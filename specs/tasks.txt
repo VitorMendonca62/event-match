@@ -1,0 +1,5 @@
+Alinhar a documentação técnica e de domínio do repositório ao Documento de Especificação de Requisitos do EventMatch MVP, versão 1.3, em `docs/DER-EventMatch-MVP.md`.
+
+Motivação: transformar RF001–RF107, RN001–RN168 e RNF001–RNF025 em contexto arquitetural, regras operacionais, modelos conceituais e mapa de APIs/integrações rastreáveis.
+
+Restrição: requisitos de retenção, cópia de dados e uso excepcional de documentos permanecem condicionados à validação jurídica brasileira.
