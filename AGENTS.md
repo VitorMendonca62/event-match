@@ -31,19 +31,19 @@ Ainda não existem manifests. Estes são os comandos-alvo e devem ser confirmado
 | Comando | Descrição | Quando usar |
 |---|---|---|
 | `bun install` | Instala dependências do workspace. | Setup ou mudança no lockfile. |
-| `bun --cwd front run dev` | Inicia o Next.js. | Desenvolvimento do frontend. |
-| `bun --cwd back run start:dev` | Inicia o NestJS em watch. | Desenvolvimento do backend. |
-| `bun --cwd front run build` | Build do frontend. | Antes de commit/PR. |
-| `bun --cwd back run build` | Build do backend. | Antes de commit/PR. |
-| `bun --cwd front test` | Testes do frontend. | Durante a implementação e antes de PR. |
-| `bun --cwd back test` | Testes unitários do backend. | Durante a implementação e antes de PR. |
-| `bun --cwd back run test:e2e` | Testes E2E da API. | Antes de PR. |
-| `bun --cwd front run lint` | Lint do frontend. | Após alterações. |
-| `bun --cwd back run lint` | Lint do backend. | Após alterações. |
-| `bun --cwd front run typecheck` | Checagem TypeScript do frontend. | Após mudanças de contrato. |
-| `bun --cwd back run typecheck` | Checagem TypeScript do backend. | Após mudanças de contrato. |
-| `bun --cwd back run db:migrate` | Aplica migrations PostgreSQL. | Após revisão da migration. |
-| `bunx nest info` | Inspeciona ambiente NestJS. | Diagnóstico de configuração/DI. |
+| `bun run --cwd front dev` | Inicia o Next.js. | Desenvolvimento do frontend. |
+| `bun run --cwd back start:dev` | Inicia o NestJS em watch. | Desenvolvimento do backend. |
+| `bun run --cwd front build` | Build do frontend. | Antes de commit/PR. |
+| `bun run --cwd back build` | Build do backend. | Antes de commit/PR. |
+| `bun run --cwd front test` | Testes do frontend. | Durante a implementação e antes de PR. |
+| `bun run --cwd back test` | Testes unitários do backend. | Durante a implementação e antes de PR. |
+| `bun run --cwd back test:e2e` | Testes E2E da API. | Antes de PR. |
+| `bun run --cwd front lint` | Lint do frontend. | Após alterações. |
+| `bun run --cwd back lint` | Lint do backend. | Após alterações. |
+| `bun run --cwd front typecheck` | Checagem TypeScript do frontend. | Após mudanças de contrato. |
+| `bun run --cwd back typecheck` | Checagem TypeScript do backend. | Após mudanças de contrato. |
+| `bun run --cwd back db:migrate` | Aplica migrations PostgreSQL. | Após revisão da migration. |
+| `bunx @nestjs/cli info` (em `back/`) | Inspeciona ambiente NestJS. | Diagnóstico de configuração/DI. |
 
 Não use npm, pnpm ou yarn sem ADR aceito. Não crie scripts ausentes apenas para fazer validações passarem.
 
@@ -85,13 +85,6 @@ front/
 │   ├── components/
 │   │   ├── server/
 │   │   └── client/
-│   ├── server/
-│   │   ├── application/
-│   │   ├── contracts/
-│   │   ├── domain/
-│   │   └── infrastructure/
-│   │       ├── db/
-│   │       └── repositories/
 │   └── shared/
 └── tests/
     ├── unit/
@@ -184,6 +177,32 @@ specs/
 - Priorize regras `async-*`, `bundle-*` e `server-*`; cite IDs aplicáveis no plano/revisão.
 - Route Handlers não duplicam a API NestJS nem acessam PostgreSQL. Quando existirem, autenticam/autorizam e delegam ao backend.
 - Não mantenha estado mutável de requisição em módulos e minimize dados serializados para Client Components.
+
+### Paleta visual obrigatória
+
+Toda interface do EventMatch deve utilizar os tokens abaixo como paleta padrão. Centralize-os no tema global do frontend e use as variáveis semânticas, evitando valores hexadecimais avulsos em componentes.
+
+```css
+:root {
+  --background: #09090b;
+  --surface: #111113;
+  --card: #18181b;
+  --border: #2a2a2e;
+
+  --primary: #e11d48;
+  --primary-hover: #fb3c5a;
+  --primary-active: #be123c;
+  --primary-muted: rgba(225, 29, 72, 0.15);
+
+  --foreground: #fafafa;
+  --muted-foreground: #a1a1aa;
+  --disabled: #71717a;
+
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --error: #f87171;
+}
+```
 
 ## 6. Contratos públicos
 

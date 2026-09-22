@@ -1,0 +1,12 @@
+services:
+  front:
+    build:
+      context: .
+      dockerfile: front/Dockerfile
+      target: production
+    environment:
+      HOSTNAME: 0.0.0.0
+      NODE_ENV: production
+      PORT: 3000
+    ports:
+      - "${FRONT_PORT:-3000}:3000"

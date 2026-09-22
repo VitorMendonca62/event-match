@@ -1,0 +1,14 @@
+services:
+  back:
+    build:
+      context: .
+      dockerfile: back/Dockerfile
+      target: production
+    environment:
+      HOSTNAME: 0.0.0.0
+      NODE_ENV: production
+      PORT: 3001
+      SWAGGER_ENABLED: "true"
+      SWAGGER_PATH: docs
+    ports:
+      - "${BACK_PORT:-3001}:3001"

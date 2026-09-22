@@ -15,6 +15,14 @@ A fonte funcional canônica é [`DER-EventMatch-MVP.md`](DER-EventMatch-MVP.md),
 - Armazenamento de arquivos: adapter externo a definir para fotos, imagens de conversa, anexos de denúncia e evidências protegidas.
 - OpenAPI do NestJS: contrato de integração entre front e back.
 
+### Fundação do frontend
+
+A fundação em `front/` usa workspace Bun, TypeScript estrito e Next.js App Router. O layout e páginas permanecem React Server Components; `QueryProvider` é o boundary client-only mínimo para TanStack Query e não executa queries nesta etapa. A configuração de execução é validada com Zod antes do processo servir tráfego; diagnósticos omitem valores recebidos. Docker usa imagens multi-stage e compose separado para desenvolvimento e produção, conforme ADR-003 a ADR-005.
+
+### Fundação do backend
+
+A fundação em `back/` usa NestJS, TypeScript estrito e o mesmo workspace Bun. O módulo `health` mantém o caso de uso sem NestJS e expõe somente `GET /health`; `ConfigModule` recebe valores validados por Zod, `ValidationPipe` e filter HTTP são globais, e Swagger descreve o contrato técnico. Respostas com corpo usam envelope `data`, `message` e `statusCode`, conforme ADR-006. Não há acesso a PostgreSQL, ORM, migration ou integração externa nesta etapa.
+
 ```text
 Browser -> front/ Next.js -> back/ NestJS -> PostgreSQL
             |                   |

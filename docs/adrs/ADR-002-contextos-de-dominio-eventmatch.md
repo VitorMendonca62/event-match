@@ -1,6 +1,6 @@
 # ADR-002: Decompor o EventMatch em contextos de domínio
 
-- **Status:** proposed
+- **Status:** accepted
 - **Data:** 2026-09-21
 - **Decisores:** mantenedores de produto e arquitetura
 - **Relacionado:** `specs/sdd-002-alinhar-documentacao-der-eventmatch/tasks.md`
@@ -52,4 +52,4 @@ Validar este ADR antes do primeiro scaffolding de módulos. Implementar contexto
 - `docs/01-visao-geral-arquitetura.md §4`
 - `docs/02-regras-de-negocio.md`
 - `docs/03-modelos-de-dominio.md`
-- ADR-001
+- `docs/adrs/ADR-001.md`

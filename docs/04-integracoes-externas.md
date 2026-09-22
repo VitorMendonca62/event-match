@@ -27,6 +27,12 @@ Os paths finais serão definidos por contrato OpenAPI e plano de feature. Esta t
 | Notificações | inbox, preferências e categorias essenciais | RF063–RF064, RF094, RF105 |
 | Operação | profissionais, papéis, casos, auditoria, catálogos, eventos oficiais | RF066–RF067, RF082–RF084, RF095–RF101 |
 
+### Contrato técnico inicial
+
+Enquanto os grupos de produto não forem implementados, o backend expõe somente `GET /health`, sem autenticação, como liveness do processo — não como readiness de PostgreSQL ou integrações ainda inexistentes. A resposta 200 é `{ "data": { "status": "ok" }, "message": "API disponível", "statusCode": 200 }`.
+
+Toda resposta HTTP com corpo segue o envelope público `data` (objeto), `message` (string) e `statusCode` (número serializado de `HttpStatus`). A camada de apresentação converte erros conhecidos e inesperados nesse formato sem retornar stack trace, erro bruto de validação ou detalhe de infraestrutura. O OpenAPI do NestJS fica disponível no caminho configurado pelo ambiente e pode ser desabilitado sem alterar `/health`.
+
 ## 3. Exposição por audiência
 
 | Audiência | Pode receber | Nunca recebe |

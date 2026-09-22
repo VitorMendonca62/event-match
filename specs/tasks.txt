@@ -1,5 +1,9 @@
-Alinhar a documentação técnica e de domínio do repositório ao Documento de Especificação de Requisitos do EventMatch MVP, versão 1.3, em `docs/DER-EventMatch-MVP.md`.
+TASK 03:
 
-Motivação: transformar RF001–RF107, RN001–RN168 e RNF001–RNF025 em contexto arquitetural, regras operacionais, modelos conceituais e mapa de APIs/integrações rastreáveis.
-
-Restrição: requisitos de retenção, cópia de dados e uso excepcional de documentos permanecem condicionados à validação jurídica brasileira.
+Objeteivo: 
+ Vamos criar a camada de banco de dados
+    
+Escopo:
+- Criar ADRs com status `proposed` para:
+  - acesso ao PostgreSQL, pool de conexões e migrations;
+- Criar fundação do PostgreSQL no backend: configuração por ambiente, pool, portas, adapters e migrations iniciais após aprovacao da ADR.

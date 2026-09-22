@@ -1,0 +1,20 @@
+services:
+  front:
+    build:
+      context: .
+      dockerfile: front/Dockerfile
+      target: development
+    command: bun run --cwd front dev
+    environment:
+      HOSTNAME: 0.0.0.0
+      NODE_ENV: development
+      PORT: 3000
+      WATCHPACK_POLLING: "true"
+    ports:
+      - "${FRONT_PORT:-3000}:3000"
+    volumes:
+      - .:/app
+      - front_node_modules:/app/node_modules
+
+volumes:
+  front_node_modules:
