@@ -49,4 +49,11 @@ describe('validateEnv', () => {
       DATABASE_SSL_MODE: 'disable',
     })).toThrow('DATABASE_SSL_MODE');
   });
+
+  test.each(['disable', 'no-verify'])('rejects sslmode=%s in the database URL', (sslMode) => {
+    expect(() => validateEnv({
+      NODE_ENV: 'production',
+      DATABASE_URL: `postgresql://eventmatch:eventmatch@localhost:5432/eventmatch?sslmode=${sslMode}`,
+    })).toThrow('DATABASE_URL');
+  });
 });

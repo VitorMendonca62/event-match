@@ -7,6 +7,15 @@ const booleanSchema = z
 const databaseUrlSchema = z.string().trim().url();
 const nonNegativeIntSchema = z.coerce.number().int().min(0);
 const positiveIntSchema = z.coerce.number().int().min(1);
+const databaseUrlTlsParameters = new Set([
+  'ssl',
+  'sslcert',
+  'sslcrl',
+  'sslkey',
+  'sslmode',
+  'sslrootcert',
+  'require_ssl',
+]);
 
 const rawEnvSchema = z
   .object({
@@ -23,6 +32,17 @@ const rawEnvSchema = z
     DATABASE_SSL_MODE: z.enum(['disable', 'require']).optional(),
   })
   .superRefine((environment, context) => {
+    const hasTlsParameter = [...new URL(environment.DATABASE_URL).searchParams.keys()]
+      .some((parameter) => databaseUrlTlsParameters.has(parameter.toLowerCase()));
+
+    if (hasTlsParameter) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['DATABASE_URL'],
+        message: 'must not contain TLS parameters; use DATABASE_SSL_MODE',
+      });
+    }
+
     if (
       environment.NODE_ENV === 'production' &&
       environment.DATABASE_SSL_MODE === 'disable'

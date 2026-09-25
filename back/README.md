@@ -28,14 +28,14 @@ A API responde em `http://localhost:3001`. O Swagger fica disponível em `http:/
 | `HOSTNAME` | `0.0.0.0` | Interface de escuta não vazia. |
 | `SWAGGER_ENABLED` | `true` | Habilita ou desabilita o Swagger (`true`/`false`). |
 | `SWAGGER_PATH` | `docs` | Caminho do Swagger. |
-| `DATABASE_URL` | — | URL PostgreSQL única, obrigatória e nunca registrada em logs. |
+| `DATABASE_URL` | — | URL PostgreSQL única, obrigatória e nunca registrada em logs; não aceita parâmetros TLS/SSL na query string. |
 | `DATABASE_POOL_MAX` | `1` | Limite fixo de uma conexão nesta fundação. |
 | `DATABASE_IDLE_TIMEOUT_MS` | `10000` | Tempo de ociosidade do pool. |
 | `DATABASE_CONNECTION_TIMEOUT_MS` | `2000` | Timeout para adquirir conexão. |
 | `DATABASE_STATEMENT_TIMEOUT_MS` | `5000` | Timeout de statement PostgreSQL. |
 | `DATABASE_SSL_MODE` | conforme ambiente | `disable` em desenvolvimento/teste; `require` em produção, sempre com validação de certificado. |
 
-O preflight Zod roda antes de iniciar o processo. Em falha, o processo encerra sem abrir porta e informa apenas a chave e o motivo da validação, nunca o valor recebido.
+O preflight Zod roda antes de iniciar o processo. Em falha, o processo encerra sem abrir porta e informa apenas a chave e o motivo da validação, nunca o valor recebido. A política TLS vem exclusivamente de `DATABASE_SSL_MODE`; parâmetros TLS/SSL em `DATABASE_URL` são rejeitados para impedir que sobrescrevam a validação de certificado do pool.
 
 ## Contratos técnicos
 
@@ -55,7 +55,7 @@ Todas as respostas HTTP com corpo usam `data` (objeto), `message` (string) e `st
 
 ## Persistência
 
-O módulo técnico cria um pool `pg` singleton com no máximo uma conexão e uma instância Drizzle sobre ele. A configuração do Drizzle Kit fica em `src/shared/infrastructure/persistence/drizzle.config.ts` para o primeiro bounded context; esta tarefa não executa `generate`, `migrate` ou `push`.
+O módulo técnico cria um pool `pg` singleton com no máximo uma conexão e uma instância Drizzle sobre ele. Erros de clientes ociosos do pool são consumidos e registrados somente como evento estruturado redigido; eles não derrubam a liveness e a readiness volta a refletir uma conexão recuperada. A configuração do Drizzle Kit fica em `src/shared/infrastructure/persistence/drizzle.config.ts` para o primeiro bounded context; esta tarefa não executa `generate`, `migrate` ou `push`.
 
 ## Validação
 
