@@ -36,9 +36,20 @@ describe('Health endpoint (e2e)', () => {
     });
   });
 
+  test('database readiness returns a safe 503 when PostgreSQL is unavailable', async () => {
+    const response = await request(app.getHttpServer()).get('/health/readiness').expect(503);
+
+    expect(response.body).toEqual({
+      data: {},
+      message: 'Service is temporarily unavailable.',
+      statusCode: 503,
+    });
+  });
+
   test('the generated OpenAPI document publishes the health route', async () => {
     const response = await request(app.getHttpServer()).get('/docs-json').expect(200);
 
     expect(response.body.paths['/health']).toBeDefined();
+    expect(response.body.paths['/health/readiness']).toBeDefined();
   });
 });

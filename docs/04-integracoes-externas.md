@@ -8,6 +8,7 @@
 - Autorização considera identidade, papel, relação com evento/caso, bloqueios, restrições e estado do recurso.
 - Operações irreversíveis, concorrentes ou reexecutáveis declaram idempotência e conflito (`409`) explicitamente.
 - Erros de autenticação/recuperação respeitam antienumeração.
+- `GET /health` é liveness do processo; `GET /health/readiness` consulta PostgreSQL e retorna `503` com envelope seguro quando a dependência está indisponível.
 
 ## 2. Grupos de API esperados
 

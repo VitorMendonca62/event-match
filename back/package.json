@@ -1,6 +1,6 @@
 {
   "name": "@eventmatch/back",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "scripts": {
     "validate:env": "bun run src/shared/infrastructure/config/validate-env.ts",
@@ -10,7 +10,12 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "bun test --preload ./test/setup.ts test/unit",
-    "test:e2e": "bun test --preload ./test/setup.ts test/e2e"
+    "test:e2e": "bun test --preload ./test/setup.ts test/e2e",
+    "test:integration": "bun -e \"if (!process.env.DATABASE_INTEGRATION_URL) throw new Error('DATABASE_INTEGRATION_URL is required');\" && bun test --preload ./test/setup.ts test/integration",
+    "db:generate": "drizzle-kit generate --config ./src/shared/infrastructure/persistence/drizzle.config.ts",
+    "db:migrate": "drizzle-kit migrate --config ./src/shared/infrastructure/persistence/drizzle.config.ts",
+    "db:check": "drizzle-kit check --config ./src/shared/infrastructure/persistence/drizzle.config.ts",
+    "db:studio": "drizzle-kit studio --config ./src/shared/infrastructure/persistence/drizzle.config.ts"
   },
   "dependencies": {
     "@nestjs/common": "12.0.4",
@@ -20,6 +25,8 @@
     "@nestjs/swagger": "12.0.1",
     "class-transformer": "0.5.1",
     "class-validator": "0.15.1",
+    "drizzle-orm": "0.45.3",
+    "pg": "8.16.3",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2",
     "zod": "4.6.5"
@@ -31,10 +38,12 @@
     "@types/bun": "1.4.2",
     "@types/express": "5.0.6",
     "@types/node": "26.6.2",
+    "@types/pg": "8.15.5",
     "@types/supertest": "7.2.1",
     "eslint": "9.39.1",
     "supertest": "7.2.2",
     "typescript": "5.9.3",
-    "typescript-eslint": "8.70.1"
+    "typescript-eslint": "8.70.1",
+    "drizzle-kit": "0.31.11"
   }
 }

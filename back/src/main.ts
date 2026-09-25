@@ -25,7 +25,7 @@ export function configureApplication(app: INestApplication): void {
     const swaggerConfig = new DocumentBuilder()
       .setTitle('EventMatch API')
       .setDescription('Technical API contract for EventMatch.')
-      .setVersion('0.5.0')
+      .setVersion('0.6.0')
       .build();
     const document = SwaggerModule.createDocument(app, swaggerConfig);
 

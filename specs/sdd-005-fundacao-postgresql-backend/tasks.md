@@ -168,7 +168,7 @@ Nenhuma regra funcional RF/RN é alterada. A mudança é infraestrutura técnica
 - Unitários do adapter de readiness: sucesso, timeout e erro do driver mapeados sem vazar detalhes.
 - Integração PostgreSQL real/descartável: pool, consulta, isolamento entre testes, indisponibilidade, encerramento e recuperação após falha transitória permitida.
 - Drizzle Kit: validar apenas configuração, descoberta do schema e geração determinística em diretório de trabalho; não aplicar migration.
-- Segurança: runtime sem DDL; migration user com mínimo necessário; busca automatizada confirma ausência de URL/segredo em logs e artefatos.
+- Segurança: única credencial configurada por ambiente; permissões auditadas e busca automatizada confirma ausência de URL/segredo em logs e artefatos.
 - Arquitetura: imports Drizzle/driver proibidos em `domain`/`application`, acesso PostgreSQL fora de `infrastructure/persistence` e qualquer dependência Drizzle/PostgreSQL no frontend.
 - E2E/Supertest: liveness preservada, readiness `200` com banco disponível e `503` com banco indisponível, envelope e OpenAPI exatos.
 - Capacidade: teste controlado confirma limite fixo de 1 conexão, timeout de aquisição e ausência de crescimento ilimitado.
@@ -199,7 +199,7 @@ Rollback: interromper promoção e manter/reimplantar a versão anterior da API.
 
 - [x] Decisões citam `docs/` e ADRs.
 - [x] O ADR material desta fundação foi criado e aceito.
-- [x] Nenhum código de produção foi escrito.
+- [x] Código de produção foi implementado conforme este plano.
 - [x] Contratos front/back, OpenAPI, Drizzle e PostgreSQL estão explícitos.
 - [x] Performance, segurança e observabilidade foram tratadas.
 - [x] `nestjs-expert` foi aplicada; `vercel-react-best-practices` foi avaliada e não se aplica ao escopo sem frontend.

@@ -12,6 +12,7 @@ A fonte funcional canônica é [`DER-EventMatch-MVP.md`](DER-EventMatch-MVP.md),
 - `front/`: Next.js App Router, responsável por experiência web e, quando necessário, Route Handlers usados somente como BFF/proxy.
 - `back/`: NestJS com arquitetura hexagonal, responsável pela API de negócio, autorização, casos de uso, auditoria e integrações.
 - PostgreSQL: acessado exclusivamente por adapters do backend.
+- Persistência: Drizzle ORM sobre `node-postgres`, com pool singleton limitado a uma conexão nesta fundação; schema e builders permanecem em `infrastructure/persistence`.
 - Armazenamento de arquivos: adapter externo a definir para fotos, imagens de conversa, anexos de denúncia e evidências protegidas.
 - OpenAPI do NestJS: contrato de integração entre front e back.
 
@@ -32,6 +33,8 @@ Browser -> front/ Next.js -> back/ NestJS -> PostgreSQL
 back/presentation -> application/use-cases -> domain/ports
                                             <- infrastructure/adapters
 ```
+
+A fundação PostgreSQL configura Drizzle e o pool no backend, preserva `GET /health` como liveness e expõe readiness separado para a dependência. Não cria schema físico nem migrations iniciais; cada bounded context será responsável por seu modelo e migrations futuras.
 
 ## 3. Atores e superfícies
 

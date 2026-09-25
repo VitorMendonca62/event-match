@@ -2,7 +2,7 @@
 
 ## 1. Convenções
 
-Este documento descreve o modelo conceitual derivado do DER v1.3. Não define tabelas nem escolhe ORM. Entidades de domínio não são entidades do ORM; adapters PostgreSQL fazem o mapeamento. Identificadores são opacos e datas persistidas em UTC, com fuso explícito quando relevante ao evento.
+Este documento descreve o modelo conceitual derivado do DER v1.3. Não define tabelas nem schema físico. Drizzle ORM foi escolhido para os adapters PostgreSQL, mas entidades de domínio não são modelos Drizzle; adapters fazem o mapeamento. Identificadores são opacos e datas persistidas em UTC, com fuso explícito quando relevante ao evento.
 
 Toda coleção sensível deve ter classificação, política de acesso, retenção e trilha de auditoria. Requisitos canônicos: [`DER-EventMatch-MVP.md`](DER-EventMatch-MVP.md).
 
