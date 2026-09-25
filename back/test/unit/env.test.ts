@@ -41,4 +41,12 @@ describe('validateEnv', () => {
       DATABASE_URL: 'postgresql://eventmatch:eventmatch@localhost:5432/eventmatch',
     }).DATABASE_SSL_MODE).toBe('require');
   });
+
+  test('rejects disabled TLS in production', () => {
+    expect(() => validateEnv({
+      NODE_ENV: 'production',
+      DATABASE_URL: 'postgresql://eventmatch:eventmatch@localhost:5432/eventmatch',
+      DATABASE_SSL_MODE: 'disable',
+    })).toThrow('DATABASE_SSL_MODE');
+  });
 });

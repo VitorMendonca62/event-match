@@ -6,7 +6,7 @@
     "validate:env": "bun run src/shared/infrastructure/config/validate-env.ts",
     "start": "bun run validate:env && bun dist/main.js",
     "start:dev": "bun run validate:env && bun --watch src/main.ts",
-    "build": "bun run validate:env && tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "bun test --preload ./test/setup.ts test/unit",

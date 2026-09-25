@@ -8,19 +8,32 @@ const databaseUrlSchema = z.string().trim().url();
 const nonNegativeIntSchema = z.coerce.number().int().min(0);
 const positiveIntSchema = z.coerce.number().int().min(1);
 
-const rawEnvSchema = z.object({
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  PORT: portSchema.default(3001),
-  HOSTNAME: z.string().trim().min(1).default('0.0.0.0'),
-  SWAGGER_ENABLED: booleanSchema.default(true),
-  SWAGGER_PATH: z.string().trim().min(1).default('docs'),
-  DATABASE_URL: databaseUrlSchema,
-  DATABASE_POOL_MAX: z.literal('1').default('1').transform(() => 1),
-  DATABASE_IDLE_TIMEOUT_MS: nonNegativeIntSchema.default(10_000),
-  DATABASE_CONNECTION_TIMEOUT_MS: positiveIntSchema.default(2_000),
-  DATABASE_STATEMENT_TIMEOUT_MS: positiveIntSchema.default(5_000),
-  DATABASE_SSL_MODE: z.enum(['disable', 'require']).optional(),
-});
+const rawEnvSchema = z
+  .object({
+    NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+    PORT: portSchema.default(3001),
+    HOSTNAME: z.string().trim().min(1).default('0.0.0.0'),
+    SWAGGER_ENABLED: booleanSchema.default(true),
+    SWAGGER_PATH: z.string().trim().min(1).default('docs'),
+    DATABASE_URL: databaseUrlSchema,
+    DATABASE_POOL_MAX: z.literal('1').default('1').transform(() => 1),
+    DATABASE_IDLE_TIMEOUT_MS: nonNegativeIntSchema.default(10_000),
+    DATABASE_CONNECTION_TIMEOUT_MS: positiveIntSchema.default(2_000),
+    DATABASE_STATEMENT_TIMEOUT_MS: positiveIntSchema.default(5_000),
+    DATABASE_SSL_MODE: z.enum(['disable', 'require']).optional(),
+  })
+  .superRefine((environment, context) => {
+    if (
+      environment.NODE_ENV === 'production' &&
+      environment.DATABASE_SSL_MODE === 'disable'
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['DATABASE_SSL_MODE'],
+        message: 'must be require when NODE_ENV is production',
+      });
+    }
+  });
 
 export const envSchema = rawEnvSchema.transform((environment) => ({
   ...environment,
