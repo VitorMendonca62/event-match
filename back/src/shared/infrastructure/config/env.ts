@@ -4,7 +4,14 @@ const portSchema = z.coerce.number().int().min(1).max(65_535);
 const booleanSchema = z
   .enum(['true', 'false'])
   .transform((value) => value === 'true');
-const databaseUrlSchema = z.string().trim().url();
+const databaseUrlSchema = z
+  .string()
+  .trim()
+  .url()
+  .refine(
+    (value) => ['postgres:', 'postgresql:'].includes(new URL(value).protocol),
+    'must use postgres:// or postgresql://',
+  );
 const nonNegativeIntSchema = z.coerce.number().int().min(0);
 const positiveIntSchema = z.coerce.number().int().min(1);
 const databaseUrlTlsParameters = new Set([

@@ -28,7 +28,7 @@ A API responde em `http://localhost:3001`. O Swagger fica disponível em `http:/
 | `HOSTNAME` | `0.0.0.0` | Interface de escuta não vazia. |
 | `SWAGGER_ENABLED` | `true` | Habilita ou desabilita o Swagger (`true`/`false`). |
 | `SWAGGER_PATH` | `docs` | Caminho do Swagger. |
-| `DATABASE_URL` | — | URL PostgreSQL única, obrigatória e nunca registrada em logs; não aceita parâmetros TLS/SSL na query string. |
+| `DATABASE_URL` | — | URL PostgreSQL `postgres://` ou `postgresql://`, obrigatória e nunca registrada em logs; não aceita parâmetros TLS/SSL na query string. |
 | `DATABASE_POOL_MAX` | `1` | Limite fixo de uma conexão nesta fundação. |
 | `DATABASE_IDLE_TIMEOUT_MS` | `10000` | Tempo de ociosidade do pool. |
 | `DATABASE_CONNECTION_TIMEOUT_MS` | `2000` | Timeout para adquirir conexão. |

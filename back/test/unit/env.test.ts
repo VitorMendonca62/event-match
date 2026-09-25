@@ -28,6 +28,12 @@ describe('validateEnv', () => {
     expect(() => validateEnv({})).toThrow('DATABASE_URL');
   });
 
+  test('rejects non-PostgreSQL database URLs', () => {
+    expect(() => validateEnv({ DATABASE_URL: 'https://db.example' })).toThrow(
+      'DATABASE_URL',
+    );
+  });
+
   test('keeps the pool limit fixed at one connection', () => {
     expect(() => validateEnv({
       DATABASE_URL: 'postgresql://eventmatch:eventmatch@localhost:5432/eventmatch',

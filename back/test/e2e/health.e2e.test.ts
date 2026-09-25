@@ -1,14 +1,26 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import type { INestApplication } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
 import request from 'supertest';
 
-import { createApplication } from '../../src/main';
+import { AppModule } from '../../src/app.module';
+import { configureApplication } from '../../src/main';
+import { DATABASE_READINESS_PORT } from '../../src/shared/application/ports/database-readiness.port';
 
 describe('Health endpoint (e2e)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
-    app = await createApplication();
+    const module = await Test.createTestingModule({ imports: [AppModule] })
+      .overrideProvider(DATABASE_READINESS_PORT)
+      .useValue({
+        check: async () => {
+          throw new Error('controlled database unavailability');
+        },
+      })
+      .compile();
+    app = module.createNestApplication();
+    configureApplication(app);
     await app.listen(0, '127.0.0.1');
   });
 
