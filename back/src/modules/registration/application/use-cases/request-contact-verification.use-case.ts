@@ -133,7 +133,7 @@ export class RequestContactVerification {
             keyVersion: sealed.keyVersion,
             otpDigest: otp.digest,
             deliveryIdempotencyKey: this.ids.next(),
-            whatsappConsentAt,
+            whatsappConsentAt: whatsappConsentAt ? now : null,
           },
           now,
           this.policy,
