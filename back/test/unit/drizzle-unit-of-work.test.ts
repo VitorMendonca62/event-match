@@ -4,13 +4,15 @@ import { DrizzleUnitOfWork } from '../../src/shared/infrastructure/persistence/d
 
 describe('DrizzleUnitOfWork', () => {
   test('delegates the callback to the transaction boundary', async () => {
-    const transaction = { marker: 'transaction' };
+    const statements: unknown[] = [];
+    const transaction = { execute: async (statement: unknown) => statements.push(statement) };
     const database = {
       transaction: async <T>(work: (context: object) => Promise<T>) => work(transaction),
     };
     const unitOfWork = new DrizzleUnitOfWork(database as never);
 
     await expect(unitOfWork.execute(async (context) => context)).resolves.toBe(transaction);
+    expect(statements).toHaveLength(1);
   });
 
   test('propagates callback failures for the application boundary', async () => {
@@ -18,7 +20,7 @@ describe('DrizzleUnitOfWork', () => {
     const database = {
       transaction: async <T>(work: (context: object) => Promise<T>) => {
         try {
-          return await work({});
+          return await work({ execute: async () => undefined });
         } catch (error) {
           rolledBack = true;
           throw error;

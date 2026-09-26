@@ -50,14 +50,16 @@ Referência: RN021, RN025, RN075–RN077, RN152–RN159.
 
 | Integração | Finalidade | Requisitos/controles |
 |---|---|---|
-| E-mail | confirmação, recuperação, alertas e avisos essenciais | links/códigos temporários; antienumeração; templates versionados |
-| SMS | confirmação, recuperação e avisos essenciais | códigos temporários, rate limit e mascaramento |
+| Resend (e-mail) | OTP, link de confirmação e recuperação | domínio configurado, templates versionados, antienumeração, timeout de 5 s e até duas novas tentativas transitórias |
+| WhatsApp Cloud API (Meta) | OTP e recuperação para celular no Brasil | consentimento explícito para envio transacional, template aprovado, rate limit, timeout de 5 s e até duas novas tentativas transitórias; sem fallback por SMS |
 | Object storage | fotos, imagens de conversa, anexos e evidências | buckets/prefixos por classe, URLs assinadas, malware scan, retenção e exclusão |
 | Geocodificação/mapas | região aproximada, distância e ponto de encontro | consentimento, minimização e não rastrear deslocamento |
 | Push/web notification | avisos configuráveis e essenciais | preferências por categoria e ao menos um canal essencial |
 | Observabilidade | logs, métricas, traces e alertas | redaction de PII/segredos; correlação sem conteúdo sensível |
 
-Provedor, região, SLA, DPA, residência de dados e estratégia de fallback exigem ADR antes de implementação.
+Resend e WhatsApp Cloud API são os provedores aceitos para a primeira implementação de verificação. Antes de ativá-los, é obrigatório configurar domínio e templates aprovados, credenciais em ambiente e revisar os termos operacionais vigentes. Região, DPA, residência de dados e demais integrações continuam sujeitos a ADR antes de implementação.
+
+Nesta fundação não há SDK ou chamada de provedor: a entrega de verificação é a porta outbound `VerificationDeliveryPort`, chamada somente após o commit da unidade de trabalho. A requisição `verify` leva o OTP em claro apenas em memória (ele nunca é persistido nem registrado em log) e a chave de idempotência persistida; reenvios usam `<chave>:resend:<n>`. A requisição `recovery_notice` é enviada, pelo mesmo canal, quando o contato já pertence a um cadastro ou conta, sem alterar a resposta neutra. Falhas de entrega não mudam a resposta e geram apenas o evento `registration.verification.delivery_failed`, com canal e id opaco. O adapter atual (`NoopVerificationDeliveryAdapter`) não chama provedor.
 
 ## 5. Arquivos e limites
 
@@ -73,6 +75,8 @@ Valide extensão, MIME real, tamanho, assinatura, malware e autorização tanto 
 
 - Rate limit por IP, conta, contato e operação sensível, com cuidado para não bloquear vítimas.
 - Tokens de confirmação/recuperação têm finalidade, expiração, uso único e armazenamento seguro.
+- Cada entrega de verificação usa chave de idempotência por desafio/entrega. Falhas definitivas não são repetidas automaticamente; falhas transitórias podem ter no máximo duas novas tentativas.
+- OTP expira em 15 minutos, bloqueia por 20 minutos após cinco falhas e usa limites por contato e origem/IP; logs e métricas não incluem código, contato completo ou razão detalhada de bloqueio.
 - Respostas de login/recuperação não confirmam existência da conta.
 - Downloads de cópia de dados usam autenticação reforçada, URL temporária e expiração de sete dias.
 - Webhooks externos exigem assinatura, replay protection, idempotência e auditoria.

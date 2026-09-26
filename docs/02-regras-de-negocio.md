@@ -15,6 +15,15 @@ As regras normativas completas são RN001–RN168 em [`DER-EventMatch-MVP.md`](D
 - Contatos não mudam simultaneamente; o atual permanece válido até confirmação do novo. O único meio confirmado não pode ser removido (RN015, RN113).
 - Correção do nascimento é fluxo protegido com análise humana; suspeita de menoridade suspende ações e protege o histórico conforme RN092–RN096 e RN124–RN130.
 
+### Cadastro, verificação e retomada
+
+- O fluxo é contato → verificação → senha → dados obrigatórios → nascimento e aceites → interesses → campos opcionais. A confirmação do contato acontece antes de criar o registro provisório de cadastro.
+- OTP é válido por 15 minutos; são permitidas cinco falhas por desafio e, então, bloqueio de 20 minutos, sem contar tentativas posteriores. Há reenvio após 60 segundos, até três por desafio e por contato/hora; cada reenvio gera novo código e renova a validade. Há no máximo cinco desafios por contato/hora; um novo pedido substitui o desafio aberto, exceto durante o bloqueio. O limite de dez por origem/IP/hora está adiado até existir origem confiável (ADR-015).
+- E-mail usa OTP e link; celular no Brasil usa WhatsApp. Todas as respostas para contato já associado, OTP inválido, expirado ou bloqueado são neutras e não revelam a existência de conta.
+- Após contato e senha válidos, `Registration` permanece em progresso por até 24 horas sem atualização. Ao salvar os dados obrigatórios do RF004 (nome de exibição, cidade/região e intenção de uso), a `Account` é persistida como incompleta e somente pode retomar o cadastro; após 15 dias sem atualização, expira com anulação imediata dos dados pessoais e libera o contato (ADR-017).
+- A data de nascimento é informada na etapa de nascimento e aceites e validada na ativação; data de menor de idade é recusada sem ser persistida. A conta torna-se ativa somente em transação que revalida maioridade, contato confirmado, senha, dados obrigatórios, ao menos três interesses e aceites efetivos versionados. Placeholder lorem ipsum não habilita conclusão nem gera aceite jurídico.
+- O navegador pode reter por no máximo 30 minutos, em `sessionStorage` versionado, apenas etapa, nome de exibição, cidade/região, intenção, interesses e campos opcionais. Segredos, contato, nascimento, OTP, tokens, aceites e respostas do backend não são retidos localmente.
+
 ## 3. Eventos e anfitriões
 
 - Apenas encontros presenciais, informais, gratuitos e em local público/estabelecimento identificável podem ser publicados (RN019–RN020).

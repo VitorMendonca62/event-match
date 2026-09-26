@@ -1,0 +1,41 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-eventmatch}
+      POSTGRES_USER: ${POSTGRES_USER:-eventmatch}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    ports:
+      - "${POSTGRES_PORT:-0}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  back:
+    build:
+      context: .
+      dockerfile: back/Dockerfile
+      target: development
+    command: bun run --cwd back start:dev
+    environment:
+      HOSTNAME: 0.0.0.0
+      NODE_ENV: test
+      PORT: 3001
+      SWAGGER_ENABLED: "true"
+      SWAGGER_PATH: docs
+      DATABASE_URL: ${DATABASE_URL:-}
+      DATABASE_POOL_MAX: "1"
+      DATABASE_IDLE_TIMEOUT_MS: "10000"
+      DATABASE_CONNECTION_TIMEOUT_MS: "2000"
+      DATABASE_STATEMENT_TIMEOUT_MS: "5000"
+      DATABASE_SSL_MODE: disable
+      CONTACT_HASH_KEY: ${CONTACT_HASH_KEY:-}
+      CONTACT_ENCRYPTION_KEY: ${CONTACT_ENCRYPTION_KEY:-}
+      VERIFICATION_SECRET_KEY: ${VERIFICATION_SECRET_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${BACK_PORT:-0}:3001"
