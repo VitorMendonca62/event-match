@@ -1,6 +1,6 @@
 {
   "name": "@eventmatch/back",
-  "version": "0.6.0",
+  "version": "0.8.0",
   "private": true,
   "scripts": {
     "validate:env": "bun run src/shared/infrastructure/config/validate-env.ts",
@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "bun test --preload ./test/setup.ts test/unit",
-    "test:e2e": "bun test --preload ./test/setup.ts test/e2e",
+    "test:e2e": "../scripts/test-back-e2e.sh",
     "test:integration": "bun -e \"if (!process.env.DATABASE_INTEGRATION_URL) throw new Error('DATABASE_INTEGRATION_URL is required');\" && bun test --preload ./test/setup.ts test/integration",
     "db:generate": "drizzle-kit generate --config ./src/shared/infrastructure/persistence/drizzle.config.ts",
     "db:migrate": "drizzle-kit migrate --config ./src/shared/infrastructure/persistence/drizzle.config.ts",

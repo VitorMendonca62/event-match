@@ -1,9 +1,60 @@
-TASK 03:
 
-Objeteivo: 
- Vamos criar a camada de banco de dados
-    
+TASK 04 — Fundação PostgreSQL do fluxo de cadastro
+
+Objetivo:
+Planejar e implementar a persistência PostgreSQL do bounded context de cadastro, com Drizzle ORM, migrations revisáveis e adapters hexagonais. A fundação deve suportar o fluxo já decidido nas ADRs 008–012, sem criar endpoints HTTP, telas ou integração real com provedores de e-mail/WhatsApp nesta task.
+
+Fonte de verdade funcional e arquitetural:
+- Consultar `docs/DER-EventMatch-MVP.md` v1.3, especialmente RF001–RF007, RN001–RN016 e RNF003–RNF004.
+- Seguir integralmente `AGENTS.md`.
+- Aplicar `docs/adrs/ADR-007-acesso-postgresql-pool-e-migrations.md` e as ADRs aceitas `ADR-008` a `ADR-012`.
+- Usar `specs/sdd-006-modelagem-conceitual-cadastro/tasks.md` como especificação de fluxo.
+
 Escopo:
-- Criar ADRs com status `proposed` para:
-  - acesso ao PostgreSQL, pool de conexões e migrations;
-- Criar fundação do PostgreSQL no backend: configuração por ambiente, pool, portas, adapters e migrations iniciais após aprovacao da ADR.
+
+- Criar a primeira migration Drizzle revisável do bounded context `registration`, usando a fundação PostgreSQL existente.
+- Modelar e persistir, em tabelas com ownership explícito:
+  - desafio de verificação de contato e OTP, armazenando somente hash do código, expiração, tentativas, reenvios, bloqueio, idempotência e metadados mínimos;
+  - registro provisório de cadastro, com expiração após 24 horas sem atualização;
+  - conta em estado `account_incomplete`, com remoção após 15 dias sem atualização e liberação do contato;
+  - identificadores de contato normalizados, unicidade parcial entre contas ativas e sem vazamento em logs;
+  - dados obrigatórios de conta/perfil, estado do cadastro, interesse e associação conta–interesse;
+  - catálogo inicial de interesses definido no DER §3.10, com estratégia idempotente de seed ou migration de dados revisável;
+  - estrutura preparada para aceites versionados, respeitando ADR-012: placeholder não gera aceite jurídico efetivo nem ativa conta em produção.
+- Criar portas outbound por bounded context, repositórios/adapters Drizzle, mapeadores e casos de uso internos necessários para persistir e recuperar o fluxo, sem expor tipos Drizzle fora da infraestrutura.
+- Garantir transações para conclusão/ativação, constraints e índices para unicidade, expiração e consultas do fluxo.
+- Documentar esquema físico, constraints, dados iniciais, migration, rollout e rollback em `docs/03-modelos-de-dominio.md` e documentação operacional pertinente.
+
+Fora de escopo:
+
+- Controllers, DTOs, OpenAPI, endpoints, Route Handlers, páginas e componentes de cadastro.
+- SDKs, credenciais e chamadas reais para Resend ou WhatsApp Cloud API; usar portas e doubles de teste quando necessários.
+- Login, sessões, recuperação completa de senha, alteração de contato, perfil público, eventos e catálogo profissional.
+- Conteúdo jurídico real de termos, política de privacidade e regras de convivência.
+- Exclusão automática destrutiva em produção sem job, observabilidade, janela operacional e revisão específicos.
+
+Regras obrigatórias:
+
+- Fluxo: `verification_pending` → `registration_in_progress` → `account_incomplete` → `active`, com saída `expired`.
+- OTP: validade de 15 minutos, máximo de cinco tentativas inválidas, bloqueio de 20 minutos, reenvio após 60 segundos (máximo de três por contato/hora), até cinco desafios por contato/hora e dez por IP/origem/hora.
+- `Registration` nasce após contato verificado e senha informada; `Account` é persistida após dados obrigatórios e só fica ativa após nascimento, aceites válidos e ao menos três interesses.
+- Contato associado a conta ativa não revela sua existência; a persistência/casos de uso devem possibilitar recuperação neutra pelo mesmo canal.
+- E-mail e WhatsApp são responsabilidades de portas outbound; a persistência não depende de SDK de provedor.
+- `sessionStorage` não é fonte de verdade nem é persistido pelo backend; o banco aceita apenas dados do fluxo autorizado.
+- PostgreSQL é acessado somente em `back/src/**/infrastructure/persistence`; domínio/aplicação não importam Drizzle, `pg`, SQL ou NestJS.
+- Não registrar OTP, senha, URL de banco, contato completo, tokens ou PII em logs, exceptions públicas ou artefatos de teste.
+
+Critérios de aceite:
+
+- Migration Drizzle versionada cria somente os objetos aprovados e possui plano de rollout/forward-fix; nenhum `drizzle-kit push` é usado.
+- Constraints, índices e transações impedem duplicidade de contato ativo, corrida em tentativas OTP e ativação incompleta.
+- Adaptadores Drizzle usam DI NestJS, tokens explícitos e mapeiam para portas sem vazar tipos de infraestrutura.
+- Testes unitários cobrem estados, expiração, bloqueio, limites e mapeamento; testes de integração PostgreSQL cobrem migration, constraints, transações, índices e concorrência; não usar banco compartilhado não isolado.
+- Lint, typecheck, testes, build e `db:check` executam via Bun; migration é validada contra PostgreSQL descartável.
+- `docs/03-modelos-de-dominio.md`, `docs/04-integracoes-externas.md` se aplicável, ADRs e CHANGELOG/versão são atualizados quando houver contrato público.
+- Nenhum endpoint, UI ou integração de provedor é implementado nesta task.
+
+TASK 05 — Runner descartável para testes de integração e E2E
+
+Objetivo:
+- Disponibilizar um script Bash que suba o PostgreSQL temporário necessário, aplique migrations, execute testes de integração e E2E e remova containers, volumes e rede ao finalizar, inclusive em falha ou interrupção.

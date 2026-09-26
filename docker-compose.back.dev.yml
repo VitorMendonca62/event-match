@@ -30,6 +30,9 @@ services:
       DATABASE_CONNECTION_TIMEOUT_MS: "2000"
       DATABASE_STATEMENT_TIMEOUT_MS: "5000"
       DATABASE_SSL_MODE: disable
+      CONTACT_HASH_KEY: ${CONTACT_HASH_KEY:-}
+      CONTACT_ENCRYPTION_KEY: ${CONTACT_ENCRYPTION_KEY:-}
+      VERIFICATION_SECRET_KEY: ${VERIFICATION_SECRET_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy

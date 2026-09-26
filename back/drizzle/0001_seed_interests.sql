@@ -1,0 +1,22 @@
+INSERT INTO "interest" ("id", "slug", "label", "position", "active") VALUES
+  ('00000000-0000-7000-8000-000000000001', 'cafe-e-gastronomia', 'Café e gastronomia', 1, true),
+  ('00000000-0000-7000-8000-000000000002', 'corrida-e-caminhada', 'Corrida e caminhada', 2, true),
+  ('00000000-0000-7000-8000-000000000003', 'ciclismo', 'Ciclismo', 3, true),
+  ('00000000-0000-7000-8000-000000000004', 'esportes-e-atividades-fisicas', 'Esportes e atividades físicas', 4, true),
+  ('00000000-0000-7000-8000-000000000005', 'jogos-de-tabuleiro', 'Jogos de tabuleiro', 5, true),
+  ('00000000-0000-7000-8000-000000000006', 'videogames', 'Videogames', 6, true),
+  ('00000000-0000-7000-8000-000000000007', 'musica', 'Música', 7, true),
+  ('00000000-0000-7000-8000-000000000008', 'cinema', 'Cinema', 8, true),
+  ('00000000-0000-7000-8000-000000000009', 'teatro', 'Teatro', 9, true),
+  ('00000000-0000-7000-8000-000000000010', 'exposicoes-e-museus', 'Exposições e museus', 10, true),
+  ('00000000-0000-7000-8000-000000000011', 'literatura-e-clubes-de-leitura', 'Literatura e clubes de leitura', 11, true),
+  ('00000000-0000-7000-8000-000000000012', 'fotografia', 'Fotografia', 12, true),
+  ('00000000-0000-7000-8000-000000000013', 'tecnologia', 'Tecnologia', 13, true),
+  ('00000000-0000-7000-8000-000000000014', 'idiomas', 'Idiomas', 14, true),
+  ('00000000-0000-7000-8000-000000000015', 'natureza', 'Natureza', 15, true),
+  ('00000000-0000-7000-8000-000000000016', 'voluntariado', 'Voluntariado', 16, true),
+  ('00000000-0000-7000-8000-000000000017', 'cultura-local', 'Cultura local', 17, true),
+  ('00000000-0000-7000-8000-000000000018', 'danca', 'Dança', 18, true),
+  ('00000000-0000-7000-8000-000000000019', 'bem-estar', 'Bem-estar', 19, true),
+  ('00000000-0000-7000-8000-000000000020', 'empreendedorismo-e-networking', 'Empreendedorismo e networking', 20, true)
+ON CONFLICT ("slug") DO NOTHING;

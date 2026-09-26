@@ -34,6 +34,9 @@ A API responde em `http://localhost:3001`. O Swagger fica disponível em `http:/
 | `DATABASE_CONNECTION_TIMEOUT_MS` | `2000` | Timeout para adquirir conexão. |
 | `DATABASE_STATEMENT_TIMEOUT_MS` | `5000` | Timeout de statement PostgreSQL. |
 | `DATABASE_SSL_MODE` | conforme ambiente | `disable` em desenvolvimento/teste; `require` em produção, sempre com validação de certificado. |
+| `CONTACT_HASH_KEY` | — | Segredo base64 de ao menos 32 bytes para o índice cego HMAC dos contatos. |
+| `CONTACT_ENCRYPTION_KEY` | — | Segredo base64 de ao menos 32 bytes para cifra AES-256-GCM de contatos. |
+| `VERIFICATION_SECRET_KEY` | — | Segredo base64 de ao menos 32 bytes para digest de OTP e links. |
 
 O preflight Zod roda antes de iniciar o processo. Em falha, o processo encerra sem abrir porta e informa apenas a chave e o motivo da validação, nunca o valor recebido. A política TLS vem exclusivamente de `DATABASE_SSL_MODE`; parâmetros TLS/SSL em `DATABASE_URL` são rejeitados para impedir que sobrescrevam a validação de certificado do pool.
 
@@ -55,7 +58,9 @@ Todas as respostas HTTP com corpo usam `data` (objeto), `message` (string) e `st
 
 ## Persistência
 
-O módulo técnico cria um pool `pg` singleton com no máximo uma conexão e uma instância Drizzle sobre ele. Erros de clientes ociosos do pool são consumidos e registrados somente como evento estruturado redigido; eles não derrubam a liveness e a readiness volta a refletir uma conexão recuperada. A configuração do Drizzle Kit fica em `src/shared/infrastructure/persistence/drizzle.config.ts` para o primeiro bounded context; esta tarefa não executa `generate`, `migrate` ou `push`.
+O módulo técnico cria um pool `pg` singleton com no máximo uma conexão e uma instância Drizzle sobre ele. Os schemas pertencem aos módulos `registration`, `profiles` e `catalog`; migrations são versionadas em `back/drizzle/`. Não use `drizzle-kit push`.
+
+Antes do deploy, execute uma única vez `bun run --cwd back db:migrate`. O rollout é aditivo; rollback consiste em reimplantar a API anterior mantendo as tabelas e os segredos para preservar a legibilidade dos dados. Correções de schema são sempre forward-fix por nova migration.
 
 ## Validação
 
@@ -68,6 +73,20 @@ bun run --cwd back test:integration # requer DATABASE_INTEGRATION_URL
 bunx @nestjs/cli info
 bun run --cwd back db:check
 ```
+
+Para executar a integração com PostgreSQL descartável, sem manter containers, volumes ou rede ao final:
+
+```bash
+./scripts/test-back-integration.sh
+```
+
+Os E2E validam os containers `back` e `postgres` com HTTP real:
+
+```bash
+./scripts/test-back-e2e.sh
+```
+
+Os runners usam `docker-compose.back.test.yml` e carregam obrigatoriamente `back/.env.test.local`, isolado dos ambientes de desenvolvimento e produção e sem volumes persistentes. Crie-o a partir de `back/.env.test.example` e gere chaves próprias para teste.
 
 Para validar PostgreSQL real sem criar schema persistente, suba somente o serviço descartável e execute o teste de integração:
 

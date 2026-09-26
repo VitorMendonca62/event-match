@@ -20,6 +20,55 @@ Raiz da identidade de acesso.
 
 Referências: RF001–RF011, RF057–RF062, RF075–RF078, RF088–RF089; RN001–RN016, RN078–RN106, RN124–RN130.
 
+#### Registration, ContactVerification e OtpChallenge
+
+`Registration` é o agregado provisório do cadastro; não é uma `Account` parcialmente ativa. Ele nasce somente após a confirmação de contato e o registro de senha, e protege a retomada do fluxo sem conceder acesso ao produto.
+
+- `Registration`: `registrationId`, `status`, contato confirmado de referência, credencial protegida, dados obrigatórios parciais, `lastUpdatedAt` e `expiresAt`.
+- `ContactIdentifier`: value object de e-mail ou celular, normalizado e protegido; o valor completo não integra resposta pública, log ou progresso local.
+- `ContactVerification`: desafio técnico associado ao identificador, canal e origem segura. É criado antes de `Registration` para evitar que uma conta provisória exista antes da confirmação.
+- `OtpChallenge`: hash do OTP, expiração, número de tentativas, reenvios, bloqueio, chave de idempotência de entrega e correlação segura. O código em texto nunca é persistido.
+- `TermsAcceptance`: registra somente aceite efetivo de documento aprovado, com tipo, versão imutável, idioma, vigência, instante, sujeito e contexto mínimo auditável. Uma apresentação lorem ipsum de teste nunca cria esse registro.
+- `RegistrationProgress`: projeção local, versionada e de curta duração; contém apenas etapa, nome de exibição, cidade/região, intenção, interesses e campos opcionais aprovados. Nunca contém contato, nascimento, senha, OTP, tokens, aceites efetivos ou respostas do backend.
+
+Estados do cadastro:
+
+| Estado | Responsável | Permite | Bloqueia |
+|---|---|---|---|
+| `verification_pending` | `ContactVerification` | solicitar/reenviar e validar verificação | criação de `Registration` e acesso ao produto |
+| `registration_in_progress` | `Registration` | salvar senha e dados obrigatórios | criação de `Account` sem dados obrigatórios |
+| `account_incomplete` | `Account` | retomar exclusivamente o cadastro | eventos, perfil público, descoberta e demais recursos |
+| `active` | `Account` | uso normal do produto | retorno ao fluxo de cadastro |
+| `expired` | `Registration`/cleanup | reiniciar o fluxo | retomada com o registro expirado |
+
+```mermaid
+stateDiagram-v2
+  [*] --> verification_pending: contato informado
+  verification_pending --> verification_pending: OTP inválido, reenvio ou bloqueio
+  verification_pending --> registration_in_progress: OTP ou link válido + senha
+  registration_in_progress --> account_incomplete: dados obrigatórios válidos
+  account_incomplete --> active: idade, 3 interesses e aceites efetivos válidos
+  registration_in_progress --> expired: 24 h sem atualização
+  account_incomplete --> expired: 15 dias sem atualização
+  expired --> [*]: remoção e liberação do contato
+```
+
+O fluxo só avança; retornos de tela podem corrigir dados ainda não consolidados, mas não desfazem contato confirmado nem criam acesso fora do estado permitido. Para contato já associado, a resposta é neutra e inicia recuperação no mesmo canal, sem confirmar a existência da conta. A conclusão é uma transação única: revalida contato, senha, maioridade, dados obrigatórios, três interesses e aceites efetivos; ativa a `Account`, completa o `Profile`, associa interesses e grava aceites atomicamente.
+
+```mermaid
+erDiagram
+  CONTACT_VERIFICATION ||--|| OTP_CHALLENGE : protege
+  CONTACT_VERIFICATION ||--o| REGISTRATION : confirma_contato
+  REGISTRATION ||--o| ACCOUNT : cria_incompleta
+  ACCOUNT ||--|| PROFILE : completa
+  ACCOUNT ||--o{ ACCOUNT_INTEREST : seleciona
+  INTEREST ||--o{ ACCOUNT_INTEREST : classifica
+  ACCOUNT ||--o{ TERMS_ACCEPTANCE : aceita
+  REGISTRATION ||--o| REGISTRATION_PROGRESS : retoma_no_navegador
+```
+
+O schema físico do cadastro está versionado pela migration `back/drizzle/0000_clever_epoch.sql`: `registration` possui `contact_verification`, `verification_rate_window`, `registration`, `account`, `account_contact`, `account_credential`, `terms_document` e `terms_acceptance`; `profiles` possui `profile`, `profile_usage_intent` e `account_interest`; `catalog` possui `interest`. Contatos são índice cego HMAC + cifra AES-GCM, nunca texto claro. Índices parciais retêm contato apenas enquanto `registration_in_progress`, `account_incomplete` ou `active`; a expiração lazy anula dados sensíveis antes de liberar o contato. O seed `0001_seed_interests.sql` é idempotente e fixa os 20 interesses do DER §3.10.
+
 ### 2.2 Profile
 
 - `profileId`, `accountId`, `displayName`, foto, apresentação, região aproximada e intenção.
@@ -139,6 +188,9 @@ Referências: RF057–RF062, RF068, RF073–RF078; RN080–RN106, RN115–RN123.
 - Um aviso fixado por evento e um silenciamento de anfitrião de duas horas por reincidência prevista.
 - Agregados de avaliação contam autores válidos distintos, nunca quantidade bruta de registros.
 - Ações profissionais sensíveis e transições irreversíveis geram auditoria.
+- OTP é válido por 15 minutos, permite cinco tentativas inválidas e bloqueia por 20 minutos após o limite. Reenvio ocorre após 60 segundos, no máximo três vezes por contato/hora; há no máximo cinco desafios por contato/hora e dez por origem/IP/hora.
+- Criação de desafio, incremento de tentativa, confirmação de contato e conclusão do cadastro exigem atualização atômica/locking. Chaves de idempotência são por desafio e entrega.
+- `Registration` expira 24 horas após a última atualização; `Account` incompleta é removida após 15 dias sem atualização. Ambos os fluxos de cleanup liberam o contato de forma consistente.
 
 ## 5. Classificação de dados
 

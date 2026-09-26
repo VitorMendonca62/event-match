@@ -1,36 +1,22 @@
-import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import type { INestApplication } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
-import request from 'supertest';
-
-import { AppModule } from '../../src/app.module';
-import { configureApplication } from '../../src/main';
-import { DATABASE_READINESS_PORT } from '../../src/shared/application/ports/database-readiness.port';
+import { describe, expect, test } from 'bun:test';
 
 describe('Health endpoint (e2e)', () => {
-  let app: INestApplication;
+  const baseUrl = process.env.E2E_BASE_URL
+;
 
-  beforeAll(async () => {
-    const module = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(DATABASE_READINESS_PORT)
-      .useValue({
-        check: async () => {
-          throw new Error('controlled database unavailability');
-        },
-      })
-      .compile();
-    app = module.createNestApplication();
-    configureApplication(app);
-    await app.listen(0, '127.0.0.1');
-  });
+  if (!process.env.E2E_BASE_URL) {
+    throw new Error('E2E_BASE_URL is required for containerized E2E tests.');
+  }
 
-  afterAll(async () => {
-    await app.close();
-  });
+  async function get(path: string): Promise<{ status: number; body: unknown }> {
+    const response = await fetch(new URL(path, baseUrl));
+    return { status: response.status, body: await response.json() };
+  }
 
-  test('GET /health returns the standard success envelope', async () => {
-    const response = await request(app.getHttpServer()).get('/health').expect(200);
+  test('GET /health returns the standard success envelope from the container', async () => {
+    const response = await get('/health');
 
+    expect(response.status).toBe(200);
     expect(response.body).toEqual({
       data: { status: 'ok' },
       message: 'API disponível',
@@ -39,8 +25,9 @@ describe('Health endpoint (e2e)', () => {
   });
 
   test('missing routes return the standard error envelope', async () => {
-    const response = await request(app.getHttpServer()).get('/missing').expect(404);
+    const response = await get('/missing');
 
+    expect(response.status).toBe(404);
     expect(response.body).toEqual({
       data: {},
       message: 'Resource not found.',
@@ -48,20 +35,23 @@ describe('Health endpoint (e2e)', () => {
     });
   });
 
-  test('database readiness returns a safe 503 when PostgreSQL is unavailable', async () => {
-    const response = await request(app.getHttpServer()).get('/health/readiness').expect(503);
+  test('database readiness uses the real PostgreSQL container', async () => {
+    const response = await get('/health/readiness');
 
+    expect(response.status).toBe(200);
     expect(response.body).toEqual({
-      data: {},
-      message: 'Service is temporarily unavailable.',
-      statusCode: 503,
+      data: { status: 'ok' },
+      message: 'Banco de dados disponível',
+      statusCode: 200,
     });
   });
 
   test('the generated OpenAPI document publishes the health route', async () => {
-    const response = await request(app.getHttpServer()).get('/docs-json').expect(200);
+    const response = await get('/docs-json');
 
-    expect(response.body.paths['/health']).toBeDefined();
-    expect(response.body.paths['/health/readiness']).toBeDefined();
+    expect(response.status).toBe(200);
+    const document = response.body as { paths: Record<string, unknown> };
+    expect(document.paths['/health']).toBeDefined();
+    expect(document.paths['/health/readiness']).toBeDefined();
   });
 });

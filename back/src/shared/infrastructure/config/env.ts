@@ -14,6 +14,16 @@ const databaseUrlSchema = z
   );
 const nonNegativeIntSchema = z.coerce.number().int().min(0);
 const positiveIntSchema = z.coerce.number().int().min(1);
+const base64SecretSchema = z.string().trim().min(1).refine(
+  (value) => {
+    try {
+      return Buffer.from(value, 'base64').length >= 32;
+    } catch {
+      return false;
+    }
+  },
+  'must be a base64 value with at least 32 bytes',
+);
 const databaseUrlTlsParameters = new Set([
   'ssl',
   'sslcert',
@@ -37,6 +47,9 @@ const rawEnvSchema = z
     DATABASE_CONNECTION_TIMEOUT_MS: positiveIntSchema.default(2_000),
     DATABASE_STATEMENT_TIMEOUT_MS: positiveIntSchema.default(5_000),
     DATABASE_SSL_MODE: z.enum(['disable', 'require']).optional(),
+    CONTACT_HASH_KEY: base64SecretSchema,
+    CONTACT_ENCRYPTION_KEY: base64SecretSchema,
+    VERIFICATION_SECRET_KEY: base64SecretSchema,
   })
   .superRefine((environment, context) => {
     const hasTlsParameter = [...new URL(environment.DATABASE_URL).searchParams.keys()]
