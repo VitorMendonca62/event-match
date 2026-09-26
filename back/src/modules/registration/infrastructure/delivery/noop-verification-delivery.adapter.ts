@@ -1,8 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import type { VerificationDeliveryPort } from '../../domain/ports/outbound/security.ports';
 
-/** Deliberately does not call a provider; delivery integration is a later vertical slice. */
+import type {
+  VerificationDeliveryPort,
+  VerificationDeliveryRequest,
+} from '../../domain/ports/outbound/security.ports';
+
+/**
+ * Deliberately calls no provider; Resend and WhatsApp adapters are a later vertical slice
+ * (ADR-010). It must not log the request, which carries the OTP.
+ */
 @Injectable()
 export class NoopVerificationDeliveryAdapter implements VerificationDeliveryPort {
-  async send(): Promise<{ accepted: boolean }> { return { accepted: true }; }
+  async send(request: VerificationDeliveryRequest): Promise<{ accepted: boolean }> {
+    void request;
+    return { accepted: true };
+  }
 }

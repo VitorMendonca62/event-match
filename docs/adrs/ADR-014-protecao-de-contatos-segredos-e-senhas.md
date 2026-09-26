@@ -5,7 +5,7 @@
 - **Aceita em:** 2026-09-26
 - **Decisores:** segurança, privacidade e backend
 - **Relacionado:** `specs/sdd-007-persistencia-postgresql-cadastro/tasks.md`; ADR-004, ADR-009, ADR-010
-- **Substitui/Substituído por:** N/A
+- **Substitui/Substituído por:** parcialmente substituída pela ADR-018 (somente a origem da lista de senhas comuns)
 
 ## Contexto
 

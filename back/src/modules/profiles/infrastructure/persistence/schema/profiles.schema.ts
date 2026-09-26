@@ -5,8 +5,8 @@ import { interest } from '../../../../catalog/infrastructure/persistence/schema/
 
 export const profile = pgTable('profile', {
   accountId: uuid('account_id').primaryKey().references(() => account.id, { onDelete: 'cascade' }),
-  displayName: text('display_name').notNull(),
-  region: text('region').notNull(),
+  displayName: text('display_name'),
+  region: text('region'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [

@@ -59,7 +59,7 @@ Referência: RN021, RN025, RN075–RN077, RN152–RN159.
 
 Resend e WhatsApp Cloud API são os provedores aceitos para a primeira implementação de verificação. Antes de ativá-los, é obrigatório configurar domínio e templates aprovados, credenciais em ambiente e revisar os termos operacionais vigentes. Região, DPA, residência de dados e demais integrações continuam sujeitos a ADR antes de implementação.
 
-Nesta fundação não há SDK ou chamada de provedor: a entrega de verificação é uma porta outbound e deve ocorrer somente após o commit da unidade de trabalho, usando a chave de idempotência persistida.
+Nesta fundação não há SDK ou chamada de provedor: a entrega de verificação é a porta outbound `VerificationDeliveryPort`, chamada somente após o commit da unidade de trabalho. A requisição `verify` leva o OTP em claro apenas em memória (ele nunca é persistido nem registrado em log) e a chave de idempotência persistida; reenvios usam `<chave>:resend:<n>`. A requisição `recovery_notice` é enviada, pelo mesmo canal, quando o contato já pertence a um cadastro ou conta, sem alterar a resposta neutra. Falhas de entrega não mudam a resposta e geram apenas o evento `registration.verification.delivery_failed`, com canal e id opaco. O adapter atual (`NoopVerificationDeliveryAdapter`) não chama provedor.
 
 ## 5. Arquivos e limites
 

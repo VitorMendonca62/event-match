@@ -43,12 +43,11 @@ export POSTGRES_DB POSTGRES_USER POSTGRES_PORT BACK_PORT POSTGRES_PASSWORD
 export CONTACT_HASH_KEY CONTACT_ENCRYPTION_KEY VERIFICATION_SECRET_KEY
 export DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}"
 
-"${compose[@]}" up --detach postgres >/dev/null
-for _ in {1..30}; do
-  if "${compose[@]}" exec --no-TTY postgres pg_isready --username="${POSTGRES_USER}" --dbname="${POSTGRES_DB}" >/dev/null 2>&1; then break; fi
-  sleep 1
-done
-if ! "${compose[@]}" exec --no-TTY postgres pg_isready --username="${POSTGRES_USER}" --dbname="${POSTGRES_DB}" >/dev/null 2>&1; then echo 'Temporary PostgreSQL did not become ready.' >&2; exit 1; fi
+# Waits on the Compose healthcheck instead of a fixed polling budget, which flaked on cold starts.
+if ! "${compose[@]}" up --detach --wait --wait-timeout 120 postgres >/dev/null; then
+  echo 'Temporary PostgreSQL did not become ready.' >&2
+  exit 1
+fi
 
 "${compose[@]}" run --rm back bun run --cwd back db:migrate >/dev/null
 "${compose[@]}" up --detach back >/dev/null
@@ -57,7 +56,7 @@ back_port="${binding##*:}"
 if [[ ! "${back_port}" =~ ^[0-9]+$ ]]; then echo 'Could not determine the backend test port.' >&2; exit 1; fi
 export E2E_BASE_URL="http://127.0.0.1:${back_port}"
 
-for _ in {1..30}; do
+for _ in {1..90}; do
   if curl --fail --silent --output /dev/null "${E2E_BASE_URL}/health"; then break; fi
   sleep 1
 done

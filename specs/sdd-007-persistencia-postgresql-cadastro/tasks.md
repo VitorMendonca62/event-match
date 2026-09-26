@@ -89,6 +89,7 @@ Regras `nestjs-expert`: `@Injectable()` + constructor injection; tokens `UPPER_S
 | Limites de abuso em PostgreSQL | `docs/adrs/ADR-015-limites-de-abuso-persistidos-em-postgresql.md` | accepted | Alternativa a cache; consistência entre réplicas. |
 | Repositórios transacionais e concorrência | `docs/adrs/ADR-016-repositorios-transacionais-e-concorrencia.md` | accepted | Contexto transacional explícito, `READ COMMITTED`, locks direcionados e timeout de 2 segundos. |
 | Expiração e liberação de contato sem job | `docs/adrs/ADR-017-expiracao-e-liberacao-de-contato-sem-job-destrutivo.md` | accepted | Expiração lazy, minimização imediata e tombstones até uma futura purga física. |
+| Origem da lista de senhas e estado `converted` | `docs/adrs/ADR-018-lista-de-senhas-e-conversao-do-cadastro.md` | accepted | Correções da revisão de código (0.8.1). |
 
 Todos devem estar `accepted` antes da implementação; ao aceitá-los, o status deste plano passa a `ready`.
 
@@ -250,3 +251,15 @@ Rollback:
 - [x] `vercel-react-best-practices` e `nestjs-expert` foram aplicadas conforme o escopo (apenas backend).
 - [x] Testes, migration e rollback estão planejados.
 - [x] Perguntas em aberto foram exauridas.
+
+## 11. Correções pós-revisão (0.8.1)
+
+A revisão de código de 2026-09-26 encontrou divergências bloqueantes; as correções mantêm o escopo deste plano:
+
+- Contratos internos ajustados: `VerificationRepositoryPort` troca `findOpenForUpdate`/`expireOpen` por `findById`, `findActiveByContactForUpdate` e substituição explícita do desafio; `AccountRepositoryPort` ganha `findHoldingContactForUpdate`, `activate` condicional, `expire` e `expireStale` com ids; `ContactProtectorPort.rateLimitSubject` separa o domínio HMAC dos limites (ADR-015); `VerificationDeliveryPort` recebe o OTP em memória após o commit; `ProfileWriterPort` usa tipos próprios e ganha `erasePersonalData`; nova `RegistrationTelemetryPort`.
+- `SaveRequiredData` recebe somente os dados do RF004; `CompleteRegistration` recebe `birthDate` e grava `account.birth_date` apenas ao ativar, conforme a ordem de `docs/02` (contato → verificação → senha → dados obrigatórios → nascimento e aceites → interesses).
+- Serviços de aplicação `ContactRetention` (expiração lazy, ADR-017) e `VerificationDispatcher` (entrega pós-commit, ADR-010).
+- Migration forward `0002_registration_hardening` (ADR-018); `0000`/`0001` permanecem inalteradas.
+- Testes de integração em banco efêmero `eventmatch_it_<aleatório>` com dois pools, conforme §7.
+- Pendências fora deste plano: limite por origem (ADR-015), adapters reais de entrega (ADR-010), purga física de tombstones (ADR-017) e rotação de chaves por `key_version`.
+

@@ -1,14 +1,21 @@
 import { Injectable } from '@nestjs/common';
-import { sql } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
+
 import type { TransactionContext } from '../../../../shared/application/ports/unit-of-work.port';
 import { resolveExecutor } from '../../../../shared/infrastructure/persistence/resolve-executor';
+import { isUuid } from '../../../../shared/infrastructure/persistence/uuid';
 import type { InterestCatalogReaderPort, InterestRef } from '../../domain/ports/interest-catalog-reader.port';
+import { interest } from './schema/catalog.schema';
 
 @Injectable()
 export class DrizzleInterestCatalogReaderAdapter implements InterestCatalogReaderPort {
-  async findActiveByIds(context: TransactionContext, ids: string[]): Promise<InterestRef[]> {
-    if (!ids.length) return [];
-    const result = await resolveExecutor(context).execute(sql`select id from interest where active=true and id = any(${ids}::uuid[])`);
-    return result.rows.map((row) => ({ id: row.id as string }));
+  async findActiveByIds(context: TransactionContext, ids: readonly string[]): Promise<InterestRef[]> {
+    // Malformed ids simply do not match, instead of aborting the transaction with a cast error.
+    const candidates = ids.filter(isUuid);
+    if (candidates.length === 0) return [];
+    return resolveExecutor(context)
+      .select({ id: interest.id })
+      .from(interest)
+      .where(and(eq(interest.active, true), inArray(interest.id, candidates)));
   }
 }

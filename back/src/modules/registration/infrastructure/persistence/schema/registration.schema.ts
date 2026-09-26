@@ -72,6 +72,7 @@ export const registration = pgTable('registration', {
   channel: text('channel').notNull(),
   contactHash: bytea('contact_hash'),
   contactCiphertext: bytea('contact_ciphertext'),
+  keyVersion: smallint('key_version'),
   passwordHash: text('password_hash'),
   status: text('status').notNull().default('registration_in_progress'),
   lastUpdatedAt: timestamp('last_updated_at', { withTimezone: true }).notNull(),
@@ -79,8 +80,11 @@ export const registration = pgTable('registration', {
   expiredAt: timestamp('expired_at', { withTimezone: true }),
 }, (table) => [
   check('registration_channel_check', sql`${table.channel} in ('email', 'whatsapp')`),
-  check('registration_status_check', sql`${table.status} in ('registration_in_progress', 'expired')`),
-  check('registration_expired_contact_check', sql`${table.status} <> 'expired' or ${table.contactHash} is null`),
+  check('registration_status_check', sql`${table.status} in ('registration_in_progress', 'converted', 'expired')`),
+  check(
+    'registration_retained_data_check',
+    sql`(${table.status} = 'registration_in_progress') = (${table.contactHash} is not null and ${table.contactCiphertext} is not null and ${table.keyVersion} is not null and ${table.passwordHash} is not null)`,
+  ),
   unique('registration_verification_unique').on(table.verificationId),
   uniqueIndex('registration_retained_contact_unique').on(table.contactHash).where(sql`${table.status} = 'registration_in_progress'`),
   index('registration_status_expires_at_index').on(table.status, table.expiresAt),
@@ -111,12 +115,16 @@ export const accountContact = pgTable('account_contact', {
 }, (table) => [
   primaryKey({ columns: [table.accountId, table.channel] }),
   check('account_contact_channel_check', sql`${table.channel} in ('email', 'whatsapp')`),
+  check(
+    'account_contact_holding_check',
+    sql`${table.holdsContact} = (${table.contactHash} is not null and ${table.contactCiphertext} is not null)`,
+  ),
   uniqueIndex('account_contact_holding_contact_unique').on(table.channel, table.contactHash).where(sql`${table.holdsContact}`),
 ]);
 
 export const accountCredential = pgTable('account_credential', {
   accountId: uuid('account_id').primaryKey().references(() => account.id, { onDelete: 'cascade' }),
-  passwordHash: text('password_hash').notNull(),
+  passwordHash: text('password_hash'),
   algorithm: text('algorithm').notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
 });

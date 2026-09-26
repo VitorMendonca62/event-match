@@ -49,16 +49,8 @@ fi
 export POSTGRES_DB POSTGRES_USER POSTGRES_PORT POSTGRES_PASSWORD
 export CONTACT_HASH_KEY CONTACT_ENCRYPTION_KEY VERIFICATION_SECRET_KEY
 
-"${compose[@]}" up --detach postgres >/dev/null
-
-for _ in {1..30}; do
-  if "${compose[@]}" exec --no-TTY postgres pg_isready --username="${POSTGRES_USER}" --dbname="${POSTGRES_DB}" >/dev/null 2>&1; then
-    break
-  fi
-  sleep 1
-done
-
-if ! "${compose[@]}" exec --no-TTY postgres pg_isready --username="${POSTGRES_USER}" --dbname="${POSTGRES_DB}" >/dev/null 2>&1; then
+# Waits on the Compose healthcheck instead of a fixed polling budget, which flaked on cold starts.
+if ! "${compose[@]}" up --detach --wait --wait-timeout 120 postgres >/dev/null; then
   echo 'Temporary PostgreSQL did not become ready.' >&2
   exit 1
 fi

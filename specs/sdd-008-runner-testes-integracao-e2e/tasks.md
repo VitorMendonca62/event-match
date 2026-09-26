@@ -10,13 +10,13 @@
 
 ## 1. Contexto e Motivação
 
-O SDD-007 exige PostgreSQL descartável para testes de integração e a execução de E2E. O repositório agora possui `docker-compose.test.yml`, isolado dos composes de desenvolvimento e produção, para evitar volumes, portas e serviços persistentes fora do escopo dos testes.
+O SDD-007 exige PostgreSQL descartável para testes de integração e a execução de E2E. O repositório agora possui `docker-compose.back.test.yml`, isolado dos composes de desenvolvimento e produção, para evitar volumes, portas e serviços persistentes fora do escopo dos testes.
 
 ## 2. Escopo
 
 Inclui dois scripts Bash em `scripts/`: `test-back-integration.sh` cria um projeto Compose exclusivo, sobe somente `postgres`, espera o healthcheck, aplica migrations, executa `test:integration` e remove recursos com `down --volumes --remove-orphans` em `EXIT`, `INT` ou `TERM`; `test-back-e2e.sh` sobe `postgres` e `back`, aplica migrations dentro da rede Docker, aguarda `/health`, executa `test:e2e` contra a URL publicada e remove os recursos com a mesma garantia.
 
-Exclui containers do frontend/backend, alterações de rotas, schema e credenciais persistentes.
+Exclui container do frontend, alterações de rotas, schema e credenciais persistentes. O container `back` é usado somente pelo runner E2E.
 
 ## 3. Impacto Arquitetural e ADRs
 
@@ -53,7 +53,7 @@ Os scripts carregam obrigatoriamente `back/.env.test.local` e passam o mesmo arq
 ## 6. Critérios de Aceitação
 
 - Integração inicia somente `postgres`; E2E inicia `postgres` e `back`.
-- A porta é descoberta pelo Compose após o healthcheck.
+- A porta é descoberta pelo Compose após o healthcheck (`up --wait`).
 - Cleanup roda mesmo se qualquer teste falhar ou o processo receber `INT`/`TERM`.
 - O script não exibe senha ou URL de banco.
 

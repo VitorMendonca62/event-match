@@ -4,7 +4,7 @@
 - **Data:** 2026-09-25
 - **Decisores:** backend, arquitetura, produto e privacidade
 - **Relacionado:** `specs/sdd-007-persistencia-postgresql-cadastro/tasks.md`; ADR-002, ADR-007, ADR-008, ADR-012
-- **Substitui/Substituído por:** N/A
+- **Substitui/Substituído por:** complementada pela ADR-018 (estado `converted` de `registration`)
 
 ## Contexto
 

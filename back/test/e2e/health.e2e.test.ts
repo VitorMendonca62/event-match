@@ -1,10 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 
 describe('Health endpoint (e2e)', () => {
-  const baseUrl = process.env.E2E_BASE_URL
-;
+  const baseUrl = process.env.E2E_BASE_URL;
 
-  if (!process.env.E2E_BASE_URL) {
+  if (!baseUrl) {
     throw new Error('E2E_BASE_URL is required for containerized E2E tests.');
   }
 

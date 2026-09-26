@@ -98,3 +98,4 @@ RF068, RF073, RF074, RN068, RN080–RN083, RN093, RN096, RN100–RN104, RN115–
 - ADR-001: monorepo Next.js + NestJS hexagonal + Bun.
 - ADR-002: contextos e fronteiras de domínio do EventMatch, em estado `proposed`.
 - ADR-013 a ADR-017: schema físico do cadastro, proteção de segredos, limites persistidos, concorrência transacional e expiração lazy.
+- ADR-018: origem da lista de senhas comuns e estado `converted` do cadastro.

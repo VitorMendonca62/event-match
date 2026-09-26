@@ -1,6 +1,6 @@
 # Backend EventMatch
 
-API NestJS do EventMatch. A fundação implementa apenas o health check técnico e mantém domínio/aplicação independentes do framework e da persistência.
+API NestJS do EventMatch. Expõe o health check técnico e contém a persistência interna do fluxo de cadastro (casos de uso sem rotas HTTP), mantendo domínio/aplicação independentes do framework e da persistência.
 
 ## Pré-requisitos
 
@@ -34,9 +34,11 @@ A API responde em `http://localhost:3001`. O Swagger fica disponível em `http:/
 | `DATABASE_CONNECTION_TIMEOUT_MS` | `2000` | Timeout para adquirir conexão. |
 | `DATABASE_STATEMENT_TIMEOUT_MS` | `5000` | Timeout de statement PostgreSQL. |
 | `DATABASE_SSL_MODE` | conforme ambiente | `disable` em desenvolvimento/teste; `require` em produção, sempre com validação de certificado. |
-| `CONTACT_HASH_KEY` | — | Segredo base64 de ao menos 32 bytes para o índice cego HMAC dos contatos. |
-| `CONTACT_ENCRYPTION_KEY` | — | Segredo base64 de ao menos 32 bytes para cifra AES-256-GCM de contatos. |
-| `VERIFICATION_SECRET_KEY` | — | Segredo base64 de ao menos 32 bytes para digest de OTP e links. |
+| `CONTACT_HASH_KEY` | — | Base64 padrão com ao menos 32 bytes; índice cego HMAC dos contatos e limites de abuso. |
+| `CONTACT_ENCRYPTION_KEY` | — | Base64 padrão com exatamente 32 bytes; cifra AES-256-GCM dos contatos. |
+| `VERIFICATION_SECRET_KEY` | — | Base64 padrão com ao menos 32 bytes; digest HMAC de OTP e links. |
+
+Gere cada chave com `openssl rand -base64 32`. Valores vazios, placeholders ou base64 inválido fazem o preflight falhar. Perder `CONTACT_ENCRYPTION_KEY` torna os contatos cifrados ilegíveis; trocar `CONTACT_HASH_KEY` invalida a unicidade dos contatos existentes. Mantenha as chaves em cofre e não as rotacione sem migration de reprocessamento.
 
 O preflight Zod roda antes de iniciar o processo. Em falha, o processo encerra sem abrir porta e informa apenas a chave e o motivo da validação, nunca o valor recebido. A política TLS vem exclusivamente de `DATABASE_SSL_MODE`; parâmetros TLS/SSL em `DATABASE_URL` são rejeitados para impedir que sobrescrevam a validação de certificado do pool.
 
@@ -54,13 +56,19 @@ O preflight Zod roda antes de iniciar o processo. Em falha, o processo encerra s
 }
 ```
 
-Todas as respostas HTTP com corpo usam `data` (objeto), `message` (string) e `statusCode` (valor numérico de `HttpStatus`). Drizzle ORM e `pg` ficam restritos à infraestrutura; não há migration inicial nem schema físico nesta fundação.
+Todas as respostas HTTP com corpo usam `data` (objeto), `message` (string) e `statusCode` (valor numérico de `HttpStatus`). Drizzle ORM e `pg` ficam restritos à infraestrutura.
 
 ## Persistência
 
 O módulo técnico cria um pool `pg` singleton com no máximo uma conexão e uma instância Drizzle sobre ele. Os schemas pertencem aos módulos `registration`, `profiles` e `catalog`; migrations são versionadas em `back/drizzle/`. Não use `drizzle-kit push`.
 
 Antes do deploy, execute uma única vez `bun run --cwd back db:migrate`. O rollout é aditivo; rollback consiste em reimplantar a API anterior mantendo as tabelas e os segredos para preservar a legibilidade dos dados. Correções de schema são sempre forward-fix por nova migration.
+
+A migration `0002_registration_hardening.sql` (ADR-018) altera `CHECK`s de `registration`, adiciona `registration.key_version` com backfill e torna anuláveis colunas que a expiração anula. Ela precisa rodar antes do deploy da versão que a usa; a versão anterior da API continua compatível com o schema novo.
+
+`bun run --cwd back build` compila e copia `common-passwords.txt` para `dist/` (`build:assets`), pois o adapter de senhas comuns lê o arquivo na inicialização. A origem da lista está em `src/modules/registration/infrastructure/security/data/SOURCE.md`.
+
+Os casos de uso do cadastro registram um evento JSON por resultado no contexto `Registration` (`registration.verification.requested`, `registration.account.activation` etc.), apenas com ids opacos, canal e código de resultado. Contato, OTP, senha e URL de banco nunca aparecem em logs.
 
 ## Validação
 
@@ -85,6 +93,8 @@ Os E2E validam os containers `back` e `postgres` com HTTP real:
 ```bash
 ./scripts/test-back-e2e.sh
 ```
+
+O teste de integração do cadastro cria um banco efêmero `eventmatch_it_<aleatório>` no PostgreSQL de `DATABASE_INTEGRATION_URL` (o usuário precisa de `CREATEDB`), aplica as migrations com o migrator do Drizzle, usa dois pools independentes para os cenários de concorrência e remove o banco ao final.
 
 Os runners usam `docker-compose.back.test.yml` e carregam obrigatoriamente `back/.env.test.local`, isolado dos ambientes de desenvolvimento e produção e sem volumes persistentes. Crie-o a partir de `back/.env.test.example` e gere chaves próprias para teste.
 

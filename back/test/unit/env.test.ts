@@ -72,4 +72,26 @@ describe('validateEnv', () => {
       DATABASE_URL: `postgresql://eventmatch:eventmatch@localhost:5432/eventmatch?sslmode=${sslMode}`,
     })).toThrow('DATABASE_URL');
   });
+
+  test.each([
+    ['a placeholder', 'replace-with-a-base64-secret-of-at-least-32-bytes', 'must be standard base64'],
+    ['an empty value', '', 'must decode to at least 32 bytes'],
+    ['a short key', Buffer.alloc(16).toString('base64'), 'must decode to at least 32 bytes'],
+  ])('rejects %s as a secret without echoing it', (_label, value, reason) => {
+    const run = () => validateEnv({
+      ...secrets,
+      DATABASE_URL: 'postgresql://eventmatch:eventmatch@localhost:5432/eventmatch',
+      CONTACT_HASH_KEY: value,
+    });
+    expect(run).toThrow(`CONTACT_HASH_KEY: ${reason}`);
+    if (value) expect(run).not.toThrow(value);
+  });
+
+  test('requires an AES-256 key of exactly 32 bytes', () => {
+    expect(() => validateEnv({
+      ...secrets,
+      DATABASE_URL: 'postgresql://eventmatch:eventmatch@localhost:5432/eventmatch',
+      CONTACT_ENCRYPTION_KEY: Buffer.alloc(48).toString('base64'),
+    })).toThrow('CONTACT_ENCRYPTION_KEY: must decode to exactly 32 bytes');
+  });
 });
