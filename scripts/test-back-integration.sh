@@ -62,7 +62,11 @@ if [[ ! "${postgres_port}" =~ ^[0-9]+$ ]]; then
   exit 1
 fi
 
-export DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:${postgres_port}/${POSTGRES_DB}"
+# Percent-encode credentials: a valid password may contain URL-reserved characters (@ # ? / :).
+url_encode() { bun -e 'process.stdout.write(encodeURIComponent(process.argv[1]))' "$1"; }
+encoded_user="$(url_encode "${POSTGRES_USER}")"
+encoded_password="$(url_encode "${POSTGRES_PASSWORD}")"
+export DATABASE_URL="postgresql://${encoded_user}:${encoded_password}@127.0.0.1:${postgres_port}/${POSTGRES_DB}"
 export DATABASE_INTEGRATION_URL="${DATABASE_URL}"
 
 cd "${ROOT_DIR}"

@@ -19,7 +19,7 @@
     {
       "idx": 2,
       "version": "7",
-      "when": 1790444098554,
+      "when": 1790450213477,
       "tag": "0002_registration_hardening",
       "breakpoints": true
     }

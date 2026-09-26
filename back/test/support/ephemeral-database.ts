@@ -21,31 +21,44 @@ export interface EphemeralDatabase {
 /**
  * Creates `eventmatch_it_<random>` through the administrative connection and applies the
  * versioned migrations with the Drizzle migrator, so tests never share a database (SDD-007 §7).
+ * Every setup failure releases both pools and drops whatever was created.
  */
-export async function createEphemeralDatabase(adminUrl: string): Promise<EphemeralDatabase> {
+export async function createEphemeralDatabase(
+  adminUrl: string,
+  options: { initialMigrationsFolder?: string } = {},
+): Promise<EphemeralDatabase> {
   const name = `eventmatch_it_${randomBytes(6).toString('hex')}`;
   const admin = new Pool({ connectionString: adminUrl, max: 1 });
-  await admin.query(`CREATE DATABASE "${name}"`);
+  let pool: Pool | undefined;
+  let created = false;
 
-  const url = new URL(adminUrl);
-  url.pathname = `/${name}`;
-  const pool = new Pool({ connectionString: url.toString(), max: 2 });
-  const database: EphemeralDatabase = {
-    url: url.toString(),
-    pool,
-    migrate: () => migrate(drizzle({ client: pool }), MIGRATIONS_CONFIG),
-    async drop() {
-      await pool.end();
-      await admin.query(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`);
+  const release = async () => {
+    await pool?.end();
+    try {
+      if (created) await admin.query(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`);
+    } finally {
       await admin.end();
-    },
+    }
   };
 
   try {
-    await database.migrate();
+    await admin.query(`CREATE DATABASE "${name}"`);
+    created = true;
+
+    const url = new URL(adminUrl);
+    url.pathname = `/${name}`;
+    const databasePool = new Pool({ connectionString: url.toString(), max: 2 });
+    pool = databasePool;
+    const migrateDatabase = () => migrate(drizzle({ client: databasePool }), MIGRATIONS_CONFIG);
+    // A partial folder lets tests seed legacy rows before the remaining migrations run.
+    await migrate(drizzle({ client: databasePool }), {
+      ...MIGRATIONS_CONFIG,
+      migrationsFolder: options.initialMigrationsFolder ?? MIGRATIONS_CONFIG.migrationsFolder,
+    });
+
+    return { url: url.toString(), pool: databasePool, migrate: migrateDatabase, drop: release };
   } catch (error) {
-    await database.drop();
+    await release();
     throw error;
   }
-  return database;
 }

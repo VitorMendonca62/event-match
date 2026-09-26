@@ -1,5 +1,5 @@
 {
-  "id": "e0c76485-70fe-44ad-ae45-669db4e01690",
+  "id": "0bc6f2ef-6b0d-47ae-8938-dcf294d61db2",
   "prevId": "ec638252-466d-4274-b6b7-4bc2909740d4",
   "version": "7",
   "dialect": "postgresql",
@@ -476,7 +476,7 @@
         },
         "account_contact_holding_check": {
           "name": "account_contact_holding_check",
-          "value": "\"account_contact\".\"holds_contact\" = (\"account_contact\".\"contact_hash\" is not null and \"account_contact\".\"contact_ciphertext\" is not null)"
+          "value": "(\"account_contact\".\"holds_contact\" and \"account_contact\".\"contact_hash\" is not null and \"account_contact\".\"contact_ciphertext\" is not null) or (not \"account_contact\".\"holds_contact\" and \"account_contact\".\"contact_hash\" is null and \"account_contact\".\"contact_ciphertext\" is null)"
         }
       },
       "isRLSEnabled": false
@@ -884,7 +884,7 @@
         },
         "registration_retained_data_check": {
           "name": "registration_retained_data_check",
-          "value": "(\"registration\".\"status\" = 'registration_in_progress') = (\"registration\".\"contact_hash\" is not null and \"registration\".\"contact_ciphertext\" is not null and \"registration\".\"key_version\" is not null and \"registration\".\"password_hash\" is not null)"
+          "value": "(\"registration\".\"status\" = 'registration_in_progress' and \"registration\".\"contact_hash\" is not null and \"registration\".\"contact_ciphertext\" is not null and \"registration\".\"key_version\" is not null and \"registration\".\"password_hash\" is not null) or (\"registration\".\"status\" <> 'registration_in_progress' and \"registration\".\"contact_hash\" is null and \"registration\".\"contact_ciphertext\" is null and \"registration\".\"key_version\" is null and \"registration\".\"password_hash\" is null)"
         }
       },
       "isRLSEnabled": false

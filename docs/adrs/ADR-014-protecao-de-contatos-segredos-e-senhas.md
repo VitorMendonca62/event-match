@@ -34,6 +34,7 @@ Adotar a opção 2, confirmada pelo produto em 2026-09-25:
 - Colunas `contact_hash bytea` (HMAC-SHA-256 com `CONTACT_HASH_KEY`) e `contact_ciphertext bytea` (AES-256-GCM, nonce aleatório, `key_version smallint`) com `CONTACT_ENCRYPTION_KEY`. Nenhuma coluna com contato em claro.
 - OTP de 6 dígitos gerado por CSPRNG; token de link com 32 bytes. Persistidos apenas como HMAC-SHA-256 com `VERIFICATION_SECRET_KEY` e comparados em tempo constante.
 - Senha com Argon2id via `Bun.password` no adapter `PasswordHasherPort`; parâmetros registrados com o hash. O value object `Password` valida apenas as regras estruturais RN006/RN007 (mínimo 8 e não somente espaços). O caso de uso consulta `CommonPasswordCheckerPort` antes de persistir; domínio/aplicação não leem arquivo diretamente. O adapter de infraestrutura carrega uma única vez, na inicialização, `back/src/modules/registration/infrastructure/security/data/common-passwords.txt` (UTF-8, uma senha por linha, minúsculas) em um `Set`; a comparação ignora caixa. O arquivo será uma cópia local da lista `Passwords/Common-Credentials/10-million-password-list-top-10000.txt` do SecLists, fixada na release `2026.1`, sob licença MIT. Na adoção, remover linhas vazias, converter para minúsculas, deduplicar, registrar a origem/licença e o SHA-256 do artefato normalizado; atualizações futuras exigem mudança explícita da versão e revisão do diff. Testes usam lista própria reduzida.
+  - **Substituído pela ADR-018 (2026-09-26):** o caminho acima não existe na release `2026.1`. A fonte vigente é `Passwords/Common-Credentials/100k-most-used-passwords-NCSC.txt`, filtrada para 8+ caracteres; origem, licença, normalização e SHA-256 estão em `back/src/modules/registration/infrastructure/security/data/SOURCE.md`.
 - Chaves: variáveis de ambiente validadas por Zod (mínimo 32 bytes em base64), obrigatórias em `production`, nunca logadas; rotação por `key_version` documentada, sem reprocessamento nesta task.
 - Logs e erros usam apenas `contact_channel`, ids opacos e códigos seguros.
 
@@ -57,5 +58,6 @@ Adicionar chaves ao schema Zod com mensagens sem valores; testes com chaves gera
 - DER RN002–RN003, RN006–RN007, RN009, RNF002–RNF004
 - ADR-004, ADR-009, ADR-010
 - SecLists release `2026.1`: https://github.com/danielmiessler/SecLists/releases/tag/2026.1
-- Lista de origem: https://github.com/danielmiessler/SecLists/blob/2026.1/Passwords/Common-Credentials/10-million-password-list-top-10000.txt
+- Lista de origem (original, substituída pela ADR-018; o caminho não existe na release `2026.1`): https://github.com/danielmiessler/SecLists/blob/2026.1/Passwords/Common-Credentials/10-million-password-list-top-10000.txt
+- Lista de origem vigente (ADR-018): https://github.com/danielmiessler/SecLists/blob/2026.1/Passwords/Common-Credentials/100k-most-used-passwords-NCSC.txt
 - Licença MIT do SecLists: https://github.com/danielmiessler/SecLists/blob/2026.1/LICENSE

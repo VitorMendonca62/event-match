@@ -83,7 +83,8 @@ export const registration = pgTable('registration', {
   check('registration_status_check', sql`${table.status} in ('registration_in_progress', 'converted', 'expired')`),
   check(
     'registration_retained_data_check',
-    sql`(${table.status} = 'registration_in_progress') = (${table.contactHash} is not null and ${table.contactCiphertext} is not null and ${table.keyVersion} is not null and ${table.passwordHash} is not null)`,
+    // Explicit branches: terminal rows must hold none of the retained data (ADR-017/018).
+    sql`(${table.status} = 'registration_in_progress' and ${table.contactHash} is not null and ${table.contactCiphertext} is not null and ${table.keyVersion} is not null and ${table.passwordHash} is not null) or (${table.status} <> 'registration_in_progress' and ${table.contactHash} is null and ${table.contactCiphertext} is null and ${table.keyVersion} is null and ${table.passwordHash} is null)`,
   ),
   unique('registration_verification_unique').on(table.verificationId),
   uniqueIndex('registration_retained_contact_unique').on(table.contactHash).where(sql`${table.status} = 'registration_in_progress'`),
@@ -117,7 +118,7 @@ export const accountContact = pgTable('account_contact', {
   check('account_contact_channel_check', sql`${table.channel} in ('email', 'whatsapp')`),
   check(
     'account_contact_holding_check',
-    sql`${table.holdsContact} = (${table.contactHash} is not null and ${table.contactCiphertext} is not null)`,
+    sql`(${table.holdsContact} and ${table.contactHash} is not null and ${table.contactCiphertext} is not null) or (not ${table.holdsContact} and ${table.contactHash} is null and ${table.contactCiphertext} is null)`,
   ),
   uniqueIndex('account_contact_holding_contact_unique').on(table.channel, table.contactHash).where(sql`${table.holdsContact}`),
 ]);

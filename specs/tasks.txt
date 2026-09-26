@@ -1,60 +1,106 @@
 
-TASK 04 — Fundação PostgreSQL do fluxo de cadastro
+TASK 06 — API HTTP e entrega de verificação do fluxo de cadastro
 
 Objetivo:
-Planejar e implementar a persistência PostgreSQL do bounded context de cadastro, com Drizzle ORM, migrations revisáveis e adapters hexagonais. A fundação deve suportar o fluxo já decidido nas ADRs 008–012, sem criar endpoints HTTP, telas ou integração real com provedores de e-mail/WhatsApp nesta task.
+Planejar e implementar a fatia HTTP pública do cadastro no NestJS, expondo com segurança os casos de uso construídos na SDD-007 e substituindo o adapter de entrega `noop` por integrações reais de e-mail e WhatsApp. A API deve permitir que o futuro frontend execute o fluxo de contato, verificação, senha, dados obrigatórios, nascimento, aceites e interesses sem acessar o PostgreSQL nem conhecer tipos do Drizzle.
 
-Fonte de verdade funcional e arquitetural:
-- Consultar `docs/DER-EventMatch-MVP.md` v1.3, especialmente RF001–RF007, RN001–RN016 e RNF003–RNF004.
-- Seguir integralmente `AGENTS.md`.
-- Aplicar `docs/adrs/ADR-007-acesso-postgresql-pool-e-migrations.md` e as ADRs aceitas `ADR-008` a `ADR-012`.
-- Usar `specs/sdd-006-modelagem-conceitual-cadastro/tasks.md` como especificação de fluxo.
+Dependências e fontes de verdade:
+- Executar somente após a implementação e revisão da `specs/sdd-007-persistencia-postgresql-cadastro/tasks.md`.
+- Consultar `docs/DER-EventMatch-MVP.md` v1.3, especialmente RF001–RF007, RN001–RN016, RN147–RN149 e RNF002–RNF004.
+- Aplicar `AGENTS.md`, ADR-008 a ADR-017 e os contratos reais dos casos de uso em `back/src/modules/registration/application/use-cases/`.
+- Aplicar obrigatoriamente `nestjs-expert` e `nestjs-hexagonal-architecture` durante planejamento, implementação e revisão.
 
 Escopo:
+- Planejar, documentar em OpenAPI e implementar endpoints versionados para:
+  - solicitar desafio de verificação por e-mail ou WhatsApp, registrando consentimento explícito para WhatsApp;
+  - reenviar o desafio respeitando cooldown e limites;
+  - confirmar OTP e, no e-mail, consumir link de verificação com token opaco;
+  - informar a senha e iniciar o `Registration` provisório;
+  - salvar nome de exibição, cidade/região e intenções de uso, criando a `Account` incompleta;
+  - listar interesses ativos em ordem estável;
+  - consultar somente documentos jurídicos aprovados e suas versões vigentes;
+  - enviar nascimento, documentos aceitos e no mínimo três interesses para concluir o cadastro;
+  - consultar apenas o estado mínimo necessário para retomar o cadastro, sem devolver contato, senha, OTP, nascimento ou sinais de existência de outra conta.
+- Criar controllers e DTOs em `presentation/http`, com `class-validator`, transformação explícita, Swagger (`@ApiTags`, `@ApiOperation` e respostas tipadas) e DI por construtor.
+- Manter regras nos casos de uso e domínio; controllers apenas validam, traduzem contratos e invocam portas inbound/casos de uso.
+- Definir um contrato público consistente para envelopes, datas ISO-8601, ids opacos, idempotência, status HTTP e erros seguros. Mapear `RegistrationError` sem vazar SQL, stack, contato, estado de conta ou razão que permita enumeração.
+- Projetar e implementar uma credencial de continuação do cadastro: IDs públicos isoladamente não podem autorizar leitura ou mutação. Definir expiração, rotação, revogação, armazenamento no navegador/cookie, CSRF, CORS e vínculo com os estados do cadastro em ADR próprio.
+- Decidir em ADR se o browser chamará o NestJS diretamente ou se usará Route Handlers do Next.js como BFF. Se houver BFF, ele apenas autentica/autoriza e delega, sem duplicar regras nem acessar PostgreSQL.
+- Definir a origem confiável da requisição (proxy, cabeçalho e política de confiança) e então ativar o limite de dez desafios por origem/hora previsto na ADR-009; não confiar cegamente em `X-Forwarded-For`.
+- Implementar adapters substituíveis para Resend e WhatsApp Cloud API conforme ADR-010: timeout de cinco segundos, até duas novas tentativas apenas para falhas transitórias, idempotência, mensagens/templates aprovados e logs sem PII.
+- Validar configuração e segredos de provedores via `ConfigModule`/Zod; produção deve falhar cedo se o adapter real estiver habilitado sem configuração. O adapter `noop` pode permanecer somente em testes ou configuração explicitamente local.
+- Manter respostas neutras para contato existente, rate limit, desafio inexistente/expirado/bloqueado e recuperação no mesmo canal.
+- Atualizar `docs/04-integracoes-externas.md`, documentação de contratos/modelos, `.env.example`, README, `CHANGELOG.md` e versões aplicáveis.
 
-- Criar a primeira migration Drizzle revisável do bounded context `registration`, usando a fundação PostgreSQL existente.
-- Modelar e persistir, em tabelas com ownership explícito:
-  - desafio de verificação de contato e OTP, armazenando somente hash do código, expiração, tentativas, reenvios, bloqueio, idempotência e metadados mínimos;
-  - registro provisório de cadastro, com expiração após 24 horas sem atualização;
-  - conta em estado `account_incomplete`, com remoção após 15 dias sem atualização e liberação do contato;
-  - identificadores de contato normalizados, unicidade parcial entre contas ativas e sem vazamento em logs;
-  - dados obrigatórios de conta/perfil, estado do cadastro, interesse e associação conta–interesse;
-  - catálogo inicial de interesses definido no DER §3.10, com estratégia idempotente de seed ou migration de dados revisável;
-  - estrutura preparada para aceites versionados, respeitando ADR-012: placeholder não gera aceite jurídico efetivo nem ativa conta em produção.
-- Criar portas outbound por bounded context, repositórios/adapters Drizzle, mapeadores e casos de uso internos necessários para persistir e recuperar o fluxo, sem expor tipos Drizzle fora da infraestrutura.
-- Garantir transações para conclusão/ativação, constraints e índices para unicidade, expiração e consultas do fluxo.
-- Documentar esquema físico, constraints, dados iniciais, migration, rollout e rollback em `docs/03-modelos-de-dominio.md` e documentação operacional pertinente.
+Decisões obrigatórias no planejamento:
+- Criar ADRs `proposed` separados para o contrato HTTP, a credencial segura de continuação, o limite de origem confiável e a topologia browser/BFF/NestJS;  todos devem ser aceitas por mim antes da implementação.
+- Confirmar URLs, métodos, DTOs, códigos HTTP, estratégia de idempotência e compatibilidade/versionamento.
+- Confirmar 2e faltarem, manter o plano `blocked`; não simular entrega em produção.
+- Definir como o link de e-mail será construído, expira, é consumido uma única vez e redireciona sem colocar segredo em logs ou analytics.
+- Definir comportamento quando não houver documentos jurídicos aprovados: a API pode permitir testes isolados com fixtures, mas nunca ativar conta real com placeholder lorem ipsum.
 
 Fora de escopo:
-
-- Controllers, DTOs, OpenAPI, endpoints, Route Handlers, páginas e componentes de cadastro.
-- SDKs, credenciais e chamadas reais para Resend ou WhatsApp Cloud API; usar portas e doubles de teste quando necessários.
-- Login, sessões, recuperação completa de senha, alteração de contato, perfil público, eventos e catálogo profissional.
-- Conteúdo jurídico real de termos, política de privacidade e regras de convivência.
-- Exclusão automática destrutiva em produção sem job, observabilidade, janela operacional e revisão específicos.
-
-Regras obrigatórias:
-
-- Fluxo: `verification_pending` → `registration_in_progress` → `account_incomplete` → `active`, com saída `expired`.
-- OTP: validade de 15 minutos, máximo de cinco tentativas inválidas, bloqueio de 20 minutos, reenvio após 60 segundos (máximo de três por contato/hora), até cinco desafios por contato/hora e dez por IP/origem/hora.
-- `Registration` nasce após contato verificado e senha informada; `Account` é persistida após dados obrigatórios e só fica ativa após nascimento, aceites válidos e ao menos três interesses.
-- Contato associado a conta ativa não revela sua existência; a persistência/casos de uso devem possibilitar recuperação neutra pelo mesmo canal.
-- E-mail e WhatsApp são responsabilidades de portas outbound; a persistência não depende de SDK de provedor.
-- `sessionStorage` não é fonte de verdade nem é persistido pelo backend; o banco aceita apenas dados do fluxo autorizado.
-- PostgreSQL é acessado somente em `back/src/**/infrastructure/persistence`; domínio/aplicação não importam Drizzle, `pg`, SQL ou NestJS.
-- Não registrar OTP, senha, URL de banco, contato completo, tokens ou PII em logs, exceptions públicas ou artefatos de teste.
+- Telas e componentes Next.js.
+- Login após cadastro, sessão geral da conta, recuperação completa de senha, alteração de contato e onboarding de campos opcionais.
+- Conteúdo jurídico definitivo, painel administrativo, job agendado de expiração e SMS.
+- Acesso direto do frontend ao PostgreSQL ou regras de negócio em controllers/BFF.
 
 Critérios de aceite:
+- OpenAPI cobre todos os endpoints, DTOs, respostas e erros públicos; alterações de contrato possuem testes de snapshot/contrato, documentação, changelog e versionamento.
+- `ValidationPipe` global rejeita propriedades desconhecidas; limites de tamanho e formato existem para todos os campos.
+- Testes unitários cobrem controllers, tradução de erros e adapters; testes contratuais cobrem Resend/Meta com servidor fake; E2E com PostgreSQL descartável cobre o fluxo por OTP, reenvio, expiração, bloqueio, antienumeração, idempotência e ativação.
+- Testes garantem que contato, OTP, senha, token de link, credenciais, nascimento e SQL nunca aparecem em logs ou respostas indevidas.
+- Falhas transitórias/definitivas dos provedores respeitam timeout, retry e idempotência sem manter transação PostgreSQL aberta durante I/O externo.
+- `bun run --cwd back lint`, `typecheck`, `test`, `test:integration`, `test:e2e` e `build` passam; testes com banco usam o runner descartável da TASK 05.
 
-- Migration Drizzle versionada cria somente os objetos aprovados e possui plano de rollout/forward-fix; nenhum `drizzle-kit push` é usado.
-- Constraints, índices e transações impedem duplicidade de contato ativo, corrida em tentativas OTP e ativação incompleta.
-- Adaptadores Drizzle usam DI NestJS, tokens explícitos e mapeiam para portas sem vazar tipos de infraestrutura.
-- Testes unitários cobrem estados, expiração, bloqueio, limites e mapeamento; testes de integração PostgreSQL cobrem migration, constraints, transações, índices e concorrência; não usar banco compartilhado não isolado.
-- Lint, typecheck, testes, build e `db:check` executam via Bun; migration é validada contra PostgreSQL descartável.
-- `docs/03-modelos-de-dominio.md`, `docs/04-integracoes-externas.md` se aplicável, ADRs e CHANGELOG/versão são atualizados quando houver contrato público.
-- Nenhum endpoint, UI ou integração de provedor é implementado nesta task.
-
-TASK 05 — Runner descartável para testes de integração e E2E
+TASK 07 — Frontend Next.js do fluxo de cadastro
 
 Objetivo:
-- Disponibilizar um script Bash que suba o PostgreSQL temporário necessário, aplique migrations, execute testes de integração e E2E e remova containers, volumes e rede ao finalizar, inclusive em falha ou interrupção.
+Planejar e implementar no Next.js App Router a experiência responsiva e acessível de cadastro do EventMatch, consumindo exclusivamente o contrato público aprovado na TASK 06. O fluxo deve conduzir a pessoa por contato, OTP, senha, dados obrigatórios, nascimento e aceites, escolha de interesses e conclusão, preservando somente o progresso local não sensível autorizado.
+
+Dependências e fontes de verdade:
+- Executar após a TASK 06 possuir SDD `ready`, ADRs aceitas e contrato OpenAPI estável; a implementação E2E depende dos endpoints disponíveis.
+- Consultar `specs/sdd-006-modelagem-conceitual-cadastro/tasks.md`, ADR-008 a ADR-012, contrato OpenAPI da TASK 06 e `docs/DER-EventMatch-MVP.md` v1.3.
+- Aplicar `AGENTS.md`, `vercel-react-best-practices` e `nextjs-architecture` durante planejamento, implementação e revisão.
+
+Escopo:
+- Criar rota de cadastro no App Router com Server Components por padrão e Client Components pequenos apenas onde houver formulário, temporizador, rolagem, seleção ou acesso a `sessionStorage`.
+- Implementar as etapas:
+  - escolha entre e-mail e WhatsApp, entrada/normalização visual do contato e consentimento explícito para WhatsApp;
+  - OTP de seis dígitos, feedback neutro, expiração de 15 minutos, reenvio liberado após 60 segundos e estados de bloqueio/limite sem enumeração;
+  - criação e confirmação de senha, requisitos claros e tratamento de senha comum sem ecoar o valor;
+  - nome de exibição, cidade/região e uma ou mais intenções de uso;
+  - nascimento, apresentação dos três documentos vigentes e confirmação acessível;
+  - seleção de pelo menos três interesses ativos;
+  - conclusão e limpeza segura do progresso local.
+- Implementar retorno por link de verificação de e-mail sem expor token em UI, logs, analytics, histórico adicional ou mensagens de erro; remover/invalidar o segredo após o consumo conforme o contrato aprovado.
+- Usar a credencial de continuação definida na TASK 06; não tratar `verificationId`, `registrationId` ou `accountId` isolados como autorização e não persisti-los em armazenamento acessível a JavaScript se o ADR definir cookie `HttpOnly`.
+- Aplicar ADR-011: `sessionStorage` versionado com TTL deslizante máximo de 30 minutos apenas para etapa, nome de exibição, cidade/região, intenção, interesses e campos opcionais autorizados. Nunca persistir contato, OTP, senha, confirmação, nascimento, token, aceite autenticado ou resposta sensível do backend. Limpar em conclusão, cancelamento, expiração e incompatibilidade de schema.
+- Aplicar ADR-012: lorem ipsum somente em testes de interface. Exigir rolagem completa no cenário visual testado, com alternativa acessível para teclado/leitor de tela, mas nunca apresentar o placeholder como documento jurídico nem permitir ativação real com ele.
+- Buscar interesses e documentos no servidor/BFF conforme o ADR da TASK 06, evitando waterfalls (`async-parallel`, `server-parallel-fetching`) e enviando aos Client Components apenas os campos necessários (`server-serialization`).
+- Usar TanStack Query somente para estado remoto que se beneficie de cache/deduplicação; não duplicar no cache dados que pertencem ao formulário ou ao backend.
+- Centralizar a paleta obrigatória de `AGENTS.md` em `globals.css`, substituir o tema claro atual, usar variáveis semânticas e não espalhar hexadecimais pelos componentes.
+- Implementar layout mobile-first, estados de carregamento/erro/sucesso, prevenção de envio duplo e navegação segura entre etapas.
+- Garantir acessibilidade por teclado, foco após mudança de etapa/erro, labels e instruções associadas, regiões `aria-live`, contraste, zoom de 200%, alvos de toque adequados e feedback que não dependa apenas de cor.
+- Atualizar `.env.example`, README, documentação da jornada, `CHANGELOG.md` e versão do frontend.
+
+Decisões obrigatórias no planejamento:
+- Reutilizar a ADR aprovada da TASK 06 para BFF/chamada direta e credencial de continuação; qualquer mudança exige nova ADR, sem editar silenciosamente a anterior.
+- Definir mapa de rotas, comportamento de atualizar/voltar/fechar a aba, experiência após TTL local e recuperação quando o backend indicar cadastro expirado.
+- Definir biblioteca/estratégia de formulários e validação compartilhada. Nova dependência exige justificativa e ADR quando material; não duplicar regras de domínio como fonte de verdade no frontend.
+- Definir visual e conteúdo textual dos estados neutros sem afirmar que um contato existe ou não.
+- Manter o plano bloqueado enquanto o contrato OpenAPI, a credencial de continuação ou a política BFF/CORS/CSRF não estiverem aceitos.
+
+Fora de escopo:
+- Login, recuperação completa de senha, perfil público, eventos, recomendações e painel administrativo.
+- Campos opcionais do onboarding posterior à ativação, salvo uma tela neutra de encaminhamento; sua persistência exige tarefa própria.
+- Conteúdo jurídico definitivo e ativação real enquanto não existirem três documentos aprovados.
+- Acesso ao PostgreSQL, regras de cadastro em Route Handlers ou armazenamento de segredos no navegador.
+
+Critérios de aceite:
+- O fluxo completo funciona por e-mail e WhatsApp contra a API da TASK 06; em ambiente sem documentos aprovados, a interface bloqueia a ativação real de forma clara e segura.
+- Testes unitários cobrem validação visual, máquina de etapas, TTL/schema do `sessionStorage`, limpeza, countdown e acessibilidade básica; testes de integração cobrem cliente/BFF e contratos de erro.
+- E2E cobre caminho feliz, OTP inválido/expirado, reenvio, bloqueio, retorno por link de e-mail, atualização da página, expiração local, falha de provedor, menor de idade, menos de três interesses e ausência de documentos aprovados.
+- Auditoria automatizada e manual cobre teclado, leitor de tela, foco, contraste e zoom; nenhum teste/snapshot contém PII ou segredo real.
+- Aplicar e citar no plano/revisão, quando pertinentes: `async-parallel`, `async-defer-await`, `server-no-shared-module-state`, `server-serialization`, `server-parallel-fetching`, `client-localstorage-schema`, `rerender-derived-state-no-effect` e `rerender-move-effect-to-event`.
+- `bun run --cwd front lint`, `typecheck`, `test` e `build` passam, além do E2E full-stack pelo runner descartável.

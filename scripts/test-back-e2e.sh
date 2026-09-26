@@ -41,7 +41,11 @@ if ! command -v curl >/dev/null 2>&1; then echo 'curl is required to probe the b
 : "${VERIFICATION_SECRET_KEY:?VERIFICATION_SECRET_KEY must be set in back/.env.test.local}"
 export POSTGRES_DB POSTGRES_USER POSTGRES_PORT BACK_PORT POSTGRES_PASSWORD
 export CONTACT_HASH_KEY CONTACT_ENCRYPTION_KEY VERIFICATION_SECRET_KEY
-export DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}"
+# Percent-encode credentials: a valid password may contain URL-reserved characters (@ # ? / :).
+url_encode() { bun -e 'process.stdout.write(encodeURIComponent(process.argv[1]))' "$1"; }
+encoded_user="$(url_encode "${POSTGRES_USER}")"
+encoded_password="$(url_encode "${POSTGRES_PASSWORD}")"
+export DATABASE_URL="postgresql://${encoded_user}:${encoded_password}@postgres:5432/${POSTGRES_DB}"
 
 # Waits on the Compose healthcheck instead of a fixed polling budget, which flaked on cold starts.
 if ! "${compose[@]}" up --detach --wait --wait-timeout 120 postgres >/dev/null; then
