@@ -32,7 +32,7 @@ export class VerificationSecretAdapter implements VerificationSecretPort {
     return actual.length === digest.length && timingSafeEqual(actual, digest);
   }
 
-  private digest(value: string): Buffer {
+  digest(value: string): Buffer {
     return createHmac('sha256', this.key).update(value).digest();
   }
 }

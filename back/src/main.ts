@@ -25,7 +25,11 @@ export function configureApplication(app: INestApplication): void {
     const swaggerConfig = new DocumentBuilder()
       .setTitle('EventMatch API')
       .setDescription('Technical API contract for EventMatch.')
-      .setVersion('0.8.1')
+      .setVersion('0.9.0')
+      .addBearerAuth(
+        { type: 'http', scheme: 'bearer', description: 'Registration continuation token (ADR-021).' },
+        'registration-continuation',
+      )
       .build();
     const document = SwaggerModule.createDocument(app, swaggerConfig);
 

@@ -2,7 +2,7 @@
 TASK 06 — API HTTP e entrega de verificação do fluxo de cadastro
 
 Objetivo:
-Planejar e implementar a fatia HTTP pública do cadastro no NestJS, expondo com segurança os casos de uso construídos na SDD-007 e substituindo o adapter de entrega `noop` pelo Resend no canal de e-mail. WhatsApp fica adiado e indisponível no contrato publicado. A API deve permitir que o futuro frontend execute o fluxo de elegibilidade por nascimento, contato, verificação, senha, dados obrigatórios, aceites e interesses sem acessar o PostgreSQL nem conhecer tipos do Drizzle.
+Planejar e implementar a fatia HTTP pública do cadastro no NestJS, expondo com segurança os casos de uso construídos na SDD-007 e substituindo o adapter de entrega `noop` pela Brevo no canal de e-mail. WhatsApp fica adiado e indisponível no contrato publicado. A API deve permitir que o futuro frontend execute o fluxo de elegibilidade por nascimento, contato, verificação, senha, dados obrigatórios, aceites e interesses sem acessar o PostgreSQL nem conhecer tipos do Drizzle.
 
 Dependências e fontes de verdade:
 - Executar somente após a implementação e revisão da `specs/sdd-007-persistencia-postgresql-cadastro/tasks.md`.
@@ -29,15 +29,15 @@ Escopo:
 - Decidir em ADR se o browser chamará o NestJS diretamente ou se usará Route Handlers do Next.js como BFF. Se houver BFF, ele apenas autentica/autoriza e delega, sem duplicar regras nem acessar PostgreSQL.
 - Definir a origem confiável da requisição (proxy, cabeçalho e política de confiança) e então ativar o limite de dez desafios por origem/hora previsto na ADR-009; não confiar cegamente em `X-Forwarded-For`.
 - Usar Vercel como deploy inicial do frontend/BFF de testes, diretamente e sem proxy adicional; isolar a resolução de origem para permitir migração futura à Cloudflare por nova ADR, sem alterar o NestJS ou o PostgreSQL.
-- Implementar adapter substituível para Resend conforme ADR-010, ADR-024 e ADR-025: timeout de cinco segundos, até duas novas tentativas apenas para falhas transitórias, idempotência, template aprovado e logs sem PII. A integração WhatsApp fica fora desta task.
-- Validar configuração e segredo do Resend via `ConfigModule`/Zod; produção deve falhar cedo se o adapter real estiver habilitado sem configuração. O adapter `noop` pode permanecer somente em testes ou configuração explicitamente local e nunca habilita WhatsApp no contrato publicado.
+- Implementar adapter substituível para Brevo conforme ADR-026: SDK oficial confinado à infraestrutura, timeout de cinco segundos, até duas novas tentativas apenas para falhas transitórias, idempotência, template versionado em código e logs sem PII. A integração WhatsApp fica fora desta task.
+- Validar configuração e segredo da Brevo via `ConfigModule`/Zod; produção deve falhar cedo se o adapter real estiver habilitado sem configuração. O adapter `noop` pode permanecer somente em testes ou configuração explicitamente local e nunca habilita WhatsApp no contrato publicado.
 - Manter respostas neutras para contato existente, rate limit, desafio inexistente/expirado/bloqueado e recuperação no mesmo canal.
 - Atualizar `docs/04-integracoes-externas.md`, documentação de contratos/modelos, `.env.example`, README, `CHANGELOG.md` e versões aplicáveis.
 
 Decisões obrigatórias no planejamento:
 - Criar ADRs `proposed` separados para o contrato HTTP, a credencial segura de continuação, o limite de origem confiável e a topologia browser/BFF/NestJS; todos devem ser aceitos por mim antes da implementação.
 - Confirmar URLs, métodos, DTOs, códigos HTTP, estratégia de idempotência e compatibilidade/versionamento.
-- Confirmar os pré-requisitos operacionais do Resend: domínio de e-mail, remetente, credencial e política vigente. Se faltarem, manter o plano `blocked`; não simular entrega em produção. WhatsApp é uma integração futura conforme ADR-025.
+- Confirmar os pré-requisitos operacionais da Brevo antes do smoke/deploy: conta, remetente individual verificado, API key, cota vigente e URL pública. A implementação usa fake HTTP e não simula entrega em produção. WhatsApp é uma integração futura conforme ADR-025.
 - Definir como o link de e-mail será construído, expira, é consumido uma única vez e redireciona sem colocar segredo em logs ou analytics.
 - Definir comportamento quando não houver documentos jurídicos aprovados: a API pode permitir testes isolados com fixtures, mas nunca ativar conta real com placeholder lorem ipsum.
 
@@ -50,9 +50,9 @@ Fora de escopo:
 Critérios de aceite:
 - OpenAPI cobre todos os endpoints, DTOs, respostas e erros públicos; alterações de contrato possuem testes de snapshot/contrato, documentação, changelog e versionamento.
 - `ValidationPipe` global rejeita propriedades desconhecidas; limites de tamanho e formato existem para todos os campos.
-- Testes unitários cobrem controllers, tradução de erros e adapters; testes contratuais cobrem Resend com servidor fake; E2E com PostgreSQL descartável cobre o fluxo por e-mail, rejeição sem efeitos de WhatsApp, OTP, reenvio, expiração, bloqueio, antienumeração, idempotência e ativação.
+- Testes unitários cobrem controllers, tradução de erros e adapters; testes contratuais cobrem Brevo com servidor fake; E2E com PostgreSQL descartável cobre o fluxo por e-mail, rejeição sem efeitos de WhatsApp, OTP, reenvio, expiração, bloqueio, antienumeração, idempotência e ativação.
 - Testes garantem que contato, OTP, senha, token de link, credenciais, nascimento e SQL nunca aparecem em logs ou respostas indevidas.
-- Falhas transitórias/definitivas do Resend respeitam timeout, retry e idempotência sem manter transação PostgreSQL aberta durante I/O externo.
+- Falhas transitórias/definitivas da Brevo respeitam timeout, retry e idempotência sem manter transação PostgreSQL aberta durante I/O externo.
 - `bun run --cwd back lint`, `typecheck`, `test`, `test:integration`, `test:e2e` e `build` passam; testes com banco usam o runner descartável da TASK 05.
 
 TASK 07 — Frontend Next.js do fluxo de cadastro
@@ -103,7 +103,7 @@ Fora de escopo:
 Critérios de aceite:
 - O fluxo completo funciona por e-mail contra a API da TASK 06; WhatsApp aparece desabilitado como “Em breve” e não dispara chamada. Em ambiente sem documentos aprovados, a interface bloqueia a ativação real de forma clara e segura.
 - Testes unitários cobrem validação visual, máquina de etapas, TTL/schema do `sessionStorage`, limpeza, countdown e acessibilidade básica; testes de integração cobrem cliente/BFF e contratos de erro.
-- E2E cobre caminho feliz por e-mail, WhatsApp desabilitado sem requisição, OTP inválido/expirado, reenvio, bloqueio, retorno por link, atualização da página, expiração local, falha do Resend, menor de idade, menos de três interesses e ausência de documentos aprovados.
+- E2E cobre caminho feliz por e-mail, WhatsApp desabilitado sem requisição, OTP inválido/expirado, reenvio, bloqueio, retorno por link, atualização da página, expiração local, falha da Brevo, menor de idade, menos de três interesses e ausência de documentos aprovados.
 - Auditoria automatizada e manual cobre teclado, leitor de tela, foco, contraste e zoom; nenhum teste/snapshot contém PII ou segredo real.
 - Aplicar e citar no plano/revisão, quando pertinentes: `async-parallel`, `async-defer-await`, `server-no-shared-module-state`, `server-serialization`, `server-parallel-fetching`, `client-localstorage-schema`, `rerender-derived-state-no-effect` e `rerender-move-effect-to-event`.
 - `bun run --cwd front lint`, `typecheck`, `test` e `build` passam, além do E2E full-stack pelo runner descartável.

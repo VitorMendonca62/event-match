@@ -4,7 +4,7 @@
 - **Data:** 2026-09-26
 - **Aceita em:** 2026-09-26
 - **Decisores:** produto, frontend, backend e operação
-- **Relacionado:** `specs/sdd-009-api-http-entrega-verificacao-cadastro/tasks.md`; ADR-010, ADR-020, ADR-024; TASK 07
+- **Relacionado:** `specs/sdd-009-api-http-entrega-verificacao-cadastro/tasks.md`; ADR-010, ADR-020, ADR-024, ADR-026; TASK 07
 - **Substitui/Substituído por:** substitui parcialmente ADR-010 e ADR-024 quanto à ativação inicial do WhatsApp
 
 ## Contexto
@@ -47,3 +47,7 @@ Restringir o DTO/OpenAPI a e-mail, compor somente Resend no ambiente publicado e
 - ADR-010, ADR-020 e ADR-024
 - `specs/tasks.txt`, TASK 06 e TASK 07
 - `NoopVerificationDeliveryAdapter` existente na fundação do cadastro
+
+## Atualização posterior
+
+A ADR-026 substitui Resend por Brevo no canal ativo de e-mail. A decisão desta ADR sobre WhatsApp desabilitado e `noop` restrito a desenvolvimento/testes permanece inalterada.

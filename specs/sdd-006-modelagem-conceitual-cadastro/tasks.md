@@ -129,6 +129,8 @@ Rollback: desabilitar fluxo/feature flag e reimplantar API anterior; migrations 
 - [x] E-mail oferece OTP e link por Resend; celular usa WhatsApp Cloud API direta da Meta no Brasil, sem SMS de fallback. Timeout de cinco segundos, até duas novas tentativas transitórias e uma chave de idempotência por desafio/entrega. Contato associado recebe recuperação no mesmo canal, com consentimento explícito para o envio transacional por WhatsApp. Registrado na ADR-010 aceita.
 
 Atualização posterior: a ADR-025, aceita em 2026-09-26, adiou a ativação de WhatsApp. O modelo de domínio permanece preparado para o canal futuro, mas a primeira API publicada aceita somente e-mail e a TASK 07 mostra WhatsApp desabilitado como “Em breve”.
+
+Atualização posterior: a ADR-026, aceita em 2026-09-26, substituiu Resend por Brevo para o e-mail da primeira publicação, sem alterar o modelo conceitual, o OTP ou a porta de entrega.
 - [x] Para contato associado, o fluxo neutro oferece recuperação no mesmo canal, sem revelar a conta.
 - [x] Lorem ipsum será usado exclusivamente em testes de interface, com rolagem completa antes de habilitar a ação; não habilita cadastro real nem gera aceite efetivo. Termos, política e regras definitivos serão criados posteriormente com respaldo jurídico, antes de lançamento ou aceite efetivo.
 - [x] O progresso local usa `sessionStorage` para etapa atual, nome de exibição, cidade/região, intenção, interesses e campos opcionais, com TTL deslizante de no máximo 30 minutos sem atualização; será apagado em conclusão, cancelamento, expiração e incompatibilidade de versão. Registrado na ADR-011 aceita.

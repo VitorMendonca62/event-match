@@ -37,6 +37,14 @@ A API responde em `http://localhost:3001`. O Swagger fica disponível em `http:/
 | `CONTACT_HASH_KEY` | — | Base64 padrão com ao menos 32 bytes; índice cego HMAC dos contatos e limites de abuso. |
 | `CONTACT_ENCRYPTION_KEY` | — | Base64 padrão com exatamente 32 bytes; cifra AES-256-GCM dos contatos. |
 | `VERIFICATION_SECRET_KEY` | — | Base64 padrão com ao menos 32 bytes; digest HMAC de OTP e links. |
+| `REGISTRATION_FLOW_SECRET` | — | Base64 padrão com ao menos 32 bytes; digest HMAC das continuações, chaves de idempotência e payloads (ADR-021). |
+| `BFF_INTERNAL_TOKEN` | — | Base64 padrão com ao menos 32 bytes, compartilhado apenas com o BFF Next.js; exigido em `X-EventMatch-BFF-Token` (ADR-023). |
+| `REGISTRATION_HTTP_ENABLED` | `false` | Liga as rotas `/api/v1/registration`; desligadas respondem `404` até o BFF da TASK 07 existir. |
+| `VERIFICATION_DELIVERY_MODE` | — | `brevo` ou `noop`, sempre explícito. `noop` não envia nada e é recusado com `NODE_ENV=production`. |
+| `BREVO_API_KEY` | — | Obrigatória em `brevo`. Guarde somente em `.env` local ou no cofre da plataforma. |
+| `EMAIL_FROM` | — | Obrigatório em `brevo`, por exemplo `EventMatch <remetente-verificado@example.com>`. Para o MVP sem domínio, verifique esse remetente individual na Brevo. |
+| `FRONTEND_PUBLIC_URL` | — | Obrigatória em `brevo`; base do link de confirmação (`/api/registration/contact-verification/confirm-link`). `https` em produção. |
+| `BREVO_BASE_URL` | `https://api.brevo.com/v3` | Só muda em testes contratuais/E2E com servidor fake; `https` em produção. |
 
 Gere cada chave com `openssl rand -base64 32`. Valores vazios, placeholders ou base64 inválido fazem o preflight falhar. Perder `CONTACT_ENCRYPTION_KEY` torna os contatos cifrados ilegíveis; trocar `CONTACT_HASH_KEY` invalida a unicidade dos contatos existentes. Mantenha as chaves em cofre e não as rotacione sem migration de reprocessamento.
 
@@ -57,6 +65,8 @@ O preflight Zod roda antes de iniciar o processo. Em falha, o processo encerra s
 ```
 
 Todas as respostas HTTP com corpo usam `data` (objeto), `message` (string) e `statusCode` (valor numérico de `HttpStatus`). Drizzle ORM e `pg` ficam restritos à infraestrutura.
+
+O contrato v1 do cadastro (`/api/v1/registration/*` e `GET /api/v1/catalog/interests`) está descrito em `docs/04-integracoes-externas.md` e no OpenAPI (`/docs`). As rotas de cadastro são internas ao BFF: exigem `X-EventMatch-BFF-Token` e ficam desligadas até `REGISTRATION_HTTP_ENABLED=true`. No MVP gratuito, verifique um remetente individual na Brevo e use-o em `EMAIL_FROM`; sem domínio autenticado, a Brevo pode reescrever o remetente para um endereço técnico próprio. Antes de um lançamento comercial, configure um domínio com SPF/DKIM.
 
 ## Persistência
 
@@ -95,6 +105,8 @@ Os E2E validam os containers `back` e `postgres` com HTTP real:
 ```
 
 O teste de integração do cadastro cria um banco efêmero `eventmatch_it_<aleatório>` no PostgreSQL de `DATABASE_INTEGRATION_URL` (o usuário precisa de `CREATEDB`), aplica as migrations com o migrator do Drizzle, usa dois pools independentes para os cenários de concorrência e remove o banco ao final.
+
+O E2E do cadastro sobe também o serviço `fake-brevo` (`back/test/support/fake-brevo-server.ts`), apontado por `BREVO_BASE_URL`; nenhuma mensagem sai da rede do Compose. `REGISTRATION_FLOW_SECRET` e `BFF_INTERNAL_TOKEN` são gerados por execução quando ausentes de `back/.env.test.local`.
 
 Os runners usam `docker-compose.back.test.yml` e carregam obrigatoriamente `back/.env.test.local`, isolado dos ambientes de desenvolvimento e produção e sem volumes persistentes. Crie-o a partir de `back/.env.test.example` e gere chaves próprias para teste.
 

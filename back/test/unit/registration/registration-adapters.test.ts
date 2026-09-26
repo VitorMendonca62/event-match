@@ -7,6 +7,8 @@ import { accountMapper, registrationMapper, verificationMapper } from '../../../
 import { CommonPasswordCheckerAdapter, parseCommonPasswords } from '../../../src/modules/registration/infrastructure/security/common-password-checker.adapter';
 import { ContactProtectorAdapter } from '../../../src/modules/registration/infrastructure/security/contact-protector.adapter';
 import { VerificationSecretAdapter } from '../../../src/modules/registration/infrastructure/security/verification-secret.adapter';
+import { RegistrationFlowTokenAdapter } from '../../../src/modules/registration/infrastructure/security/registration-flow-token.adapter';
+import { buildEmailLink, renderVerificationEmail } from '../../../src/modules/registration/infrastructure/delivery/verification-email.template';
 import { Account } from '../../../src/modules/registration/domain/entities/account';
 import { ContactVerification } from '../../../src/modules/registration/domain/entities/contact-verification';
 import { Registration } from '../../../src/modules/registration/domain/entities/registration';
@@ -97,6 +99,7 @@ describe('registration mappers', () => {
       {
         id: 'v',
         channel: 'whatsapp',
+        linkTokenDigest: null,
         contactHash: Buffer.alloc(32, 1),
         contactCiphertext: Buffer.alloc(40, 2),
         keyVersion: 1,
@@ -148,5 +151,44 @@ describe('LoggerRegistrationTelemetryAdapter', () => {
     } finally {
       log.mockRestore();
     }
+  });
+});
+
+describe('RegistrationFlowTokenAdapter (ADR-021)', () => {
+  const tokens = new RegistrationFlowTokenAdapter(config({ REGISTRATION_FLOW_SECRET: Buffer.alloc(32, 4).toString('base64') }));
+
+  test('issues 32-byte base64url tokens and stores only a keyed digest', () => {
+    const first = tokens.generate();
+    const second = tokens.generate();
+    expect(first.plain).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(Buffer.from(first.plain, 'base64url')).toHaveLength(32);
+    expect(first.plain).not.toBe(second.plain);
+    expect(tokens.digest(first.plain)).toEqual(first.digest);
+    expect(first.digest.toString('utf8')).not.toContain(first.plain);
+  });
+
+  test('separates token, key and payload digests', () => {
+    const value = 'same-value';
+    const digests = [tokens.digest(value), tokens.fingerprint('idempotency_key', value), tokens.fingerprint('request', value)];
+    expect(new Set(digests.map((digest) => digest.toString('hex'))).size).toBe(3);
+  });
+
+  test('uses a key different from the verification secret', () => {
+    const other = new RegistrationFlowTokenAdapter(config({ REGISTRATION_FLOW_SECRET: Buffer.alloc(32, 5).toString('base64') }));
+    expect(other.digest('token')).not.toEqual(tokens.digest('token'));
+  });
+});
+
+describe('verification e-mail template', () => {
+  test('points the link at the BFF callback with the token as a query parameter', () => {
+    expect(buildEmailLink('https://app.example.test/base', 'abc_-')).toBe(
+      'https://app.example.test/api/registration/contact-verification/confirm-link?token=abc_-',
+    );
+  });
+
+  test('escapes rendered values', () => {
+    const email = renderVerificationEmail({ otp: '<b>', link: 'https://x.test/?a="1"', ttlMinutes: 15 });
+    expect(email.html).not.toContain('<b>');
+    expect(email.html).toContain('&#34;');
   });
 });

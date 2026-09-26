@@ -18,6 +18,8 @@ export const TERMS_REPOSITORY_PORT = Symbol('TERMS_REPOSITORY_PORT');
 export interface VerificationRepositoryPort {
   findById(context: TransactionContext, id: string): Promise<ContactVerification | null>;
   findForUpdate(context: TransactionContext, id: string): Promise<ContactVerification | null>;
+  /** Challenge holding this unused e-mail link digest, locked. */
+  findByLinkDigestForUpdate(context: TransactionContext, linkTokenDigest: Buffer): Promise<ContactVerification | null>;
   /** Latest challenge in `open`/`verified` state for the contact, locked. */
   findActiveByContactForUpdate(
     context: TransactionContext,
@@ -90,7 +92,18 @@ export interface TermsAcceptance {
   readonly documentId: string;
 }
 
+/** Public metadata of an approved document; content and digests stay internal. */
+export interface ApprovedTermsMetadata {
+  readonly id: string;
+  readonly kind: TermsDocumentKind;
+  readonly version: string;
+  readonly locale: string;
+  readonly effectiveAt: Date;
+}
+
 export interface TermsRepositoryPort {
+  /** Approved documents for the locale, in stable kind/version order. */
+  listApproved(context: TransactionContext, locale: string): Promise<ApprovedTermsMetadata[]>;
   findApproved(context: TransactionContext, documentIds: string[]): Promise<ApprovedTermsDocument[]>;
   recordAcceptances(
     context: TransactionContext,

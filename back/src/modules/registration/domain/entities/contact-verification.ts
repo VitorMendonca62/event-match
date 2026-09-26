@@ -11,6 +11,8 @@ export interface ContactVerificationProps {
   readonly contactCiphertext: Buffer;
   readonly keyVersion: number;
   readonly otpDigest: Buffer;
+  /** Digest of the single-use e-mail link token (ADR-024); null once used or for other channels. */
+  readonly linkTokenDigest: Buffer | null;
   readonly expiresAt: Date;
   readonly deliveryIdempotencyKey: string;
   readonly lastSentAt: Date;
@@ -29,6 +31,7 @@ export interface IssueContactVerificationInput {
   readonly contactCiphertext: Buffer;
   readonly keyVersion: number;
   readonly otpDigest: Buffer;
+  readonly linkTokenDigest: Buffer | null;
   readonly deliveryIdempotencyKey: string;
   readonly whatsappConsentAt: Date | null;
 }
@@ -41,6 +44,7 @@ export class ContactVerification implements ContactVerificationProps {
   readonly contactCiphertext: Buffer;
   readonly keyVersion: number;
   readonly otpDigest: Buffer;
+  readonly linkTokenDigest: Buffer | null;
   readonly expiresAt: Date;
   readonly deliveryIdempotencyKey: string;
   readonly lastSentAt: Date;
@@ -58,6 +62,7 @@ export class ContactVerification implements ContactVerificationProps {
     this.contactCiphertext = props.contactCiphertext;
     this.keyVersion = props.keyVersion;
     this.otpDigest = props.otpDigest;
+    this.linkTokenDigest = props.linkTokenDigest;
     this.expiresAt = props.expiresAt;
     this.deliveryIdempotencyKey = props.deliveryIdempotencyKey;
     this.lastSentAt = props.lastSentAt;
@@ -105,7 +110,7 @@ export class ContactVerification implements ContactVerificationProps {
   verify(codeMatches: boolean, now: Date, policy: RegistrationPolicy): ContactVerification {
     this.assertOpen(now, policy);
 
-    if (codeMatches) return this.with({ status: 'verified', lockedUntil: null });
+    if (codeMatches) return this.with({ status: 'verified', lockedUntil: null, linkTokenDigest: null });
 
     const failedAttempts = this.failedAttempts + 1;
     return this.with({
@@ -115,8 +120,23 @@ export class ContactVerification implements ContactVerificationProps {
     });
   }
 
-  /** Rotates the code: only its digest is stored, so a resend always issues a new OTP. */
-  resend(otpDigest: Buffer, now: Date, policy: RegistrationPolicy): ContactVerification {
+  /**
+   * Single-use e-mail link (ADR-024): the caller found this challenge by the link digest, so the
+   * possession proof is already established; only the challenge lifecycle is checked here.
+   */
+  verifyByLink(now: Date, policy: RegistrationPolicy): ContactVerification {
+    this.assertOpen(now, policy);
+    if (this.linkTokenDigest === null) throw new RegistrationError('VERIFICATION_UNAVAILABLE');
+    return this.with({ status: 'verified', lockedUntil: null, linkTokenDigest: null });
+  }
+
+  /** Rotates the code and link: only digests are stored, so a resend always issues new secrets. */
+  resend(
+    otpDigest: Buffer,
+    linkTokenDigest: Buffer | null,
+    now: Date,
+    policy: RegistrationPolicy,
+  ): ContactVerification {
     this.assertOpen(now, policy);
     if (
       this.resendCount >= policy.maxResendsPerChallenge ||
@@ -126,6 +146,7 @@ export class ContactVerification implements ContactVerificationProps {
     }
     return this.with({
       otpDigest,
+      linkTokenDigest,
       expiresAt: new Date(now.getTime() + policy.otpTtlMs),
       lastSentAt: now,
       resendCount: this.resendCount + 1,

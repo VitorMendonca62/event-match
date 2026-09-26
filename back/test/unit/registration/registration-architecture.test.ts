@@ -25,4 +25,14 @@ describe('hexagonal boundaries', () => {
       }
     },
   );
+
+  test('registration presentation reaches the database only through use cases', () => {
+    const directory = join(modulesRoot, 'registration', 'presentation');
+    for (const file of collect(directory)) {
+      const source = readFileSync(file, 'utf8');
+      expect({ file, source }).not.toMatchObject({
+        source: expect.stringMatching(/from ['"](?:drizzle-orm|pg|[^'"]*\/infrastructure\/persistence\/)/),
+      });
+    }
+  });
 });

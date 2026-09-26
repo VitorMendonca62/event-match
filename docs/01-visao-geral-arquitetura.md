@@ -37,6 +37,10 @@ back/presentation -> application/use-cases -> domain/ports
 
 A fundação PostgreSQL configura Drizzle e o pool no backend, preserva `GET /health` como liveness e expõe readiness separado para a dependência. Não cria schema físico nem migrations iniciais; cada bounded context será responsável por seu modelo e migrations futuras.
 
+### Cadastro HTTP v1 (SDD-009)
+
+O módulo `registration` expõe `RegistrationController` em `/api/v1/registration` e o módulo `catalog` expõe `GET /api/v1/catalog/interests`. A apresentação valida DTOs, exige a credencial interna do BFF (`BffInternalGuard`) e a forma da continuação (`ContinuationGuard`) antes de qualquer caso de uso, traduz `RegistrationError` em respostas tipadas (`RegistrationErrorFilter`) e aplica `Cache-Control: no-store`. A aplicação ganha `RegistrationFlow` e `RegistrationFlowGate`, que resolvem ids internos a partir da sessão autorizada, controlam idempotência e rotação e avançam a sessão na mesma transação do efeito de negócio por meio de ganchos transacionais nos casos de uso existentes. A infraestrutura adiciona os repositórios Drizzle de sessão e idempotência, o adapter de token HMAC e o `BrevoVerificationDeliveryAdapter`; o `noop` só é composto quando configurado explicitamente fora de produção.
+
 ### Deploy inicial do frontend
 
 O frontend/BFF do ambiente publicado de testes será hospedado diretamente na Vercel, sem proxy adicional à frente. O cadastro deriva uma fingerprint de origem a partir do header específico da plataforma e autentica as chamadas BFF → NestJS, conforme ADR-023. A leitura da origem fica isolada em adapter server-only para permitir migração futura à Cloudflare mediante nova ADR, sem alterar regras de negócio, contrato interno ou PostgreSQL.

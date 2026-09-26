@@ -29,6 +29,8 @@ export interface GeneratedSecret {
 export interface VerificationSecretPort {
   generateOtp(): GeneratedSecret;
   generateLinkToken(): GeneratedSecret;
+  /** Digest of a presented link token, used to look the challenge up (ADR-024). */
+  digest(plain: string): Buffer;
   matches(plain: string, digest: Buffer): boolean;
 }
 
@@ -49,7 +51,13 @@ interface DeliveryTarget {
 }
 
 export type VerificationDeliveryRequest =
-  | (DeliveryTarget & { readonly kind: 'verify'; readonly verificationId: string; readonly otp: string })
+  | (DeliveryTarget & {
+      readonly kind: 'verify';
+      readonly verificationId: string;
+      readonly otp: string;
+      /** Plain single-use link token for e-mail (ADR-024); exists only in memory. */
+      readonly linkToken: string | null;
+    })
   | (DeliveryTarget & { readonly kind: 'recovery_notice' });
 
 /** Called only after commit; implementations must never log the contact or the code. */

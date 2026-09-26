@@ -13,6 +13,7 @@ import type {
 } from '../../domain/ports/outbound/security.ports';
 import { Password } from '../../domain/value-objects/password';
 import { REGISTRATION_POLICY } from '../../domain/value-objects/verification-policy';
+import type { TransactionHook } from '../contracts/transaction-hook';
 import type { ContactRetention } from '../services/contact-retention';
 
 export interface StartRegistrationResult {
@@ -36,7 +37,10 @@ export class StartRegistration {
   ) {}
 
   /** Consumes a verified challenge and creates the registration in the same transaction. */
-  async execute(input: { verificationId: string; password: string }): Promise<StartRegistrationResult> {
+  async execute(
+    input: { verificationId: string; password: string },
+    withinTransaction?: TransactionHook<StartRegistrationResult>,
+  ): Promise<StartRegistrationResult> {
     const password = Password.create(input.password);
     if (this.commonPasswords.isCommon(password)) throw new RegistrationError('WEAK_PASSWORD');
     // Argon2id runs before the transaction so no lock is held during hashing.
@@ -69,6 +73,7 @@ export class StartRegistration {
       );
       await this.verifications.save(context, consumed);
       await this.registrations.insert(context, created);
+      await withinTransaction?.(context, { registrationId: created.id, expiresAt: created.expiresAt });
       return created;
     });
 

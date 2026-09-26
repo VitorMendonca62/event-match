@@ -3,8 +3,8 @@
 - **Status:** accepted
 - **Data:** 2026-09-25
 - **Decisores:** produto, backend, operação e segurança
-- **Relacionado:** `specs/sdd-006-modelagem-conceitual-cadastro/tasks.md`; ADR-024 (`accepted`, protocolo de entrega e link de e-mail); ADR-025
-- **Substitui/Substituído por:** ativação inicial de WhatsApp parcialmente substituída pela ADR-025
+- **Relacionado:** `specs/sdd-006-modelagem-conceitual-cadastro/tasks.md`; ADR-024, ADR-025 e ADR-026
+- **Substitui/Substituído por:** WhatsApp inicial adiado pela ADR-025; provedor de e-mail substituído pela ADR-026
 
 ## Contexto
 
@@ -37,3 +37,5 @@ Antes da implementação, cadastrar e aprovar templates de autenticação, confi
 ## Atualização posterior
 
 A ADR-025, aceita em 2026-09-26, adia a ativação de WhatsApp. A primeira publicação permite cadastro somente por e-mail; WhatsApp aparece desabilitado como “Em breve” e o `noop` não simula entrega em produção.
+
+A ADR-026, aceita em 2026-09-26, substitui Resend por Brevo no canal de e-mail para permitir testes com destinatários reais sem custo de domínio. Portas, política de OTP e isolamento do provedor permanecem inalterados.

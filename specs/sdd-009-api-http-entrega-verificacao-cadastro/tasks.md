@@ -3,18 +3,18 @@
 - **Slug:** api-http-entrega-verificacao-cadastro
 - **Autor do plano:** Code-Planner (SDD)
 - **Data:** 2026-09-26
-- **Status:** blocked
+- **Status:** ready
 - **Versão-alvo:** 0.9.0
 - **Tipo:** feature
 - **Impacto público:** additive
 
 ## 1. Contexto e Motivação
 
-A TASK 06 de `specs/tasks.txt` pede a primeira fatia HTTP pública do cadastro sobre a fundação implementada pela SDD-007. A ADR-025 restringiu a primeira publicação ao e-mail com Resend e adiou WhatsApp. Hoje os casos de uso existem e estão ligados por DI, porém `RegistrationModule` não possui controllers, a entrega usa `NoopVerificationDeliveryAdapter`, a API só expõe health/readiness e o frontend ainda não possui BFF.
+A TASK 06 de `specs/tasks.txt` pede a primeira fatia HTTP pública do cadastro sobre a fundação implementada pela SDD-007. A ADR-025 restringiu a primeira publicação ao e-mail e adiou WhatsApp; a ADR-026 substituiu Resend por Brevo para preservar o custo zero sem domínio próprio. Os endpoints e casos de uso já foram implementados; esta revisão troca somente o adapter de infraestrutura, configuração e testes do provedor.
 
-O DER v1.3 exige maioridade, contato confirmado, senha, dados obrigatórios, aceites e três interesses (RF001–RF007, RN001–RN009). A ADR-019 determina validar nascimento antes de coletar contato. Todas as decisões arquiteturais estão aceitas; a implementação continua bloqueada somente pelos pré-requisitos operacionais do Resend e da URL pública do callback.
+O DER v1.3 exige maioridade, contato confirmado, senha, dados obrigatórios, aceites e três interesses (RF001–RF007, RN001–RN009). A ADR-019 determina validar nascimento antes de coletar contato. Todas as decisões arquiteturais estão aceitas. A ativação operacional da Brevo (conta, remetente individual verificado, API key e URL pública do callback) não bloqueia a implementação: fica como passo 1 do rollout, antes de habilitar produção.
 
-Rastreabilidade: `docs/02-regras-de-negocio.md` §2; `docs/03-modelos-de-dominio.md` §2.1 e §4; `docs/04-integracoes-externas.md` §§1, 4 e 6; ADR-008 a ADR-025; `specs/sdd-007-persistencia-postgresql-cadastro/tasks.md`; código e testes atuais de `back/src/modules/registration/`.
+Rastreabilidade: `docs/02-regras-de-negocio.md` §2; `docs/03-modelos-de-dominio.md` §2.1 e §4; `docs/04-integracoes-externas.md` §§1, 4 e 6; ADR-008 a ADR-026; `specs/sdd-007-persistencia-postgresql-cadastro/tasks.md`; código e testes atuais de `back/src/modules/registration/`.
 
 Versão: elevar raiz e backend de `0.8.1` para `0.9.0`, atualizar Swagger e `CHANGELOG.md`. O frontend permanece em sua versão atual nesta task; Route Handlers serão implementados apenas na TASK 07.
 
@@ -22,16 +22,16 @@ Versão: elevar raiz e backend de `0.8.1` para `0.9.0`, atualizar Swagger e `CHA
 
 Inclui:
 
-- [ ] Etapa de validação de nascimento antes do contato, emitindo credencial de continuação somente para maior de 18 anos e sem persistir a data (ADR-019/ADR-021).
-- [ ] Contrato HTTP v1, DTOs, presenters, controller(s), guard de continuação e mapeamento tipado de `RegistrationError` (ADR-020).
-- [ ] Credencial opaca de continuação com digest, expiração, rotação, revogação e autorização por etapa; ids internos deixam de ser credenciais públicas (ADR-021).
-- [ ] Migration forward `0003` para `registration_flow_session` e `registration_idempotency`, com constraints, índices, rollout e forward fix (ADR-021).
-- [ ] Casos de uso/portas necessários para consultar o estado mínimo do fluxo, listar interesses ativos, listar metadados de documentos aprovados, verificar link de e-mail e operar a sessão de continuação.
-- [ ] Limite de dez novos desafios por origem/hora usando fingerprint HMAC fornecida apenas por camada confiável, sem persistir IP (ADR-023).
-- [ ] Adapter de e-mail com SDK oficial `resend`, configuração Zod, timeout/retry/idempotência e testes contratuais; `noop` fica restrito a desenvolvimento/testes (ADR-010/ADR-024/ADR-025).
-- [ ] OTP e link de uso único no e-mail. O link usa token opaco, alta entropia e expiração igual à do desafio (ADR-024).
-- [ ] OpenAPI, `.env.example`, Docker Compose, README, docs arquiteturais/de integração, changelog e versão.
-- [ ] Testes unitários, arquitetura, contrato de provedor, integração PostgreSQL, E2E e validações Bun.
+- [x] Etapa de validação de nascimento antes do contato, emitindo credencial de continuação somente para maior de 18 anos e sem persistir a data (ADR-019/ADR-021).
+- [x] Contrato HTTP v1, DTOs, presenters, controller(s), guard de continuação e mapeamento tipado de `RegistrationError` (ADR-020).
+- [x] Credencial opaca de continuação com digest, expiração, rotação, revogação e autorização por etapa; ids internos deixam de ser credenciais públicas (ADR-021).
+- [x] Migration forward `0003` para `registration_flow_session` e `registration_idempotency`, com constraints, índices, rollout e forward fix (ADR-021).
+- [x] Casos de uso/portas necessários para consultar o estado mínimo do fluxo, listar interesses ativos, listar metadados de documentos aprovados, verificar link de e-mail e operar a sessão de continuação.
+- [x] Limite de dez novos desafios por origem/hora usando fingerprint HMAC fornecida apenas por camada confiável, sem persistir IP (ADR-023).
+- [x] Adapter de e-mail com SDK oficial `@getbrevo/brevo`, configuração Zod, timeout/retry/idempotência e testes contratuais; `noop` fica restrito a desenvolvimento/testes (ADR-026).
+- [x] OTP e link de uso único no e-mail. O link usa token opaco, alta entropia e expiração igual à do desafio (ADR-024).
+- [x] OpenAPI, `.env.example`, Docker Compose, README, docs arquiteturais/de integração, changelog e versão.
+- [x] Testes unitários, arquitetura, contrato de provedor, integração PostgreSQL, E2E e validações Bun.
 
 Exclui:
 
@@ -56,7 +56,7 @@ Browser (TASK 07)
             domain: regras/portas sem HTTP, NestJS ou Drizzle
             infrastructure:
               PostgreSQL/Drizzle (flow session + idempotência + cadastro)
-              Resend SDK oficial
+              Brevo SDK oficial
 ```
 
 Regras `nestjs-expert`/hexagonal: DTOs com `class-validator`; `ValidationPipe` global existente; Swagger em cada operação; adapters `@Injectable()` por tokens; nenhum `new` de serviço; erros de domínio/aplicação sem HTTP; controller sem regra de negócio; `Test.createTestingModule` e Supertest. Não usar `forwardRef()`.
@@ -70,10 +70,11 @@ Regras Next/Vercel aplicáveis ao contrato futuro: Route Handlers apenas como BF
 | Credencial opaca, rotação e idempotência | `docs/adrs/ADR-021-credencial-de-continuacao-do-cadastro.md` | accepted | IDs não podem autorizar operações; exige schema e segredo novos. |
 | Next.js BFF como única entrada do navegador | `docs/adrs/ADR-022-bff-nextjs-para-o-cadastro.md` | accepted | Simplifica cookie HttpOnly, CORS e CSRF sem mover regras ao frontend. |
 | Fingerprint de origem confiável | `docs/adrs/ADR-023-origem-confiavel-para-limites-do-cadastro.md` | accepted | Vercel direta fornece a origem inicial; BFF transforma em fingerprint e autentica o encaminhamento. |
-| Entrega por provedor e link de e-mail | `docs/adrs/ADR-024-entrega-de-verificacao-e-link-de-email.md` | accepted | SDK oficial do Resend e semântica de retry/idempotência; a parte WhatsApp ficou como desenho futuro pela ADR-025. |
+| Entrega por provedor e link de e-mail | `docs/adrs/ADR-024-entrega-de-verificacao-e-link-de-email.md` | accepted | Define link, retry/idempotência e ausência de outbox; Resend foi substituído pela ADR-026. |
 | Adiar WhatsApp na primeira publicação | `docs/adrs/ADR-025-adiar-whatsapp-no-cadastro.md` | accepted | Evita fluxo sem OTP; UI mostra “Em breve” e o contrato aceita somente e-mail. |
+| Substituir Resend por Brevo | `docs/adrs/ADR-026-substituir-resend-por-brevo.md` | accepted | Permite destinatários reais no MVP gratuito sem comprar domínio. |
 
-Todos estão `accepted`. A ADR-019 substitui parcialmente a ordem da ADR-008, e a ADR-025 adia parcialmente a ativação definida nas ADRs 010 e 024; os links bidirecionais e os documentos canônicos foram atualizados.
+Todos estão `accepted`. A ADR-019 substitui parcialmente a ordem da ADR-008, a ADR-025 adia WhatsApp e a ADR-026 substitui Resend por Brevo; os links bidirecionais e os documentos canônicos foram atualizados.
 
 ## 4. Contratos e Interfaces
 
@@ -149,7 +150,7 @@ Compatibilidade: contrato novo e aditivo. OpenAPI recebe DTOs concretos, headers
 | 1 | Nascimento é validado na ativação. | Primeira informação após a apresentação; menor não recebe credencial nem avança. Data não é persistida e é revalidada na conclusão. | RF001, RN001, ADR-019 aceita. |
 | 2 | Casos de uso recebem ids internos. | HTTP resolve ids exclusivamente a partir da continuação autorizada para a etapa. | RNF003–RNF004, ADR-021 aceita. |
 | 3 | Limite por origem está adiado no código atual. | BFF na Vercel produz fingerprint autenticada; backend consome até 10 desafios/origem/hora antes da UoW de negócio. | ADR-009, ADR-015, ADR-023 aceita. |
-| 4 | E-mail/WhatsApp usam adapter noop. | SDK oficial do Resend envia OTP+link. WhatsApp fica fora do contrato publicado, e `noop` existe apenas em desenvolvimento/testes. | ADR-010, ADR-024 e ADR-025 aceitas. |
+| 4 | E-mail/WhatsApp usavam adapter noop. | SDK oficial da Brevo envia OTP+link. WhatsApp fica fora do contrato publicado, e `noop` existe apenas em desenvolvimento/testes. | ADR-025 e ADR-026 aceitas. |
 | 5 | Link digest existe, mas não é usado. | Token de 32 bytes, digest persistido, expiração junto ao desafio e consumo único sob lock. | ADR-014, ADR-024 aceita. |
 | 6 | Interesses só são buscados por ids. | Catálogo expõe somente interesses ativos em ordem estável. | RF006, RN147–RN149. |
 | 7 | Termos não têm conteúdo aprovado. | Endpoint retorna somente metadados aprovados e, hoje, lista vazia; nenhuma conta real ativa com placeholder. | RF005, ADR-012. |
@@ -164,7 +165,7 @@ Compatibilidade: contrato novo e aditivo. OpenAPI recebe DTOs concretos, headers
 - Tokens têm entropia, digest, TTL, rotação, janela anterior, revogação e comparação segura; nunca são registrados ou guardados em texto no banco.
 - Idempotency key repetida com mesmo payload retorna o resultado seguro anterior; payload diferente retorna conflito; duplicidade não envia nova mensagem.
 - Origem é limitada sem armazenar IP; o BFF aceita somente `x-vercel-forwarded-for` na Vercel direta, autentica o encaminhamento com `BFF_INTERNAL_TOKEN` e o ambiente publicado falha cedo se cadeia/configuração estiver ausente.
-- Resend usa idempotency key nativa. Timeout por tentativa é 5 s; no máximo duas novas tentativas somente quando classificadas como seguras/transitórias.
+- Brevo recebe um UUID estável em `headers.idempotencyKey` no corpo da mensagem, derivado deterministicamente da chave interna da entrega. Timeout por tentativa é 5 s; no máximo duas novas tentativas somente quando classificadas como seguras/transitórias, com retry automático do SDK desabilitado.
 - O contrato HTTP e o OpenAPI aceitam somente e-mail nesta versão; tentativa de `whatsapp` retorna `400` de validação sem criar desafio, contato, contador ou evento de entrega.
 - Nenhum I/O externo ocorre dentro de transação PostgreSQL; pool continua em uma conexão.
 - Logs/métricas usam ids opacos, operação, canal, outcome, latência e provedor; não incluem contato, nascimento, OTP, link, cookie, bearer, corpo do provedor ou credencial.
@@ -180,7 +181,7 @@ Unitários (`bun run --cwd back test`):
 - Guard/sessão: token atual/anterior, rotação, expiração, revogação, etapa errada e resposta perdida; token anterior só recupera a mesma requisição idempotente e não executa novo efeito.
 - Idempotência: replay igual, conflito de payload, concorrência e resposta armazenada sem segredo.
 - Link: geração, digest, confirmação única, expirado, inválido e concorrente.
-- Adapter Resend: redaction, timeout cancelável, `Retry-After`, 4xx definitivo, 429/5xx transitório e idempotência; `Test.createTestingModule` valida que produção não compõe `noop`.
+- Adapter Brevo: redaction, timeout cancelável, `Retry-After`, 4xx definitivo, 429/5xx transitório e idempotência; `Test.createTestingModule` valida que produção não compõe `noop`.
 - Arquitetura: domínio/aplicação sem imports NestJS/HTTP/Drizzle; apresentação sem SQL/regra de negócio.
 
 Integração (`bun run --cwd back test:integration` pelo runner descartável):
@@ -193,7 +194,7 @@ Integração (`bun run --cwd back test:integration` pelo runner descartável):
 Contrato de provedores:
 
 - Servidor HTTP fake valida URL, método, headers, template/payload, timeout, retry e idempotency key sem chamar internet real.
-- Resend: `POST /emails` e `Idempotency-Key` estável por entrega.
+- Brevo: `POST /v3/smtp/email`, header HTTP `api-key`, `headers.idempotencyKey` estável por entrega no corpo e nenhum segredo adicional além dos valores necessários ao e-mail.
 
 E2E/Supertest (`bun run --cwd back test:e2e`):
 
@@ -221,12 +222,12 @@ Validação final: `bun run --cwd back lint`, `typecheck`, `test`, `test:integra
 
 Rollout:
 
-1. Obter domínio, remetente e credencial Resend em ambiente secreto; validar a versão do SDK antes de fixá-la.
+1. Criar conta Brevo, verificar remetente individual e guardar `BREVO_API_KEY`, `EMAIL_FROM` e `FRONTEND_PUBLIC_URL` no cofre do ambiente; revisar cota e reescrita do remetente.
 2. Gerar/revisar migration `0003`, validar banco descartável e aplicar como job único.
 3. Fazer deploy do backend com rotas desabilitadas por configuração/flag até a TASK 07 entregar BFF e fingerprint confiável.
 4. Habilitar em ambiente de teste, rodar smoke de e-mail, monitorar falhas/latência/rate limit sem PII e promover gradualmente.
 
-Rollback: desabilitar rotas/adapter real e reimplantar `0.8.1`; tabelas/colunas aditivas ficam sem uso. Corrigir banco somente por migration forward; preservar digests e não executar `down` destrutivo. Revogar a credencial do Resend se houver incidente.
+Rollback: desabilitar rotas/adapter real e reimplantar `0.8.1`; tabelas/colunas aditivas ficam sem uso. Corrigir banco somente por migration forward; preservar digests e não executar `down` destrutivo. Revogar a credencial da Brevo se houver incidente.
 
 ## 9. Perguntas em Aberto (bloqueantes)
 
@@ -235,18 +236,37 @@ Rollback: desabilitar rotas/adapter real e reimplantar `0.8.1`; tabelas/colunas 
 - [x] **Continuação (ADR-021):** token opaco de 32 bytes, tabelas de sessão/idempotência, novo `REGISTRATION_FLOW_SECRET`, TTLs por etapa e rotação aceitos; a tolerância de 60 s vale somente para repetir a mesma requisição idempotente, nunca para uma operação nova.
 - [x] **Topologia (ADR-022):** Next.js BFF será a única entrada do navegador em produção, mantendo o NestJS como API de negócio interna.
 - [x] **Origem (ADR-023):** frontend/BFF inicial na Vercel direta, usando apenas `x-vercel-forwarded-for`, fingerprint HMAC e credencial interna do BFF; migração futura para Cloudflare fica isolada e exige nova ADR.
-- [x] **Protocolo de provedores (ADR-024):** SDK oficial `resend` no adapter de e-mail, retries classificados e sem outbox nesta task; o desenho HTTP de WhatsApp ficou para implementação futura.
+- [x] **Protocolo de provedores (ADR-024/ADR-026):** SDK oficial da Brevo no adapter de e-mail, retries classificados e sem outbox nesta task; o desenho HTTP de WhatsApp ficou para implementação futura.
 - [x] **Disponibilidade de canal (ADR-025):** WhatsApp desabilitado com “Em breve”, sem chamada do frontend; contrato publicado aceita somente e-mail e `noop` fica restrito a desenvolvimento/testes.
-- [ ] **Ativação do Resend:** fornecer/configurar domínio, remetente, API key e URL pública do frontend por ambiente seguro (nunca no Git ou no chat).
+- [x] **Ativação da Brevo:** conta, remetente individual, API key e URL pública serão configurados por ambiente seguro no passo 1 do rollout (nunca no Git ou no chat). O plano permanece `ready`, pois o código lê tudo por `ConfigModule` e os testes usam servidor fake da Brevo.
 - [x] **Documentos jurídicos:** o endpoint retorna apenas metadados aprovados (inicialmente vazio); lorem ipsum existe somente em fixtures/testes de interface e a ativação real continua bloqueada até tarefa jurídica/publicação futura.
 
 ## 10. Checklist de Conformidade
 
 - [x] Decisões citam `docs/` e ADRs.
 - [x] Um ADR `proposed` foi criado para cada decisão material.
-- [x] Nenhum código de produção foi escrito.
+- [x] Durante a fase de planejamento, nenhum código de produção havia sido escrito.
 - [x] Contratos front/back, OpenAPI e PostgreSQL estão explícitos no plano.
 - [x] Performance, segurança e observabilidade foram tratadas.
 - [x] `vercel-react-best-practices`, `nestjs-expert`, `nestjs-hexagonal-architecture` e `nextjs-architecture` foram aplicadas conforme o escopo.
 - [x] Testes, migration, rollout e rollback estão planejados.
-- [ ] Perguntas em aberto foram exauridas.
+- [x] Perguntas em aberto foram exauridas.
+
+## 11. Registro de implementação (2026-09-26)
+
+Implementado com `code-implementer`, aplicando `nestjs-expert` (DTOs `class-validator`, `ValidationPipe` global, Swagger por operação, providers por token, `Test.createTestingModule` e Supertest). Não houve código frontend. Nenhuma nova decisão arquitetural surgiu; os ajustes de detalhe abaixo cabem nas ADRs aceitas e estão documentados em `docs/04-integracoes-externas.md` e `docs/03-modelos-de-dominio.md`:
+
+- `POST contact-verification` aceita `age_eligible` e também `verification_pending`, para corrigir um e-mail digitado errado sem refazer a elegibilidade.
+- `registration_idempotency` não tem `http_status`: só respostas de sucesso são guardadas e o status de cada rota é fixo. Tem `rotates` e `completed_at`.
+- `Idempotency-Key` em `eligibility` e `confirm-link` é validada, mas não armazenada: não há sessão prévia, e ambos são naturalmente seguros para repetição (nova sessão curta / link de uso único).
+- O fingerprint de payload exclui senha e nascimento; a chave identifica a repetição.
+- `422` carrega `data.reason` com códigos que não dependem de terceiros.
+- Após a conclusão, os digests são anulados (ADR-021) e uma repetição recebe `401`.
+- Efeito de negócio, transição da sessão e resultado idempotente são gravados na mesma transação por ganchos `withinTransaction` nos casos de uso existentes.
+
+Pendências e observações:
+
+- A ADR-026 substituiu o adapter Resend por Brevo após esta implementação inicial; dependência, configuração e testes contratuais foram migrados sem alterar a porta de aplicação.
+- Rollout passo 1 continua pendente: conta/remetente verificado, `EMAIL_FROM`, `BREVO_API_KEY` e `FRONTEND_PUBLIC_URL` em cofre por ambiente.
+- `test/integration/registration-migrations.integration.test.ts` (“normalizes legacy rows…”) falhava desde o commit `080283e`, que passou a converter apenas registros cuja conta não está expirada. Corrigido na revisão: o fixture cobre agora os dois casos (conta expirada mantém `expired`; conta viva vira `converted`), sem alterar a migration `0002`.
+- Revisão: `LocaleQueryDto` foi movido para `back/src/shared/presentation/http/locale-query.dto.ts`, eliminando o import entre bounded contexts, e os controllers de cadastro e catálogo passaram para `presentation/http/controllers/`, conforme `AGENTS.md`.

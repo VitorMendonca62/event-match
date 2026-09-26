@@ -34,6 +34,30 @@ Enquanto os grupos de produto não forem implementados, o backend expõe somente
 
 Toda resposta HTTP com corpo segue o envelope público `data` (objeto), `message` (string) e `statusCode` (número serializado de `HttpStatus`). A camada de apresentação converte erros conhecidos e inesperados nesse formato sem retornar stack trace, erro bruto de validação ou detalhe de infraestrutura. O OpenAPI do NestJS fica disponível no caminho configurado pelo ambiente e pode ser desabilitado sem alterar `/health`.
 
+### Contrato v1 do cadastro (SDD-009, versão 0.9.0)
+
+Prefixo `/api/v1` (ADR-020). Toda rota de `/api/v1/registration` exige `X-EventMatch-BFF-Token` (comparado em tempo constante com `BFF_INTERNAL_TOKEN`; ausente ou inválido → `401`), responde `Cache-Control: no-store` inclusive em erros e fica atrás da flag `REGISTRATION_HTTP_ENABLED` (desligada → `404`) até a TASK 07 publicar o BFF. Nenhuma rota aceita `verificationId`, `registrationId` ou `accountId` do navegador; `forbidNonWhitelisted` rejeita esses campos com `400`.
+
+| Método e rota | Corpo | Sucesso | Credenciais |
+|---|---|---|---|
+| `POST /api/v1/registration/eligibility` | `{ birthDate }` | `200 { eligible }`; continuação só se elegível | `Idempotency-Key` opcional e não armazenada (nova tentativa só cria outra sessão `age_eligible`) |
+| `POST /api/v1/registration/contact-verification` | `{ channel: 'email', contact }` | `202 { expiresAt, nextResendAt }` neutro | Bearer, `Idempotency-Key`, `X-EventMatch-Origin-Fingerprint`; estágio `age_eligible` ou `verification_pending` (corrige e-mail digitado errado) |
+| `POST /api/v1/registration/contact-verification/resend` | `{}` | `202 { expiresAt, nextResendAt }` neutro | Bearer, `Idempotency-Key`; `verification_pending` |
+| `POST /api/v1/registration/contact-verification/confirm` | `{ otp }` | `200 { verified }`; rotaciona se `true` | Bearer, `Idempotency-Key`; `verification_pending` |
+| `POST /api/v1/registration/contact-verification/confirm-link` | `{ token }` | `200 { verified }`; emite continuação se `true` | só o token do link (uso único) |
+| `PUT /api/v1/registration/password` | `{ password, passwordConfirmation }` | `200 { stage, expiresAt }`; rotaciona | Bearer, `Idempotency-Key`; `contact_verified` |
+| `PUT /api/v1/registration/required-data` | `{ displayName, region, usageIntents[] }` | `200 { stage, expiresAt }`; rotaciona | Bearer, `Idempotency-Key`; `registration_in_progress` |
+| `GET /api/v1/registration` | — | `200 { stage, expiresAt, nextResendAt? }` | Bearer atual (o anterior não serve) |
+| `GET /api/v1/registration/legal-documents?locale=pt-BR` | — | `200 { documents[] }` só `approved` (hoje vazio) | apenas credencial do BFF |
+| `POST /api/v1/registration/complete` | `{ birthDate, documentIds[], interestIds[] }` | `200 { status: 'active' }`; revoga a sessão | Bearer, `Idempotency-Key`; `account_incomplete` |
+| `GET /api/v1/catalog/interests?locale=pt-BR` | — | `200 { interests[] }` ativos, ordem estável | pública |
+
+Headers internos BFF ↔ NestJS, nunca enviados ao navegador: `Authorization: Bearer <continuação>` (32 bytes em base64url), `X-EventMatch-Origin-Fingerprint` (HMAC da origem, 32 bytes em base64url; formato validado, jamais reconstruído a partir de `X-Forwarded-For`) e, na resposta, `X-Registration-Continuation`, que o BFF converte em cookie `HttpOnly` e remove (ADR-022). `Idempotency-Key` tem 16 a 128 caracteres `[A-Za-z0-9_-]`.
+
+Erros: `400` forma/DTO (sem ecoar valores), `401` credencial do BFF ou continuação ausente/inválida/expirada, `409` estágio incompatível, chave em uso ou chave repetida com payload diferente, `422` regra semântica com `data.reason` ∈ {`invalid_contact`, `invalid_password`, `weak_password`, `invalid_birth_date`, `invalid_display_name`, `invalid_region`, `invalid_usage_intents`, `activation_unavailable`}; motivos que dependam de terceiros não existem. Pedido e reenvio de contato respondem `202` idênticos mesmo quando limitados, com contato retido ou falha de entrega.
+
+Continuação e idempotência (ADR-021): a mesma chave com o mesmo payload devolve o resultado armazenado sem repetir efeito nem mensagem; se o comando original rotacionou a continuação, a repetição emite outra. O token anterior vale 60 s exclusivamente para essa repetição. O fingerprint do payload exclui senha e nascimento. Após a conclusão, os digests são anulados e qualquer repetição recebe `401`; o BFF deve tratá-lo como cadastro encerrado. O callback do link de e-mail é `GET {FRONTEND_PUBLIC_URL}/api/registration/contact-verification/confirm-link?token=…`, a ser implementado pelo BFF na TASK 07.
+
 ## 3. Exposição por audiência
 
 | Audiência | Pode receber | Nunca recebe |
@@ -50,18 +74,18 @@ Referência: RN021, RN025, RN075–RN077, RN152–RN159.
 
 | Integração | Finalidade | Requisitos/controles |
 |---|---|---|
-| Resend (e-mail) | OTP, link de confirmação e recuperação | domínio configurado, templates versionados, antienumeração, timeout de 5 s e até duas novas tentativas transitórias |
+| Brevo (e-mail) | OTP, link de confirmação e recuperação | remetente individual verificado no MVP sem domínio, template em código, antienumeração, timeout de 5 s e até duas novas tentativas transitórias |
 | WhatsApp Cloud API (Meta) | Integração futura de OTP e recuperação para celular no Brasil | adiada pela ADR-025; UI desabilitada como “Em breve” e contrato publicado não aceita o canal nesta etapa |
 | Object storage | fotos, imagens de conversa, anexos e evidências | buckets/prefixos por classe, URLs assinadas, malware scan, retenção e exclusão |
 | Geocodificação/mapas | região aproximada, distância e ponto de encontro | consentimento, minimização e não rastrear deslocamento |
 | Push/web notification | avisos configuráveis e essenciais | preferências por categoria e ao menos um canal essencial |
 | Observabilidade | logs, métricas, traces e alertas | redaction de PII/segredos; correlação sem conteúdo sensível |
 
-Resend é o único provedor ativo na primeira implementação de verificação. Antes de ativá-lo, é obrigatório configurar domínio, remetente e credencial em ambiente e revisar os termos operacionais vigentes. WhatsApp Cloud API continua como integração futura conforme ADR-025; região, DPA, residência de dados e demais integrações continuam sujeitos a ADR antes de implementação.
+Brevo é o único provedor ativo na primeira implementação de verificação. Antes de ativá-lo, é obrigatório verificar um remetente individual, configurar a API key em ambiente e revisar os termos e a cota gratuita vigentes. Sem domínio autenticado, a Brevo pode reescrever o remetente para um endereço técnico; isso é aceito apenas no MVP de testes. WhatsApp Cloud API continua como integração futura conforme ADR-025.
 
-Nesta fundação não há SDK ou chamada de provedor: a entrega de verificação é a porta outbound `VerificationDeliveryPort`, chamada somente após o commit da unidade de trabalho. A requisição `verify` leva o OTP em claro apenas em memória (ele nunca é persistido nem registrado em log) e a chave de idempotência persistida; reenvios usam `<chave>:resend:<n>`. A requisição `recovery_notice` é enviada, pelo mesmo canal, quando o contato já pertence a um cadastro ou conta, sem alterar a resposta neutra. Falhas de entrega não mudam a resposta e geram apenas o evento `registration.verification.delivery_failed`, com canal e id opaco. O adapter atual (`NoopVerificationDeliveryAdapter`) não chama provedor.
+A entrega de verificação é a porta outbound `VerificationDeliveryPort`, chamada somente após o commit da unidade de trabalho. A requisição `verify` leva o OTP e o token do link em claro apenas em memória (nunca persistidos nem registrados em log) e a chave de idempotência persistida; reenvios usam `<chave>:resend:<n>` como identificador histórico interno e geram novo OTP e novo link. A requisição `recovery_notice` é enviada, pelo mesmo canal, quando o contato já pertence a um cadastro ou conta, sem alterar a resposta neutra e sem código ou link. Falhas de entrega não mudam a resposta e geram apenas o evento `registration.verification.delivery_failed`, com canal e id opaco.
 
-Na primeira implementação real, o adapter de e-mail usará o SDK oficial `resend`, confinado à infraestrutura. O desenho do adapter WhatsApp por `fetch` da ADR-024 fica adiado pela ADR-025. O `noop` permanece somente em desenvolvimento/testes explicitamente configurados e nunca responde como entrega bem-sucedida de WhatsApp em ambiente publicado.
+`BrevoVerificationDeliveryAdapter` (ADR-026) usa o SDK oficial `@getbrevo/brevo` fixado em `6.0.3`, confinado à infraestrutura, com template pt-BR versionado (`verification-email/v1`) contendo OTP e link. O adapter desabilita retries automáticos do SDK e aplica uma única política: timeout cancelável de 5 s e no máximo duas novas tentativas, sempre com o mesmo UUID derivado em `headers.idempotencyKey` do corpo Brevo, para falhas transitórias, `408`, `429` e `5xx`; demais `4xx` são definitivos. `Retry-After` é limitado a 5 s. Configuração: `VERIFICATION_DELIVERY_MODE` (`brevo` | `noop`, obrigatório; `noop` recusado em produção), `BREVO_API_KEY`, `EMAIL_FROM`, `FRONTEND_PUBLIC_URL` (obrigatórios em `brevo`) e `BREVO_BASE_URL` (padrão oficial; `https` obrigatório em produção). Somente o adapter configurado é instanciado. O desenho do adapter WhatsApp por `fetch` da ADR-024 continua adiado pela ADR-025.
 
 ## 5. Arquivos e limites
 
@@ -79,6 +103,7 @@ Valide extensão, MIME real, tamanho, assinatura, malware e autorização tanto 
 - Tokens de confirmação/recuperação têm finalidade, expiração, uso único e armazenamento seguro.
 - Cada entrega de verificação usa chave de idempotência por desafio/entrega. Falhas definitivas não são repetidas automaticamente; falhas transitórias podem ter no máximo duas novas tentativas.
 - OTP expira em 15 minutos, bloqueia por 20 minutos após cinco falhas e usa limites por contato e origem/IP; logs e métricas não incluem código, contato completo ou razão detalhada de bloqueio.
+- O limite de dez desafios por origem/hora é aplicado no NestJS antes da unidade de negócio, em `verification_rate_window` com `scope = 'origin'`, usando somente a fingerprint recebida; nenhum IP chega ao backend, banco, logs ou telemetria (SDD-009).
 - No deploy inicial direto na Vercel, somente `x-vercel-forwarded-for` alimenta o resolvedor server-only de origem. O BFF converte o IP em fingerprint HMAC e envia apenas essa fingerprint ao NestJS; headers genéricos do cliente são ignorados.
 - Rotas de cadastro no NestJS exigem credencial interna opaca do BFF, separada da continuação da pessoa. Migração futura para Cloudflare troca apenas o resolvedor de origem e exige nova ADR; não habilita fallback simultâneo para múltiplos headers.
 - Respostas de login/recuperação não confirmam existência da conta.

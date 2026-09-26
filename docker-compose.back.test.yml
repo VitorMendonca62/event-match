@@ -13,6 +13,18 @@ services:
       timeout: 3s
       retries: 15
 
+  # E2E-only stand-in for the Brevo API (ADR-026); nothing leaves the Compose network.
+  fake-brevo:
+    build:
+      context: .
+      dockerfile: back/Dockerfile
+      target: development
+    command: bun back/test/support/fake-brevo-server.ts
+    environment:
+      FAKE_BREVO_PORT: "4010"
+    ports:
+      - "${FAKE_BREVO_HOST_PORT:-0}:4010"
+
   back:
     build:
       context: .
@@ -34,8 +46,18 @@ services:
       CONTACT_HASH_KEY: ${CONTACT_HASH_KEY:-}
       CONTACT_ENCRYPTION_KEY: ${CONTACT_ENCRYPTION_KEY:-}
       VERIFICATION_SECRET_KEY: ${VERIFICATION_SECRET_KEY:-}
+      REGISTRATION_FLOW_SECRET: ${REGISTRATION_FLOW_SECRET:-}
+      BFF_INTERNAL_TOKEN: ${BFF_INTERNAL_TOKEN:-}
+      REGISTRATION_HTTP_ENABLED: "true"
+      VERIFICATION_DELIVERY_MODE: brevo
+      BREVO_API_KEY: xkeysib-fake-e2e-only
+      BREVO_BASE_URL: http://fake-brevo:4010/v3
+      EMAIL_FROM: EventMatch <nao-responda@example.test>
+      FRONTEND_PUBLIC_URL: http://localhost:3000
     depends_on:
       postgres:
         condition: service_healthy
+      fake-brevo:
+        condition: service_started
     ports:
       - "${BACK_PORT:-0}:3001"

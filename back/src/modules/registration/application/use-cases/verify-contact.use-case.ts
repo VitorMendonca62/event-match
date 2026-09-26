@@ -1,4 +1,7 @@
-import type { UnitOfWorkPort } from '../../../../shared/application/ports/unit-of-work.port';
+import type {
+  TransactionContext,
+  UnitOfWorkPort,
+} from '../../../../shared/application/ports/unit-of-work.port';
 import type { ContactVerification } from '../../domain/entities/contact-verification';
 import { isRegistrationError } from '../../domain/errors/registration.error';
 import type { VerificationRepositoryPort } from '../../domain/ports/outbound/persistence.ports';
@@ -6,15 +9,19 @@ import type { RegistrationTelemetryPort } from '../../domain/ports/outbound/regi
 import type { ClockPort } from '../../domain/ports/outbound/runtime.ports';
 import type { VerificationSecretPort } from '../../domain/ports/outbound/security.ports';
 import { REGISTRATION_POLICY } from '../../domain/value-objects/verification-policy';
+import type { TransactionHook } from '../contracts/transaction-hook';
 
 export interface VerifyContactResult {
   readonly verificationId: string;
   readonly verified: boolean;
+  /** Challenge window, present only when verified; the next step must happen before it. */
+  readonly expiresAt?: Date;
 }
 
 interface Attempt {
   readonly outcome: 'verified' | 'failed' | 'locked' | 'unavailable';
   readonly verificationId?: string;
+  readonly expiresAt?: Date;
 }
 
 export class VerifyContact {
@@ -32,25 +39,14 @@ export class VerifyContact {
    * The challenge row is locked (ADR-016), so concurrent attempts are serialized and at most five
    * failures are counted. Unknown, expired and locked challenges answer `verified: false`.
    */
-  async execute(input: { verificationId: string; otp: string }): Promise<VerifyContactResult> {
+  async execute(
+    input: { verificationId: string; otp: string },
+    withinTransaction?: TransactionHook<VerifyContactResult>,
+  ): Promise<VerifyContactResult> {
     const attempt = await this.uow.execute(async (context): Promise<Attempt> => {
-      const verification = await this.verifications.findForUpdate(context, input.verificationId);
-      if (!verification) return { outcome: 'unavailable' };
-
-      let next: ContactVerification;
-      try {
-        next = verification.verify(
-          this.secrets.matches(input.otp, verification.otpDigest),
-          this.clock.now(),
-          this.policy,
-        );
-      } catch (error) {
-        if (isRegistrationError(error)) return { outcome: 'unavailable', verificationId: verification.id };
-        throw error;
-      }
-      await this.verifications.save(context, next);
-      const outcome = next.status === 'verified' ? 'verified' : next.lockedUntil ? 'locked' : 'failed';
-      return { outcome, verificationId: verification.id };
+      const attempt = await this.attempt(context, input);
+      await withinTransaction?.(context, this.toResult(input.verificationId, attempt));
+      return attempt;
     });
 
     // Only ids of existing challenges are logged; caller input never reaches telemetry.
@@ -59,6 +55,35 @@ export class VerifyContact {
       outcome: attempt.outcome,
       verificationId: attempt.verificationId,
     });
-    return { verificationId: input.verificationId, verified: attempt.outcome === 'verified' };
+    return this.toResult(input.verificationId, attempt);
+  }
+
+  private toResult(verificationId: string, attempt: Attempt): VerifyContactResult {
+    return attempt.outcome === 'verified'
+      ? { verificationId, verified: true, expiresAt: attempt.expiresAt }
+      : { verificationId, verified: false };
+  }
+
+  private async attempt(
+    context: TransactionContext,
+    input: { verificationId: string; otp: string },
+  ): Promise<Attempt> {
+    const verification = await this.verifications.findForUpdate(context, input.verificationId);
+    if (!verification) return { outcome: 'unavailable' };
+
+    let next: ContactVerification;
+    try {
+      next = verification.verify(
+        this.secrets.matches(input.otp, verification.otpDigest),
+        this.clock.now(),
+        this.policy,
+      );
+    } catch (error) {
+      if (isRegistrationError(error)) return { outcome: 'unavailable', verificationId: verification.id };
+      throw error;
+    }
+    await this.verifications.save(context, next);
+    const outcome = next.status === 'verified' ? 'verified' : next.lockedUntil ? 'locked' : 'failed';
+    return { outcome, verificationId: verification.id, expiresAt: next.expiresAt };
   }
 }
