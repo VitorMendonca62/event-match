@@ -3,7 +3,7 @@
 - **Status:** accepted
 - **Data:** 2026-09-25
 - **Decisores:** produto, backend, operação e segurança
-- **Relacionado:** `specs/sdd-006-modelagem-conceitual-cadastro/tasks.md`
+- **Relacionado:** `specs/sdd-006-modelagem-conceitual-cadastro/tasks.md`; ADR-024 (`accepted`, protocolo de entrega e link de e-mail)
 - **Substitui/Substituído por:** N/A
 
 ## Contexto
@@ -26,7 +26,7 @@ O cadastro solicita consentimento explícito para o envio transacional do códig
 
 ## Consequências
 
-- A implementação exige configuração segura de credenciais e templates aprovados, sem introduzir SDK de provedor no domínio ou aplicação.
+- A implementação exige configuração segura de credenciais e templates aprovados. Conforme ADR-024, o SDK oficial do Resend fica confinado ao adapter de infraestrutura; domínio e aplicação permanecem independentes de provedor.
 - Falhas de entrega não revelam existência de conta e não concluem verificação.
 - WhatsApp tem custo por mensagem/template aplicável pela Meta; Resend é usado inicialmente dentro de seu limite gratuito, sujeito aos limites vigentes do provedor.
 

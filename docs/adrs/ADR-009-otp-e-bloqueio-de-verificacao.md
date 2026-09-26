@@ -3,8 +3,8 @@
 - **Status:** accepted
 - **Data:** 2026-09-25
 - **Decisores:** produto, segurança, backend e operação
-- **Relacionado:** `specs/sdd-006-modelagem-conceitual-cadastro/tasks.md`; ADR-015 (persistência dos limites; adia o limite por origem/IP até haver origem confiável)
-- **Substitui/Substituído por:** limite por origem/IP parcialmente adiado pela ADR-015; demais decisões permanecem vigentes
+- **Relacionado:** `specs/sdd-006-modelagem-conceitual-cadastro/tasks.md`; ADR-015 (persistência dos limites); ADR-023 (origem confiável)
+- **Substitui/Substituído por:** limite por origem/IP adiado pela ADR-015 e posteriormente ativado, no escopo da SDD-009, pela ADR-023; demais decisões permanecem vigentes
 
 ## Contexto
 
@@ -39,3 +39,7 @@ Parâmetros aprovados:
 - Contadores de tentativa e bloqueio precisam ser atualizados atomicamente.
 - Limites por origem/IP devem considerar proxy confiável e não podem ser a única barreira contra abuso.
 - Mensagens para sucesso, falha, expiração, bloqueio e contato existente permanecem neutras, conforme RNF004.
+
+## Atualização posterior
+
+A ADR-023, aceita em 2026-09-26, encerra o adiamento do limite por origem: o BFF hospedado diretamente na Vercel deriva uma fingerprint HMAC de um header confiável da plataforma e a envia ao NestJS somente em chamada autenticada. A ativação pertence à SDD-009 e não armazena o IP puro.

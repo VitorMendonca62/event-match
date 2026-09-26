@@ -131,6 +131,8 @@ Rollback: desabilitar fluxo/feature flag e reimplantar API anterior; migrations 
 - [x] Lorem ipsum será usado exclusivamente em testes de interface, com rolagem completa antes de habilitar a ação; não habilita cadastro real nem gera aceite efetivo. Termos, política e regras definitivos serão criados posteriormente com respaldo jurídico, antes de lançamento ou aceite efetivo.
 - [x] O progresso local usa `sessionStorage` para etapa atual, nome de exibição, cidade/região, intenção, interesses e campos opcionais, com TTL deslizante de no máximo 30 minutos sem atualização; será apagado em conclusão, cancelamento, expiração e incompatibilidade de versão. Registrado na ADR-011 aceita.
 
+Decisão posterior: a ADR-019, aceita em 2026-09-26, substitui parcialmente a ordem registrada no primeiro item. O nascimento passa a ser informado e validado antes do contato, sem persistência; após refresh é solicitado novamente e, na conclusão, é reenviado, revalidado e persistido somente na conta ativa. Os estados e momentos de criação de `Registration` e `Account` permanecem os mesmos.
+
 ## 10. Checklist de Conformidade
 
 - [x] Decisões citam `docs/` e ADRs.

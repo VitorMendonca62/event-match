@@ -3,8 +3,8 @@
 - **Status:** accepted
 - **Data:** 2026-09-25
 - **Decisores:** segurança, backend e operação
-- **Relacionado:** `specs/sdd-007-persistencia-postgresql-cadastro/tasks.md`; ADR-009, ADR-016, ADR-017
-- **Substitui/Substituído por:** adia parcialmente o limite por origem/IP da ADR-009 até existir origem confiável; os demais limites da ADR-009 permanecem vigentes
+- **Relacionado:** `specs/sdd-007-persistencia-postgresql-cadastro/tasks.md`; ADR-009, ADR-016, ADR-017; ADR-023
+- **Substitui/Substituído por:** adiou parcialmente o limite por origem/IP da ADR-009; a ADR-023 aceita define sua ativação na SDD-009
 
 ## Contexto
 
@@ -134,3 +134,7 @@ Integrado à migration do cadastro. Rollback: API anterior; tabela aditiva. Veri
 
 - ADR-009; ADR-016 (unidade de trabalho e pool único); ADR-017; DER RNF003–RNF004
 - `back/src/shared/infrastructure/config/env.ts` (`DATABASE_POOL_MAX`); `back/src/main.ts` (sem `trust proxy`)
+
+## Atualização posterior
+
+A ADR-023, aceita em 2026-09-26, define a Vercel direta como origem inicial do BFF, transforma o IP em fingerprint antes do NestJS e autentica a chamada interna. O schema `scope = 'origin'` previsto nesta ADR será ativado pela SDD-009; até essa implementação, o código continua aplicando somente os limites por contato.

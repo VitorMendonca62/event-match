@@ -3,7 +3,7 @@
 ## 1. Princípios do contrato
 
 - NestJS em `back/` expõe a API de negócio e publica OpenAPI.
-- Route Handlers do Next.js são BFF/proxy opcional; não acessam PostgreSQL nem implementam regras do domínio.
+- Route Handlers do Next.js são BFF/proxy e, no cadastro, constituem a única entrada do navegador; não acessam PostgreSQL nem implementam regras do domínio.
 - DTOs HTTP são validados com `ValidationPipe` e `class-validator`; respostas nunca expõem stack trace, segredo ou sinal antifraude interno.
 - Autorização considera identidade, papel, relação com evento/caso, bloqueios, restrições e estado do recurso.
 - Operações irreversíveis, concorrentes ou reexecutáveis declaram idempotência e conflito (`409`) explicitamente.
@@ -61,6 +61,8 @@ Resend e WhatsApp Cloud API são os provedores aceitos para a primeira implement
 
 Nesta fundação não há SDK ou chamada de provedor: a entrega de verificação é a porta outbound `VerificationDeliveryPort`, chamada somente após o commit da unidade de trabalho. A requisição `verify` leva o OTP em claro apenas em memória (ele nunca é persistido nem registrado em log) e a chave de idempotência persistida; reenvios usam `<chave>:resend:<n>`. A requisição `recovery_notice` é enviada, pelo mesmo canal, quando o contato já pertence a um cadastro ou conta, sem alterar a resposta neutra. Falhas de entrega não mudam a resposta e geram apenas o evento `registration.verification.delivery_failed`, com canal e id opaco. O adapter atual (`NoopVerificationDeliveryAdapter`) não chama provedor.
 
+Na primeira implementação real, definida pela ADR-024, o adapter de e-mail usará o SDK oficial `resend`, confinado à infraestrutura, e o adapter de WhatsApp usará `fetch` nativo contra a Cloud API. Não serão usados o SDK Node.js arquivado da Meta nem biblioteca de automação de conta pessoal.
+
 ## 5. Arquivos e limites
 
 | Fluxo | Limite |
@@ -77,6 +79,8 @@ Valide extensão, MIME real, tamanho, assinatura, malware e autorização tanto 
 - Tokens de confirmação/recuperação têm finalidade, expiração, uso único e armazenamento seguro.
 - Cada entrega de verificação usa chave de idempotência por desafio/entrega. Falhas definitivas não são repetidas automaticamente; falhas transitórias podem ter no máximo duas novas tentativas.
 - OTP expira em 15 minutos, bloqueia por 20 minutos após cinco falhas e usa limites por contato e origem/IP; logs e métricas não incluem código, contato completo ou razão detalhada de bloqueio.
+- No deploy inicial direto na Vercel, somente `x-vercel-forwarded-for` alimenta o resolvedor server-only de origem. O BFF converte o IP em fingerprint HMAC e envia apenas essa fingerprint ao NestJS; headers genéricos do cliente são ignorados.
+- Rotas de cadastro no NestJS exigem credencial interna opaca do BFF, separada da continuação da pessoa. Migração futura para Cloudflare troca apenas o resolvedor de origem e exige nova ADR; não habilita fallback simultâneo para múltiplos headers.
 - Respostas de login/recuperação não confirmam existência da conta.
 - Downloads de cópia de dados usam autenticação reforçada, URL temporária e expiração de sete dias.
 - Webhooks externos exigem assinatura, replay protection, idempotência e auditoria.
