@@ -8,7 +8,7 @@ ALTER TABLE "registration" ADD COLUMN "key_version" smallint;--> statement-break
 -- 'expired' and only required contact_hash to be NULL on terminal rows. Normalize them before
 -- the explicit-branch CHECKs below, which require terminal rows to retain nothing (ADR-017/018).
 UPDATE "registration" SET "key_version" = 1 WHERE "status" = 'registration_in_progress';--> statement-breakpoint
-UPDATE "registration" SET "status" = 'converted', "expired_at" = NULL WHERE "status" = 'expired' AND "id" IN (SELECT "registration_id" FROM "account");--> statement-breakpoint
+UPDATE "registration" SET "status" = 'converted', "expired_at" = NULL WHERE "status" = 'expired' AND "id" IN (SELECT "registration_id" FROM "account" WHERE "status" <> 'expired');
 UPDATE "registration" SET "contact_hash" = NULL, "contact_ciphertext" = NULL, "key_version" = NULL, "password_hash" = NULL WHERE "status" <> 'registration_in_progress';--> statement-breakpoint
 UPDATE "account_contact" SET "contact_hash" = NULL, "contact_ciphertext" = NULL WHERE NOT "holds_contact";--> statement-breakpoint
 ALTER TABLE "account_contact" ADD CONSTRAINT "account_contact_holding_check" CHECK (("account_contact"."holds_contact" and "account_contact"."contact_hash" is not null and "account_contact"."contact_ciphertext" is not null) or (not "account_contact"."holds_contact" and "account_contact"."contact_hash" is null and "account_contact"."contact_ciphertext" is null));--> statement-breakpoint
