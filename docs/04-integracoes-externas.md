@@ -51,17 +51,17 @@ Referência: RN021, RN025, RN075–RN077, RN152–RN159.
 | Integração | Finalidade | Requisitos/controles |
 |---|---|---|
 | Resend (e-mail) | OTP, link de confirmação e recuperação | domínio configurado, templates versionados, antienumeração, timeout de 5 s e até duas novas tentativas transitórias |
-| WhatsApp Cloud API (Meta) | OTP e recuperação para celular no Brasil | consentimento explícito para envio transacional, template aprovado, rate limit, timeout de 5 s e até duas novas tentativas transitórias; sem fallback por SMS |
+| WhatsApp Cloud API (Meta) | Integração futura de OTP e recuperação para celular no Brasil | adiada pela ADR-025; UI desabilitada como “Em breve” e contrato publicado não aceita o canal nesta etapa |
 | Object storage | fotos, imagens de conversa, anexos e evidências | buckets/prefixos por classe, URLs assinadas, malware scan, retenção e exclusão |
 | Geocodificação/mapas | região aproximada, distância e ponto de encontro | consentimento, minimização e não rastrear deslocamento |
 | Push/web notification | avisos configuráveis e essenciais | preferências por categoria e ao menos um canal essencial |
 | Observabilidade | logs, métricas, traces e alertas | redaction de PII/segredos; correlação sem conteúdo sensível |
 
-Resend e WhatsApp Cloud API são os provedores aceitos para a primeira implementação de verificação. Antes de ativá-los, é obrigatório configurar domínio e templates aprovados, credenciais em ambiente e revisar os termos operacionais vigentes. Região, DPA, residência de dados e demais integrações continuam sujeitos a ADR antes de implementação.
+Resend é o único provedor ativo na primeira implementação de verificação. Antes de ativá-lo, é obrigatório configurar domínio, remetente e credencial em ambiente e revisar os termos operacionais vigentes. WhatsApp Cloud API continua como integração futura conforme ADR-025; região, DPA, residência de dados e demais integrações continuam sujeitos a ADR antes de implementação.
 
 Nesta fundação não há SDK ou chamada de provedor: a entrega de verificação é a porta outbound `VerificationDeliveryPort`, chamada somente após o commit da unidade de trabalho. A requisição `verify` leva o OTP em claro apenas em memória (ele nunca é persistido nem registrado em log) e a chave de idempotência persistida; reenvios usam `<chave>:resend:<n>`. A requisição `recovery_notice` é enviada, pelo mesmo canal, quando o contato já pertence a um cadastro ou conta, sem alterar a resposta neutra. Falhas de entrega não mudam a resposta e geram apenas o evento `registration.verification.delivery_failed`, com canal e id opaco. O adapter atual (`NoopVerificationDeliveryAdapter`) não chama provedor.
 
-Na primeira implementação real, definida pela ADR-024, o adapter de e-mail usará o SDK oficial `resend`, confinado à infraestrutura, e o adapter de WhatsApp usará `fetch` nativo contra a Cloud API. Não serão usados o SDK Node.js arquivado da Meta nem biblioteca de automação de conta pessoal.
+Na primeira implementação real, o adapter de e-mail usará o SDK oficial `resend`, confinado à infraestrutura. O desenho do adapter WhatsApp por `fetch` da ADR-024 fica adiado pela ADR-025. O `noop` permanece somente em desenvolvimento/testes explicitamente configurados e nunca responde como entrega bem-sucedida de WhatsApp em ambiente publicado.
 
 ## 5. Arquivos e limites
 

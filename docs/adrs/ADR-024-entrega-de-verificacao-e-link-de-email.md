@@ -4,8 +4,8 @@
 - **Data:** 2026-09-26
 - **Aceita em:** 2026-09-26
 - **Decisores:** backend, segurança e operação
-- **Relacionado:** `specs/sdd-009-api-http-entrega-verificacao-cadastro/tasks.md`; ADR-010, ADR-014, ADR-016, ADR-020
-- **Substitui/Substituído por:** complementa ADR-010 com protocolo e comportamento de falha
+- **Relacionado:** `specs/sdd-009-api-http-entrega-verificacao-cadastro/tasks.md`; ADR-010, ADR-014, ADR-016, ADR-020; ADR-025
+- **Substitui/Substituído por:** complementa ADR-010; a entrega inicial por WhatsApp foi posteriormente adiada pela ADR-025
 
 ## Contexto
 
@@ -49,3 +49,7 @@ Validar domínio, remetente e templates antes de habilitar produção. Smoke por
 - Resend idempotency keys: https://resend.com/changelog/idempotency-keys
 - WhatsApp Cloud API: https://developers.facebook.com/docs/whatsapp/cloud-api/
 - SDK Node.js oficial da Meta arquivado: https://github.com/WhatsApp/WhatsApp-Nodejs-SDK
+
+## Atualização posterior
+
+A ADR-025, aceita em 2026-09-26, mantém esta decisão como desenho futuro do adapter WhatsApp, mas o retira da SDD-009 e do primeiro ambiente publicado. Nesta etapa, somente o adapter Resend é real; WhatsApp fica desabilitado na interface e não é aceito pelo contrato HTTP.

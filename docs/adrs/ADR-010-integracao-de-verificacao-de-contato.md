@@ -3,8 +3,8 @@
 - **Status:** accepted
 - **Data:** 2026-09-25
 - **Decisores:** produto, backend, operação e segurança
-- **Relacionado:** `specs/sdd-006-modelagem-conceitual-cadastro/tasks.md`; ADR-024 (`accepted`, protocolo de entrega e link de e-mail)
-- **Substitui/Substituído por:** N/A
+- **Relacionado:** `specs/sdd-006-modelagem-conceitual-cadastro/tasks.md`; ADR-024 (`accepted`, protocolo de entrega e link de e-mail); ADR-025
+- **Substitui/Substituído por:** ativação inicial de WhatsApp parcialmente substituída pela ADR-025
 
 ## Contexto
 
@@ -33,3 +33,7 @@ O cadastro solicita consentimento explícito para o envio transacional do códig
 ## Condições de aceitação
 
 Antes da implementação, cadastrar e aprovar templates de autenticação, configurar domínio de e-mail e credenciais, e revisar os termos operacionais vigentes dos provedores. A cobertura inicial do MVP é o Brasil.
+
+## Atualização posterior
+
+A ADR-025, aceita em 2026-09-26, adia a ativação de WhatsApp. A primeira publicação permite cadastro somente por e-mail; WhatsApp aparece desabilitado como “Em breve” e o `noop` não simula entrega em produção.

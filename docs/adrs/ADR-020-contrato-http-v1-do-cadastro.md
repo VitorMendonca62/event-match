@@ -4,8 +4,8 @@
 - **Data:** 2026-09-26
 - **Aceita em:** 2026-09-26
 - **Decisores:** produto, backend, frontend e segurança
-- **Relacionado:** `specs/sdd-009-api-http-entrega-verificacao-cadastro/tasks.md`; ADR-009, ADR-012, ADR-019, ADR-021
-- **Substitui/Substituído por:** N/A
+- **Relacionado:** `specs/sdd-009-api-http-entrega-verificacao-cadastro/tasks.md`; ADR-009, ADR-012, ADR-019, ADR-021; ADR-025
+- **Substitui/Substituído por:** aceitação inicial de canal parcialmente restringida pela ADR-025
 
 ## Contexto
 
@@ -40,3 +40,7 @@ Publicar OpenAPI e rotas atrás de configuração/flag até existir BFF. Rollbac
 - `docs/04-integracoes-externas.md` §§1–2, 6
 - `back/src/shared/presentation/http/api-response.dto.ts`
 - `back/src/modules/registration/application/use-cases/`
+
+## Atualização posterior
+
+A ADR-025, aceita em 2026-09-26, restringe o pedido de verificação desta versão a `channel = email`. `whatsapp` não integra o enum público inicial e é rejeitado na validação sem efeitos; sua futura inclusão será uma extensão aditiva do contrato.

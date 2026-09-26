@@ -10,11 +10,11 @@
 
 ## 1. Contexto e Motivação
 
-A TASK 06 de `specs/tasks.txt` pede a primeira fatia HTTP pública do cadastro e os adapters reais de Resend/WhatsApp sobre a fundação implementada pela SDD-007. Hoje os casos de uso existem e estão ligados por DI, porém `RegistrationModule` não possui controllers, a entrega usa `NoopVerificationDeliveryAdapter`, a API só expõe health/readiness e o frontend ainda não possui BFF.
+A TASK 06 de `specs/tasks.txt` pede a primeira fatia HTTP pública do cadastro sobre a fundação implementada pela SDD-007. A ADR-025 restringiu a primeira publicação ao e-mail com Resend e adiou WhatsApp. Hoje os casos de uso existem e estão ligados por DI, porém `RegistrationModule` não possui controllers, a entrega usa `NoopVerificationDeliveryAdapter`, a API só expõe health/readiness e o frontend ainda não possui BFF.
 
-O DER v1.3 exige maioridade, contato confirmado, senha, dados obrigatórios, aceites e três interesses (RF001–RF007, RN001–RN009). A ADR-019, aceita após discussão de produto, determina validar nascimento antes de coletar contato. A implementação continua bloqueada pelas demais decisões propostas desta SDD.
+O DER v1.3 exige maioridade, contato confirmado, senha, dados obrigatórios, aceites e três interesses (RF001–RF007, RN001–RN009). A ADR-019 determina validar nascimento antes de coletar contato. Todas as decisões arquiteturais estão aceitas; a implementação continua bloqueada somente pelos pré-requisitos operacionais do Resend e da URL pública do callback.
 
-Rastreabilidade: `docs/02-regras-de-negocio.md` §2; `docs/03-modelos-de-dominio.md` §2.1 e §4; `docs/04-integracoes-externas.md` §§1, 4 e 6; ADR-008 a ADR-018; `specs/sdd-007-persistencia-postgresql-cadastro/tasks.md`; código e testes atuais de `back/src/modules/registration/`.
+Rastreabilidade: `docs/02-regras-de-negocio.md` §2; `docs/03-modelos-de-dominio.md` §2.1 e §4; `docs/04-integracoes-externas.md` §§1, 4 e 6; ADR-008 a ADR-025; `specs/sdd-007-persistencia-postgresql-cadastro/tasks.md`; código e testes atuais de `back/src/modules/registration/`.
 
 Versão: elevar raiz e backend de `0.8.1` para `0.9.0`, atualizar Swagger e `CHANGELOG.md`. O frontend permanece em sua versão atual nesta task; Route Handlers serão implementados apenas na TASK 07.
 
@@ -28,8 +28,8 @@ Inclui:
 - [ ] Migration forward `0003` para `registration_flow_session` e `registration_idempotency`, com constraints, índices, rollout e forward fix (ADR-021).
 - [ ] Casos de uso/portas necessários para consultar o estado mínimo do fluxo, listar interesses ativos, listar metadados de documentos aprovados, verificar link de e-mail e operar a sessão de continuação.
 - [ ] Limite de dez novos desafios por origem/hora usando fingerprint HMAC fornecida apenas por camada confiável, sem persistir IP (ADR-023).
-- [ ] Adapter de e-mail com SDK oficial `resend` e adapter WhatsApp Cloud API com `fetch` nativo, composição por canal, configuração Zod, timeout/retry/idempotência e testes contratuais (ADR-010/ADR-024).
-- [ ] OTP e link no e-mail; somente OTP no WhatsApp. O link usa token opaco, alta entropia, uso único e expiração igual à do desafio (ADR-024).
+- [ ] Adapter de e-mail com SDK oficial `resend`, configuração Zod, timeout/retry/idempotência e testes contratuais; `noop` fica restrito a desenvolvimento/testes (ADR-010/ADR-024/ADR-025).
+- [ ] OTP e link de uso único no e-mail. O link usa token opaco, alta entropia e expiração igual à do desafio (ADR-024).
 - [ ] OpenAPI, `.env.example`, Docker Compose, README, docs arquiteturais/de integração, changelog e versão.
 - [ ] Testes unitários, arquitetura, contrato de provedor, integração PostgreSQL, E2E e validações Bun.
 
@@ -39,6 +39,7 @@ Exclui:
 - Login/sessão geral da conta, recuperação completa de senha, alteração de contato e campos opcionais posteriores à ativação.
 - Conteúdo jurídico definitivo, publicação administrativa de documentos, storage de artefatos jurídicos e ativação real enquanto não existirem os três documentos aprovados.
 - Webhooks/recibos assíncronos de entrega, fila/outbox, job agendado, SMS e painel operacional.
+- Integração real, credenciais, template e ativação do WhatsApp; pertencem a tarefa futura (ADR-025).
 - Alteração do pool máximo de uma conexão.
 
 ## 3. Impacto Arquitetural e ADRs
@@ -55,7 +56,7 @@ Browser (TASK 07)
             domain: regras/portas sem HTTP, NestJS ou Drizzle
             infrastructure:
               PostgreSQL/Drizzle (flow session + idempotência + cadastro)
-              Resend HTTP / WhatsApp Cloud API HTTP
+              Resend SDK oficial
 ```
 
 Regras `nestjs-expert`/hexagonal: DTOs com `class-validator`; `ValidationPipe` global existente; Swagger em cada operação; adapters `@Injectable()` por tokens; nenhum `new` de serviço; erros de domínio/aplicação sem HTTP; controller sem regra de negócio; `Test.createTestingModule` e Supertest. Não usar `forwardRef()`.
@@ -69,9 +70,10 @@ Regras Next/Vercel aplicáveis ao contrato futuro: Route Handlers apenas como BF
 | Credencial opaca, rotação e idempotência | `docs/adrs/ADR-021-credencial-de-continuacao-do-cadastro.md` | accepted | IDs não podem autorizar operações; exige schema e segredo novos. |
 | Next.js BFF como única entrada do navegador | `docs/adrs/ADR-022-bff-nextjs-para-o-cadastro.md` | accepted | Simplifica cookie HttpOnly, CORS e CSRF sem mover regras ao frontend. |
 | Fingerprint de origem confiável | `docs/adrs/ADR-023-origem-confiavel-para-limites-do-cadastro.md` | accepted | Vercel direta fornece a origem inicial; BFF transforma em fingerprint e autentica o encaminhamento. |
-| Entrega por provedor e link de e-mail | `docs/adrs/ADR-024-entrega-de-verificacao-e-link-de-email.md` | accepted | SDK oficial do Resend, `fetch` nativo para WhatsApp e semântica explícita de retry/idempotência. |
+| Entrega por provedor e link de e-mail | `docs/adrs/ADR-024-entrega-de-verificacao-e-link-de-email.md` | accepted | SDK oficial do Resend e semântica de retry/idempotência; a parte WhatsApp ficou como desenho futuro pela ADR-025. |
+| Adiar WhatsApp na primeira publicação | `docs/adrs/ADR-025-adiar-whatsapp-no-cadastro.md` | accepted | Evita fluxo sem OTP; UI mostra “Em breve” e o contrato aceita somente e-mail. |
 
-Todos devem estar `accepted` antes da implementação. A ADR-019 substitui parcialmente a ordem da ADR-008; os links bidirecionais e os documentos canônicos foram atualizados no aceite.
+Todos estão `accepted`. A ADR-019 substitui parcialmente a ordem da ADR-008, e a ADR-025 adia parcialmente a ativação definida nas ADRs 010 e 024; os links bidirecionais e os documentos canônicos foram atualizados.
 
 ## 4. Contratos e Interfaces
 
@@ -82,7 +84,7 @@ Todas as rotas de cadastro exigem ainda `X-EventMatch-BFF-Token`, comparado em t
 | Método e rota | Entrada principal | Sucesso proposto | Autorização/observação |
 |---|---|---|---|
 | `POST /api/v1/registration/eligibility` | `{ birthDate: YYYY-MM-DD }` | `200 { eligible }`; emite continuação apenas se elegível | Sem persistir nascimento; `Idempotency-Key` opcional. |
-| `POST /api/v1/registration/contact-verification` | `{ channel, contact, whatsappConsent }` | `202 { expiresAt, nextResendAt }` | Estágio `age_eligible`; sempre resposta neutra. |
+| `POST /api/v1/registration/contact-verification` | `{ channel: 'email', contact }` | `202 { expiresAt, nextResendAt }` | Estágio `age_eligible`; sempre resposta neutra. `whatsapp` falha na validação sem escrita. |
 | `POST /api/v1/registration/contact-verification/resend` | `{}` | `202 { expiresAt, nextResendAt }` | Continuação; `Idempotency-Key` obrigatório. |
 | `POST /api/v1/registration/contact-verification/confirm` | `{ otp }` | `200 { verified }` | Continuação; falso cobre inválido, expirado, bloqueado ou indisponível. |
 | `POST /api/v1/registration/contact-verification/confirm-link` | `{ token }` | `200 { verified }` | Token do link basta; em sucesso emite/rotaciona continuação. |
@@ -147,7 +149,7 @@ Compatibilidade: contrato novo e aditivo. OpenAPI recebe DTOs concretos, headers
 | 1 | Nascimento é validado na ativação. | Primeira informação após a apresentação; menor não recebe credencial nem avança. Data não é persistida e é revalidada na conclusão. | RF001, RN001, ADR-019 aceita. |
 | 2 | Casos de uso recebem ids internos. | HTTP resolve ids exclusivamente a partir da continuação autorizada para a etapa. | RNF003–RNF004, ADR-021 aceita. |
 | 3 | Limite por origem está adiado no código atual. | BFF na Vercel produz fingerprint autenticada; backend consome até 10 desafios/origem/hora antes da UoW de negócio. | ADR-009, ADR-015, ADR-023 aceita. |
-| 4 | E-mail/WhatsApp usam adapter noop. | SDK oficial do Resend envia OTP+link; adapter HTTP da Meta envia OTP; recuperação permanece no mesmo canal e resposta é neutra. | ADR-010, ADR-024 aceita. |
+| 4 | E-mail/WhatsApp usam adapter noop. | SDK oficial do Resend envia OTP+link. WhatsApp fica fora do contrato publicado, e `noop` existe apenas em desenvolvimento/testes. | ADR-010, ADR-024 e ADR-025 aceitas. |
 | 5 | Link digest existe, mas não é usado. | Token de 32 bytes, digest persistido, expiração junto ao desafio e consumo único sob lock. | ADR-014, ADR-024 aceita. |
 | 6 | Interesses só são buscados por ids. | Catálogo expõe somente interesses ativos em ordem estável. | RF006, RN147–RN149. |
 | 7 | Termos não têm conteúdo aprovado. | Endpoint retorna somente metadados aprovados e, hoje, lista vazia; nenhuma conta real ativa com placeholder. | RF005, ADR-012. |
@@ -162,7 +164,8 @@ Compatibilidade: contrato novo e aditivo. OpenAPI recebe DTOs concretos, headers
 - Tokens têm entropia, digest, TTL, rotação, janela anterior, revogação e comparação segura; nunca são registrados ou guardados em texto no banco.
 - Idempotency key repetida com mesmo payload retorna o resultado seguro anterior; payload diferente retorna conflito; duplicidade não envia nova mensagem.
 - Origem é limitada sem armazenar IP; o BFF aceita somente `x-vercel-forwarded-for` na Vercel direta, autentica o encaminhamento com `BFF_INTERNAL_TOKEN` e o ambiente publicado falha cedo se cadeia/configuração estiver ausente.
-- Resend usa idempotency key nativa; WhatsApp documenta a limitação de idempotência do provedor e não repete timeout ambíguo. Timeout por tentativa é 5 s; no máximo duas novas tentativas somente quando classificadas como seguras/transitórias.
+- Resend usa idempotency key nativa. Timeout por tentativa é 5 s; no máximo duas novas tentativas somente quando classificadas como seguras/transitórias.
+- O contrato HTTP e o OpenAPI aceitam somente e-mail nesta versão; tentativa de `whatsapp` retorna `400` de validação sem criar desafio, contato, contador ou evento de entrega.
 - Nenhum I/O externo ocorre dentro de transação PostgreSQL; pool continua em uma conexão.
 - Logs/métricas usam ids opacos, operação, canal, outcome, latência e provedor; não incluem contato, nascimento, OTP, link, cookie, bearer, corpo do provedor ou credencial.
 - `NoopVerificationDeliveryAdapter` fica restrito a teste/desenvolvimento explicitamente configurado; produção exige adapter/segredos reais e falha cedo sem eles.
@@ -177,7 +180,7 @@ Unitários (`bun run --cwd back test`):
 - Guard/sessão: token atual/anterior, rotação, expiração, revogação, etapa errada e resposta perdida; token anterior só recupera a mesma requisição idempotente e não executa novo efeito.
 - Idempotência: replay igual, conflito de payload, concorrência e resposta armazenada sem segredo.
 - Link: geração, digest, confirmação única, expirado, inválido e concorrente.
-- Adapters: composição por canal, redaction, timeout, `Retry-After`, 4xx definitivo, 429/5xx transitório e timeout ambíguo; `Test.createTestingModule` valida bindings.
+- Adapter Resend: redaction, timeout cancelável, `Retry-After`, 4xx definitivo, 429/5xx transitório e idempotência; `Test.createTestingModule` valida que produção não compõe `noop`.
 - Arquitetura: domínio/aplicação sem imports NestJS/HTTP/Drizzle; apresentação sem SQL/regra de negócio.
 
 Integração (`bun run --cwd back test:integration` pelo runner descartável):
@@ -191,12 +194,11 @@ Contrato de provedores:
 
 - Servidor HTTP fake valida URL, método, headers, template/payload, timeout, retry e idempotency key sem chamar internet real.
 - Resend: `POST /emails` e `Idempotency-Key` estável por entrega.
-- Meta: `POST /{phone-number-id}/messages`, template configurado e versão Graph fixada/configurável; testes não dependem da versão remota.
 
 E2E/Supertest (`bun run --cwd back test:e2e`):
 
 - nascimento elegível → contato → OTP/link → senha → dados obrigatórios → interesses/termos fixture → ativação;
-- menoridade, WhatsApp sem consentimento, OTP inválido/expirado/bloqueado, cooldown/reenvio, contato retido, idempotência, token roubado/inválido e etapa fora de ordem;
+- menoridade, canal WhatsApp rejeitado sem escrita/entrega, OTP inválido/expirado/bloqueado, cooldown/reenvio, contato retido, idempotência, token roubado/inválido e etapa fora de ordem;
 - antienumeração compara status, shape, mensagem e timing com tolerância definida;
 - ausência de termos aprovados bloqueia ativação.
 
@@ -211,7 +213,7 @@ Validação final: `bun run --cwd back lint`, `typecheck`, `test`, `test:integra
 | Rotação perder resposta e bloquear usuário | média | médio | Token anterior por 60 s somente para recuperar a mesma requisição idempotente, sem repetir o efeito de negócio. |
 | Origem forjada via header | baixa com controles | alto | Vercel direta, header específico, resolvedor fail-closed e credencial BFF separada; backend ignora headers públicos. |
 | Enumeração por status/tempo | média | alto | Shape/mensagem neutros, trabalho equivalente e testes de timing. |
-| Timeout Meta gerar mensagem duplicada | média | médio | Não repetir resultado ambíguo; novo envio apenas por reenvio explícito. |
+| WhatsApp parecer disponível antes da integração | baixa com testes | médio | Contrato aceita somente e-mail; TASK 07 usa controle desabilitado, texto “Em breve” e E2E sem chamada. |
 | Falha após commit impedir entrega | média | médio | Evento seguro + reenvio; outbox/webhook fica para tarefa futura, pois OTP claro não é persistido. |
 | Termos sem conteúdo impedirem ativação | certa | médio | Comportamento intencional; fixtures aprovadas só em banco efêmero. |
 | Migration bloquear deploy | baixa | alto | Objetos aditivos, SQL revisado, teste de upgrade e job único antes da API. |
@@ -219,12 +221,12 @@ Validação final: `bun run --cwd back lint`, `typecheck`, `test`, `test:integra
 
 Rollout:
 
-1. Obter domínio/templates/credenciais em ambientes secretos; validar Graph API vigente e a versão do SDK Resend antes de fixá-las.
+1. Obter domínio, remetente e credencial Resend em ambiente secreto; validar a versão do SDK antes de fixá-la.
 2. Gerar/revisar migration `0003`, validar banco descartável e aplicar como job único.
 3. Fazer deploy do backend com rotas desabilitadas por configuração/flag até a TASK 07 entregar BFF e fingerprint confiável.
-4. Habilitar em ambiente de teste, rodar smoke por canal, monitorar falhas/latência/rate limit sem PII e promover gradualmente.
+4. Habilitar em ambiente de teste, rodar smoke de e-mail, monitorar falhas/latência/rate limit sem PII e promover gradualmente.
 
-Rollback: desabilitar rotas/adapter real e reimplantar `0.8.1`; tabelas/colunas aditivas ficam sem uso. Corrigir banco somente por migration forward; preservar digests e não executar `down` destrutivo. Revogar credenciais/tokens de provedor se houver incidente.
+Rollback: desabilitar rotas/adapter real e reimplantar `0.8.1`; tabelas/colunas aditivas ficam sem uso. Corrigir banco somente por migration forward; preservar digests e não executar `down` destrutivo. Revogar a credencial do Resend se houver incidente.
 
 ## 9. Perguntas em Aberto (bloqueantes)
 
@@ -233,8 +235,9 @@ Rollback: desabilitar rotas/adapter real e reimplantar `0.8.1`; tabelas/colunas 
 - [x] **Continuação (ADR-021):** token opaco de 32 bytes, tabelas de sessão/idempotência, novo `REGISTRATION_FLOW_SECRET`, TTLs por etapa e rotação aceitos; a tolerância de 60 s vale somente para repetir a mesma requisição idempotente, nunca para uma operação nova.
 - [x] **Topologia (ADR-022):** Next.js BFF será a única entrada do navegador em produção, mantendo o NestJS como API de negócio interna.
 - [x] **Origem (ADR-023):** frontend/BFF inicial na Vercel direta, usando apenas `x-vercel-forwarded-for`, fingerprint HMAC e credencial interna do BFF; migração futura para Cloudflare fica isolada e exige nova ADR.
-- [x] **Protocolo de provedores (ADR-024):** SDK oficial `resend` no adapter de e-mail, `fetch` nativo no adapter WhatsApp, retries classificados e sem outbox nesta task.
-- [ ] **Ativação dos provedores:** fornecer/configurar domínio Resend, remetente, API key, conta/telefone/template da Meta, token e URL pública do frontend por ambiente seguro (nunca no Git ou no chat).
+- [x] **Protocolo de provedores (ADR-024):** SDK oficial `resend` no adapter de e-mail, retries classificados e sem outbox nesta task; o desenho HTTP de WhatsApp ficou para implementação futura.
+- [x] **Disponibilidade de canal (ADR-025):** WhatsApp desabilitado com “Em breve”, sem chamada do frontend; contrato publicado aceita somente e-mail e `noop` fica restrito a desenvolvimento/testes.
+- [ ] **Ativação do Resend:** fornecer/configurar domínio, remetente, API key e URL pública do frontend por ambiente seguro (nunca no Git ou no chat).
 - [x] **Documentos jurídicos:** o endpoint retorna apenas metadados aprovados (inicialmente vazio); lorem ipsum existe somente em fixtures/testes de interface e a ativação real continua bloqueada até tarefa jurídica/publicação futura.
 
 ## 10. Checklist de Conformidade
