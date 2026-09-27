@@ -174,6 +174,10 @@ specs/
 ### Next.js obrigatório
 
 - Use [`vercel-react-best-practices`](/home/vitor/.agents/skills/vercel-react-best-practices/SKILL.md).
+- Use [`impeccable`](/home/vitor/.agents/skills/impeccable/SKILL.md) em todo planejamento, criação, alteração, revisão ou refinamento de interfaces do frontend.
+- Antes do primeiro trabalho visual da sessão, carregue o contexto pelo launcher da skill. Para uma superfície nova sem `PRODUCT.md`, execute o fluxo `init` e depois `new-work`; não edite UI antes de confirmar a direção visual e registrar o surface brief exigido pela skill.
+- Preserve as restrições funcionais, de acessibilidade e a paleta obrigatória deste arquivo ao aplicar o Impeccable. Mudança durável do sistema visual deve terminar documentada em `DESIGN.md` e `.impeccable/design.json` conforme a skill.
+- Valide interfaces em passes visuais limitados, com capturas desktop e mobile, detector aplicável e finish review do Impeccable; não faça ciclos abertos de polimento.
 - Priorize regras `async-*`, `bundle-*` e `server-*`; cite IDs aplicáveis no plano/revisão.
 - Route Handlers não duplicam a API NestJS nem acessam PostgreSQL. Quando existirem, autenticam/autorizam e delegam ao backend.
 - Não mantenha estado mutável de requisição em módulos e minimize dados serializados para Client Components.
@@ -234,8 +238,8 @@ Nunca exponha segredos. Cite arquivos e linhas. Preserve alterações do usuári
 1. Registre a demanda em `specs/tasks.txt`.
 2. Use `code-planner` e crie ADRs `proposed` para cada decisão material.
 3. Resolva perguntas e aceite ADRs; só então marque o plano `ready`.
-4. Use `code-implementer`, carregando `nestjs-expert` para backend e `vercel-react-best-practices` para frontend.
-5. Use `code-reviewer`; valide arquitetura hexagonal, contratos front/back, Bun, lint, tipos, testes e builds.
+4. Use `code-implementer`, carregando `nestjs-expert` para backend e `vercel-react-best-practices` + `impeccable` para frontend com interface.
+5. Use `code-reviewer`; valide arquitetura hexagonal, contratos front/back, Bun, lint, tipos, testes, builds e, no frontend visual, os artefatos e o finish review do Impeccable.
 6. Use `open-pull-request` somente quando explicitamente solicitado.
 
 ## 9. Skills
@@ -248,6 +252,7 @@ Nunca exponha segredos. Cite arquivos e linhas. Preserve alterações do usuári
 | `nextjs-architecture` | Arquitetura do frontend/BFF. |
 | `nestjs-hexagonal-architecture` | Camadas, portas e adapters do backend. |
 | `vercel-react-best-practices` | Trabalho em React/Next.js. |
+| `impeccable` | Todo trabalho de UX/UI, design, acessibilidade, responsividade ou refinamento visual no frontend. |
 | `nestjs-expert` | Trabalho em NestJS. |
 | `open-pull-request` | Somente por pedido explícito. |
 
