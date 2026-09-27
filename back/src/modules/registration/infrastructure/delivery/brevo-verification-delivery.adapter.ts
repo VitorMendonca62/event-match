@@ -64,7 +64,7 @@ export class BrevoVerificationDeliveryAdapter implements VerificationDeliveryPor
     this.options = { ...DEFAULT_BREVO_DELIVERY_OPTIONS, ...options };
     this.client = new BrevoClient({
       apiKey: config.getOrThrow<string>('BREVO_API_KEY'),
-      baseUrl: config.getOrThrow<string>('BREVO_BASE_URL'),
+      // baseUrl: config.getOrThrow<string>('BREVO_BASE_URL'),
       maxRetries: 0,
       timeoutInSeconds: this.options.timeoutMs / 1_000,
       ...(this.options.fetch ? { fetch: this.options.fetch } : {}),

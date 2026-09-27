@@ -57,6 +57,14 @@ export class ContactVerificationRequestDto {
   readonly contact!: string;
 }
 
+export class EmailDeliveryTestRequestDto {
+  @ApiProperty({ example: 'pessoa@example.test', maxLength: 254 })
+  @IsString()
+  @MaxLength(254)
+  @IsEmail({ allow_display_name: false, allow_ip_domain: false })
+  readonly contact!: string;
+}
+
 export class ConfirmContactRequestDto {
   @ApiProperty({ example: '123456', pattern: '^\\d{6}$' })
   @IsString()

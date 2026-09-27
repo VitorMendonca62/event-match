@@ -10,6 +10,7 @@ import { ProfilesModule } from '../../../src/modules/profiles/profiles.module';
 import { CheckRegistrationEligibility } from '../../../src/modules/registration/application/use-cases/check-registration-eligibility.use-case';
 import { ListApprovedLegalDocuments } from '../../../src/modules/registration/application/use-cases/list-approved-legal-documents.use-case';
 import { RegistrationFlow } from '../../../src/modules/registration/application/use-cases/registration-flow.use-case';
+import { SendEmailDeliveryTest } from '../../../src/modules/registration/application/use-cases/send-email-delivery-test.use-case';
 import { RegistrationError } from '../../../src/modules/registration/domain/errors/registration.error';
 import { RegistrationModule } from '../../../src/modules/registration/registration.module';
 import { configureApplication } from '../../../src/main';
@@ -41,6 +42,7 @@ const flow = {
   })),
 };
 const eligibility = { execute: mock(async (): Promise<unknown> => ({ eligible: true, continuation: TOKEN, expiresAt: new Date() })) };
+const emailDeliveryTest = { execute: mock(async () => ({ accepted: true })) };
 
 async function createApp(overrides: Record<string, string> = {}): Promise<INestApplication> {
   const module = await Test.createTestingModule({
@@ -59,6 +61,8 @@ async function createApp(overrides: Record<string, string> = {}): Promise<INestA
     .useValue(flow)
     .overrideProvider(CheckRegistrationEligibility)
     .useValue(eligibility)
+    .overrideProvider(SendEmailDeliveryTest)
+    .useValue(emailDeliveryTest)
     .overrideProvider(ListApprovedLegalDocuments)
     .useValue({ execute: async () => [] })
     .overrideProvider(ListActiveInterests)
@@ -86,6 +90,7 @@ describe('registration HTTP contract v1', () => {
   beforeEach(() => {
     Object.values(flow).forEach((fn) => fn.mockClear());
     eligibility.execute.mockClear();
+    emailDeliveryTest.execute.mockClear();
   });
 
   describe('BFF boundary (ADR-022, ADR-023)', () => {
@@ -210,6 +215,17 @@ describe('registration HTTP contract v1', () => {
     });
   });
 
+  describe('temporary Brevo delivery smoke test', () => {
+    test('is hidden while noop is configured', async () => {
+      await http()
+        .post(`${BASE}/email-delivery-test`)
+        .set({ ...BFF, 'Idempotency-Key': KEY })
+        .send({ contact: 'smoke@example.test' })
+        .expect(404);
+      expect(emailDeliveryTest.execute).not.toHaveBeenCalled();
+    });
+  });
+
   describe('password and errors', () => {
     test('the confirmation must match and never reaches the flow', async () => {
       await http()
@@ -324,6 +340,75 @@ describe('registration routes behind the rollout flag', () => {
     const app = await createApp({ REGISTRATION_HTTP_ENABLED: 'false' });
     try {
       await request(app.getHttpServer()).post(`${BASE}/eligibility`).set(BFF).send({ birthDate: '1990-05-10' }).expect(404);
+    } finally {
+      await app.close();
+    }
+  });
+});
+
+describe('temporary Brevo delivery smoke route', () => {
+  const brevoEnvironment = {
+    VERIFICATION_DELIVERY_MODE: 'brevo',
+    BREVO_API_KEY: 'xkeysib-fictitious-http-test-key',
+    EMAIL_FROM: 'EventMatch <nao-responda@example.test>',
+    FRONTEND_PUBLIC_URL: 'https://app.example.test',
+  };
+
+  test('sends only with a valid BFF token, idempotency key and e-mail', async () => {
+    const app = await createApp(brevoEnvironment);
+    try {
+      const response = await request(app.getHttpServer())
+        .post(`${BASE}/email-delivery-test`)
+        .set({ ...BFF, 'Idempotency-Key': KEY })
+        .send({ contact: 'smoke@example.test' })
+        .expect(200);
+
+      expect(response.body).toEqual({
+        data: { accepted: true },
+        message: 'E-mail de teste aceito pela Brevo; o código recebido é apenas ilustrativo.',
+        statusCode: 200,
+      });
+      expect(emailDeliveryTest.execute).toHaveBeenCalledWith({
+        contact: 'smoke@example.test',
+        idempotencyKey: KEY,
+      });
+
+      await request(app.getHttpServer())
+        .post(`${BASE}/email-delivery-test`)
+        .set({ ...BFF, 'Idempotency-Key': KEY })
+        .send({ contact: 'invalid' })
+        .expect(400);
+    } finally {
+      await app.close();
+    }
+  });
+
+  test('returns 503 when Brevo does not accept the message', async () => {
+    emailDeliveryTest.execute.mockResolvedValueOnce({ accepted: false });
+    const app = await createApp(brevoEnvironment);
+    try {
+      await request(app.getHttpServer())
+        .post(`${BASE}/email-delivery-test`)
+        .set({ ...BFF, 'Idempotency-Key': KEY })
+        .send({ contact: 'smoke@example.test' })
+        .expect(503);
+    } finally {
+      await app.close();
+    }
+  });
+
+  test('is hidden in production even when Brevo is configured', async () => {
+    const app = await createApp({
+      ...brevoEnvironment,
+      NODE_ENV: 'production',
+      DATABASE_SSL_MODE: 'require',
+    });
+    try {
+      await request(app.getHttpServer())
+        .post(`${BASE}/email-delivery-test`)
+        .set({ ...BFF, 'Idempotency-Key': KEY })
+        .send({ contact: 'smoke@example.test' })
+        .expect(404);
     } finally {
       await app.close();
     }

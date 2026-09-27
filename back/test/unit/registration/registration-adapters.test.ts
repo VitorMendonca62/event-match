@@ -8,7 +8,12 @@ import { CommonPasswordCheckerAdapter, parseCommonPasswords } from '../../../src
 import { ContactProtectorAdapter } from '../../../src/modules/registration/infrastructure/security/contact-protector.adapter';
 import { VerificationSecretAdapter } from '../../../src/modules/registration/infrastructure/security/verification-secret.adapter';
 import { RegistrationFlowTokenAdapter } from '../../../src/modules/registration/infrastructure/security/registration-flow-token.adapter';
-import { buildEmailLink, renderVerificationEmail } from '../../../src/modules/registration/infrastructure/delivery/verification-email.template';
+import {
+  buildEmailLink,
+  renderRecoveryNoticeEmail,
+  renderVerificationEmail,
+  VERIFICATION_EMAIL_TEMPLATE_VERSION,
+} from '../../../src/modules/registration/infrastructure/delivery/verification-email.template';
 import { Account } from '../../../src/modules/registration/domain/entities/account';
 import { ContactVerification } from '../../../src/modules/registration/domain/entities/contact-verification';
 import { Registration } from '../../../src/modules/registration/domain/entities/registration';
@@ -190,5 +195,27 @@ describe('verification e-mail template', () => {
     const email = renderVerificationEmail({ otp: '<b>', link: 'https://x.test/?a="1"', ttlMinutes: 15 });
     expect(email.html).not.toContain('<b>');
     expect(email.html).toContain('&#34;');
+  });
+
+  test('renders the versioned EventMatch layout with e-mail-compatible inline styles', () => {
+    const verification = renderVerificationEmail({
+      otp: '123456',
+      link: 'https://app.example.test/confirm',
+      ttlMinutes: 15,
+    });
+    const recovery = renderRecoveryNoticeEmail();
+
+    expect(VERIFICATION_EMAIL_TEMPLATE_VERSION).toBe('verification-email/v2');
+    for (const email of [verification, recovery]) {
+      expect(email.html).toContain('<!doctype html>');
+      expect(email.html).toContain('role="presentation"');
+      expect(email.html).toContain('style="');
+      expect(email.html).toContain('#09090b');
+      expect(email.html).toContain('#e11d48');
+      expect(email.html).toContain('EventMatch');
+    }
+    expect(verification.html).toContain('letter-spacing:8px');
+    expect(verification.html).toContain('Confirmar meu e-mail');
+    expect(recovery.html).not.toContain('123456');
   });
 });

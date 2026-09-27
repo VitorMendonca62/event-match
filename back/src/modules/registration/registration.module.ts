@@ -21,6 +21,7 @@ import { ListApprovedLegalDocuments } from './application/use-cases/list-approve
 import { RegistrationFlow } from './application/use-cases/registration-flow.use-case';
 import { ResendContactVerification } from './application/use-cases/resend-contact-verification.use-case';
 import { SaveRequiredData } from './application/use-cases/save-required-data.use-case';
+import { SendEmailDeliveryTest } from './application/use-cases/send-email-delivery-test.use-case';
 import { StartRegistration } from './application/use-cases/start-registration.use-case';
 import { VerifyContact } from './application/use-cases/verify-contact.use-case';
 import { VerifyContactByLink } from './application/use-cases/verify-contact-by-link.use-case';
@@ -63,6 +64,7 @@ import { SystemClockAdapter, UuidV7GeneratorAdapter } from './infrastructure/sec
 import { VerificationSecretAdapter } from './infrastructure/security/verification-secret.adapter';
 import { BffInternalGuard } from './presentation/http/bff-internal.guard';
 import { ContinuationGuard } from './presentation/http/continuation.guard';
+import { EmailDeliveryTestGuard } from './presentation/http/email-delivery-test.guard';
 import { NoStoreMiddleware } from './presentation/http/no-store.middleware';
 import { RegistrationController } from './presentation/http/controllers/registration.controller';
 
@@ -192,6 +194,7 @@ const useCases = [
     REGISTRATION_TELEMETRY_PORT,
   ]),
   useCaseProvider(ListApprovedLegalDocuments, [UNIT_OF_WORK_PORT, TERMS_REPOSITORY_PORT]),
+  useCaseProvider(SendEmailDeliveryTest, [CONTACT_PROTECTOR_PORT, VERIFICATION_DELIVERY_PORT, ID_GENERATOR_PORT]),
   useCaseProvider(RegistrationFlow, [
     RegistrationFlowGate,
     UNIT_OF_WORK_PORT,
@@ -212,7 +215,14 @@ const useCases = [
 @Module({
   imports: [PersistenceModule, ProfilesModule, CatalogModule],
   controllers: [RegistrationController],
-  providers: [...adapters, ...applicationServices, ...useCases, BffInternalGuard, ContinuationGuard],
+  providers: [
+    ...adapters,
+    ...applicationServices,
+    ...useCases,
+    BffInternalGuard,
+    ContinuationGuard,
+    EmailDeliveryTestGuard,
+  ],
   exports: [
     RequestContactVerification,
     ResendContactVerification,

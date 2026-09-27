@@ -23,6 +23,11 @@ export class VerifiedDto {
   readonly verified!: boolean;
 }
 
+export class EmailDeliveryTestDto {
+  @ApiProperty({ example: true })
+  readonly accepted!: boolean;
+}
+
 export class StageDto {
   @ApiProperty({ enum: FLOW_STAGES })
   readonly stage!: FlowStage;
@@ -86,6 +91,11 @@ export const VerificationWindowResponseDto = apiEnvelope(
   HttpStatus.ACCEPTED,
 );
 export const VerifiedResponseDto = apiEnvelope(VerifiedDto, 'VerifiedResponseDto', HttpStatus.OK);
+export const EmailDeliveryTestResponseDto = apiEnvelope(
+  EmailDeliveryTestDto,
+  'EmailDeliveryTestResponseDto',
+  HttpStatus.OK,
+);
 export const StageResponseDto = apiEnvelope(StageDto, 'StageResponseDto', HttpStatus.OK);
 export const SnapshotResponseDto = apiEnvelope(SnapshotDto, 'SnapshotResponseDto', HttpStatus.OK);
 export const LegalDocumentListResponseDto = apiEnvelope(

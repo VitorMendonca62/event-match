@@ -68,6 +68,8 @@ Todas as respostas HTTP com corpo usam `data` (objeto), `message` (string) e `st
 
 O contrato v1 do cadastro (`/api/v1/registration/*` e `GET /api/v1/catalog/interests`) está descrito em `docs/04-integracoes-externas.md` e no OpenAPI (`/docs`). As rotas de cadastro são internas ao BFF: exigem `X-EventMatch-BFF-Token` e ficam desligadas até `REGISTRATION_HTTP_ENABLED=true`. No MVP gratuito, verifique um remetente individual na Brevo e use-o em `EMAIL_FROM`; sem domínio autenticado, a Brevo pode reescrever o remetente para um endereço técnico próprio. Antes de um lançamento comercial, configure um domínio com SPF/DKIM.
 
+Para o smoke operacional da Brevo, `POST /api/v1/registration/email-delivery-test` aceita `{ "contact": "destino@example.com" }` com `X-EventMatch-BFF-Token` e `Idempotency-Key`. A rota existe somente fora de produção quando `VERIFICATION_DELIVERY_MODE=brevo`, não grava contato nem cria desafio e envia um código ilustrativo `000000`. Remova-a após validar o ambiente.
+
 ## Persistência
 
 O módulo técnico cria um pool `pg` singleton com no máximo uma conexão e uma instância Drizzle sobre ele. Os schemas pertencem aos módulos `registration`, `profiles` e `catalog`; migrations são versionadas em `back/drizzle/`. Não use `drizzle-kit push`.

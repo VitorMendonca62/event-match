@@ -9,6 +9,7 @@ import {
   Put,
   Query,
   Res,
+  ServiceUnavailableException,
   UseFilters,
   UseGuards,
 } from '@nestjs/common';
@@ -21,6 +22,7 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiServiceUnavailableResponse,
   ApiTags,
   ApiUnauthorizedResponse,
   ApiUnprocessableEntityResponse,
@@ -40,6 +42,7 @@ import { LocaleQueryDto } from '../../../../../shared/presentation/http/locale-q
 import { CheckRegistrationEligibility } from '../../../application/use-cases/check-registration-eligibility.use-case';
 import { ListApprovedLegalDocuments } from '../../../application/use-cases/list-approved-legal-documents.use-case';
 import { RegistrationFlow } from '../../../application/use-cases/registration-flow.use-case';
+import { SendEmailDeliveryTest } from '../../../application/use-cases/send-email-delivery-test.use-case';
 import { BffInternalGuard } from '../bff-internal.guard';
 import { ContinuationGuard } from '../continuation.guard';
 import {
@@ -47,12 +50,14 @@ import {
   ConfirmContactRequestDto,
   ConfirmLinkRequestDto,
   ContactVerificationRequestDto,
+  EmailDeliveryTestRequestDto,
   EligibilityRequestDto,
   PasswordRequestDto,
   RequiredDataRequestDto,
 } from '../dto/registration-request.dto';
 import {
   ActivatedResponseDto,
+  EmailDeliveryTestResponseDto,
   EligibilityResponseDto,
   LegalDocumentListResponseDto,
   SnapshotResponseDto,
@@ -61,6 +66,7 @@ import {
   VerificationWindowResponseDto,
   VerifiedResponseDto,
 } from '../dto/registration-response.dto';
+import { EmailDeliveryTestGuard } from '../email-delivery-test.guard';
 import { RegistrationErrorFilter } from '../registration-error.filter';
 import {
   BFF_TOKEN_HEADER,
@@ -123,6 +129,7 @@ export class RegistrationController {
     private readonly eligibility: CheckRegistrationEligibility,
     private readonly flow: RegistrationFlow,
     private readonly legalDocuments: ListApprovedLegalDocuments,
+    private readonly emailDeliveryTest: SendEmailDeliveryTest,
   ) {}
 
   @Post('eligibility')
@@ -164,6 +171,25 @@ export class RegistrationController {
       { contact: body.contact, originFingerprint },
     );
     return new ApiResponseDto(data, 'Se o contato puder ser usado, enviaremos um código.', HttpStatus.ACCEPTED);
+  }
+
+  @Post('email-delivery-test')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(EmailDeliveryTestGuard)
+  @ApiOperation({ summary: 'Temporarily smoke-test the configured Brevo delivery outside production' })
+  @ApiIdempotencyKey(true)
+  @ApiOkResponse({ type: EmailDeliveryTestResponseDto })
+  @ApiServiceUnavailableResponse({ description: 'Brevo did not accept the test message.' })
+  async testEmailDelivery(
+    @Body() body: EmailDeliveryTestRequestDto,
+    @IdempotencyKey({ required: true }) idempotencyKey: string,
+  ) {
+    const result = await this.emailDeliveryTest.execute({ contact: body.contact, idempotencyKey });
+    if (!result.accepted) throw new ServiceUnavailableException();
+    return new OkResponseDto(
+      result,
+      'E-mail de teste aceito pela Brevo; o código recebido é apenas ilustrativo.',
+    );
   }
 
   @Post('contact-verification/resend')

@@ -47,6 +47,12 @@ exports[`registration HTTP contract v1 the OpenAPI contract is versioned and doc
       "x-eventmatch-bff-token*",
     ],
   },
+  "/api/v1/registration/email-delivery-test": {
+    "post": [
+      "Idempotency-Key*",
+      "x-eventmatch-bff-token*",
+    ],
+  },
   "/api/v1/registration/legal-documents": {
     "get": [
       "x-eventmatch-bff-token*",

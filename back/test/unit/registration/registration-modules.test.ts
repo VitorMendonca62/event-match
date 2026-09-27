@@ -11,6 +11,7 @@ import { ExpireStaleRegistrations } from '../../../src/modules/registration/appl
 import { RequestContactVerification } from '../../../src/modules/registration/application/use-cases/request-contact-verification.use-case';
 import { ResendContactVerification } from '../../../src/modules/registration/application/use-cases/resend-contact-verification.use-case';
 import { SaveRequiredData } from '../../../src/modules/registration/application/use-cases/save-required-data.use-case';
+import { SendEmailDeliveryTest } from '../../../src/modules/registration/application/use-cases/send-email-delivery-test.use-case';
 import { StartRegistration } from '../../../src/modules/registration/application/use-cases/start-registration.use-case';
 import { VerifyContact } from '../../../src/modules/registration/application/use-cases/verify-contact.use-case';
 import { CheckRegistrationEligibility } from '../../../src/modules/registration/application/use-cases/check-registration-eligibility.use-case';
@@ -46,6 +47,7 @@ describe('registration, profiles and catalog modules', () => {
       VerifyContact,
       StartRegistration,
       SaveRequiredData,
+      SendEmailDeliveryTest,
       CompleteRegistration,
       ExpireStaleRegistrations,
       CheckRegistrationEligibility,
