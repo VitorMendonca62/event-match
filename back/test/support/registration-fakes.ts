@@ -2,14 +2,29 @@ import type { TransactionContext, UnitOfWorkPort } from '../../src/shared/applic
 import type { InterestCatalogReaderPort, InterestRef } from '../../src/modules/catalog/domain/ports/interest-catalog-reader.port';
 import type { ProfileWriterPort, RequiredProfileData } from '../../src/modules/profiles/domain/ports/profile-writer.port';
 import { ContactRetention } from '../../src/modules/registration/application/services/contact-retention';
+import { RegistrationFlowGate } from '../../src/modules/registration/application/services/registration-flow-gate';
 import { VerificationDispatcher } from '../../src/modules/registration/application/services/verification-dispatcher';
+import { CheckRegistrationEligibility } from '../../src/modules/registration/application/use-cases/check-registration-eligibility.use-case';
 import { CompleteRegistration } from '../../src/modules/registration/application/use-cases/complete-registration.use-case';
 import { ExpireStaleRegistrations } from '../../src/modules/registration/application/use-cases/expire-stale-registrations.use-case';
+import { ListApprovedLegalDocuments } from '../../src/modules/registration/application/use-cases/list-approved-legal-documents.use-case';
+import { RegistrationFlow } from '../../src/modules/registration/application/use-cases/registration-flow.use-case';
 import { RequestContactVerification } from '../../src/modules/registration/application/use-cases/request-contact-verification.use-case';
 import { ResendContactVerification } from '../../src/modules/registration/application/use-cases/resend-contact-verification.use-case';
 import { SaveRequiredData } from '../../src/modules/registration/application/use-cases/save-required-data.use-case';
 import { StartRegistration } from '../../src/modules/registration/application/use-cases/start-registration.use-case';
 import { VerifyContact } from '../../src/modules/registration/application/use-cases/verify-contact.use-case';
+import { VerifyContactByLink } from '../../src/modules/registration/application/use-cases/verify-contact-by-link.use-case';
+import type { RegistrationFlowSession } from '../../src/modules/registration/domain/entities/registration-flow-session';
+import type {
+  FlowOperation,
+  IdempotencyRecord,
+  NewIdempotencyReservation,
+  RegistrationFlowSessionRepositoryPort,
+  RegistrationFlowTokenPort,
+  RegistrationIdempotencyRepositoryPort,
+  StoredOutcome,
+} from '../../src/modules/registration/domain/ports/outbound/flow.ports';
 import type { Account } from '../../src/modules/registration/domain/entities/account';
 import type { ContactVerification } from '../../src/modules/registration/domain/entities/contact-verification';
 import type { Registration } from '../../src/modules/registration/domain/entities/registration';
@@ -17,6 +32,7 @@ import { RegistrationError } from '../../src/modules/registration/domain/errors/
 import type {
   AccountRepositoryPort,
   ApprovedTermsDocument,
+  ApprovedTermsMetadata,
   NewIncompleteAccount,
   RateLimitKind,
   RateLimitRepositoryPort,
@@ -61,6 +77,18 @@ interface State {
   usageIntents: Map<string, string[]>;
   interests: Map<string, string[]>;
   catalog: Set<string>;
+  sessions: Map<string, RegistrationFlowSession>;
+  idempotency: Map<string, IdempotencyRow>;
+}
+
+interface IdempotencyRow {
+  id: string;
+  flowSessionId: string;
+  operation: FlowOperation;
+  keyHash: Buffer;
+  requestHash: Buffer;
+  outcome: StoredOutcome | null;
+  expiresAt: Date;
 }
 
 const emptyState = (): State => ({
@@ -76,6 +104,8 @@ const emptyState = (): State => ({
   usageIntents: new Map(),
   interests: new Map(),
   catalog: new Set(),
+  sessions: new Map(),
+  idempotency: new Map(),
 });
 
 /** Copies every collection so a failed unit of work can be rolled back; entities are immutable. */
@@ -92,6 +122,8 @@ const snapshot = (state: State): State => ({
   usageIntents: new Map(state.usageIntents),
   interests: new Map(state.interests),
   catalog: new Set(state.catalog),
+  sessions: new Map(state.sessions),
+  idempotency: new Map([...state.idempotency].map(([key, value]) => [key, { ...value }])),
 });
 
 export class InMemoryDatabase {
@@ -131,6 +163,9 @@ class InMemoryVerificationRepository implements VerificationRepositoryPort {
   }
   async findForUpdate(_: TransactionContext, id: string) {
     return this.rows.get(id) ?? null;
+  }
+  async findByLinkDigestForUpdate(_: TransactionContext, linkTokenDigest: Buffer) {
+    return [...this.rows.values()].find((row) => row.linkTokenDigest?.equals(linkTokenDigest)) ?? null;
   }
   async findActiveByContactForUpdate(_: TransactionContext, contactHash: Buffer) {
     return (
@@ -261,6 +296,18 @@ class InMemoryRateLimitRepository implements RateLimitRepositoryPort {
 class InMemoryTermsRepository implements TermsRepositoryPort {
   failOnRecord = false;
   constructor(private readonly database: InMemoryDatabase) {}
+  async listApproved(_: TransactionContext, locale: string): Promise<ApprovedTermsMetadata[]> {
+    if (locale !== 'pt-BR') return [];
+    return [...this.database.state.termsDocuments]
+      .filter(([, document]) => document.status === 'approved')
+      .map(([id, document]) => ({
+        id,
+        kind: document.kind,
+        version: 'test',
+        locale,
+        effectiveAt: new Date('2026-01-01T00:00:00.000Z'),
+      }));
+  }
   async findApproved(_: TransactionContext, documentIds: string[]): Promise<ApprovedTermsDocument[]> {
     return documentIds.flatMap((id) => {
       const document = this.database.state.termsDocuments.get(id);
@@ -300,6 +347,9 @@ class InMemoryInterestCatalog implements InterestCatalogReaderPort {
   async findActiveByIds(_: TransactionContext, ids: readonly string[]): Promise<InterestRef[]> {
     return ids.filter((id) => this.database.state.catalog.has(id)).map((id) => ({ id }));
   }
+  async listActive() {
+    return [...this.database.state.catalog].sort().map((id) => ({ id, slug: `slug-${id}`, label: `Label ${id}` }));
+  }
 }
 
 /** Reversible, recognisable transforms: tests assert that raw values never reach persistence. */
@@ -326,7 +376,12 @@ export class FakeVerificationSecret implements VerificationSecretPort {
     return { plain, digest: Buffer.from(`digest:${plain}`) };
   }
   generateLinkToken(): GeneratedSecret {
-    return { plain: 'token', digest: Buffer.from('digest:token') };
+    this.sequence += 1;
+    const plain = Buffer.alloc(32, this.sequence).toString('base64url');
+    return { plain, digest: this.digest(plain) };
+  }
+  digest(plain: string) {
+    return Buffer.from(`digest:${plain}`);
   }
   matches(plain: string, digest: Buffer) {
     return Buffer.from(`digest:${plain}`).equals(digest);
@@ -375,9 +430,17 @@ export class CapturingDelivery implements VerificationDeliveryPort {
     return { accepted: true };
   }
   lastOtp(): string {
+    return this.lastVerify().otp;
+  }
+  lastLinkToken(): string {
+    const token = this.lastVerify().linkToken;
+    if (!token) throw new Error('No link delivered.');
+    return token;
+  }
+  private lastVerify() {
     const last = [...this.sent].reverse().find((request) => request.kind === 'verify');
     if (!last || last.kind !== 'verify') throw new Error('No OTP delivered.');
-    return last.otp;
+    return last;
   }
 }
 
@@ -385,6 +448,90 @@ export class CapturingTelemetry implements RegistrationTelemetryPort {
   readonly events: RegistrationEvent[] = [];
   record(event: RegistrationEvent) {
     this.events.push(event);
+  }
+}
+
+class InMemoryFlowSessionRepository implements RegistrationFlowSessionRepositoryPort {
+  constructor(private readonly database: InMemoryDatabase) {}
+  private get rows() {
+    return this.database.state.sessions;
+  }
+  async insert(_: TransactionContext, session: RegistrationFlowSession) {
+    this.rows.set(session.id, session);
+  }
+  async findByTokenForUpdate(_: TransactionContext, tokenDigest: Buffer, now: Date) {
+    return [...this.rows.values()].find((row) => row.match(tokenDigest, now) !== null) ?? null;
+  }
+  async findByIdForUpdate(_: TransactionContext, id: string) {
+    return this.rows.get(id) ?? null;
+  }
+  async findPendingByVerificationForUpdate(_: TransactionContext, verificationId: string, now: Date) {
+    return (
+      [...this.rows.values()].find(
+        (row) => row.isActive(now) && row.stage === 'verification_pending' && row.verificationId === verificationId,
+      ) ?? null
+    );
+  }
+  async save(_: TransactionContext, session: RegistrationFlowSession) {
+    this.rows.set(session.id, session);
+  }
+  async expireStale(_: TransactionContext, now: Date, batch: number) {
+    const stale = [...this.rows.values()].filter((row) => row.tokenDigest && row.expiresAt <= now).slice(0, batch);
+    stale.forEach((row) =>
+      this.rows.set(row.id, Object.assign(Object.create(Object.getPrototypeOf(row)), row, {
+        tokenDigest: null,
+        previousTokenDigest: null,
+        previousValidUntil: null,
+      })),
+    );
+    return stale.length;
+  }
+}
+
+class InMemoryIdempotencyRepository implements RegistrationIdempotencyRepositoryPort {
+  constructor(private readonly database: InMemoryDatabase) {}
+  private get rows() {
+    return this.database.state.idempotency;
+  }
+  async findForUpdate(_: TransactionContext, flowSessionId: string, operation: FlowOperation, keyHash: Buffer) {
+    const row = [...this.rows.values()].find(
+      (candidate) =>
+        candidate.flowSessionId === flowSessionId && candidate.operation === operation && candidate.keyHash.equals(keyHash),
+    );
+    return row ? ({ ...row } as IdempotencyRecord) : null;
+  }
+  async reserve(_: TransactionContext, reservation: NewIdempotencyReservation) {
+    if (await this.findForUpdate(_, reservation.flowSessionId, reservation.operation, reservation.keyHash)) {
+      throw new RegistrationError('IDEMPOTENCY_CONFLICT');
+    }
+    this.rows.set(reservation.id, { ...reservation, outcome: null });
+  }
+  async renew(_: TransactionContext, id: string, requestHash: Buffer, expiresAt: Date) {
+    const row = this.rows.get(id);
+    if (row) this.rows.set(id, { ...row, requestHash, outcome: null, expiresAt });
+  }
+  async complete(_: TransactionContext, id: string, outcome: StoredOutcome, expiresAt: Date) {
+    const row = this.rows.get(id);
+    if (row) this.rows.set(id, { ...row, outcome, expiresAt });
+  }
+  async release(_: TransactionContext, id: string) {
+    if (this.rows.get(id)?.outcome === null) this.rows.delete(id);
+  }
+}
+
+/** Recognisable, deterministic digests; tokens keep the production shape (43 base64url chars). */
+export class FakeFlowTokens implements RegistrationFlowTokenPort {
+  private sequence = 0;
+  generate(): GeneratedSecret {
+    this.sequence += 1;
+    const plain = Buffer.alloc(32, 200 + this.sequence).toString('base64url');
+    return { plain, digest: this.digest(plain) };
+  }
+  digest(token: string) {
+    return Buffer.from(`flow:${token}`);
+  }
+  fingerprint(purpose: string, value: string) {
+    return Buffer.from(`${purpose}:${value}`);
   }
 }
 
@@ -406,6 +553,17 @@ export function createRegistrationHarness() {
   const telemetry = new CapturingTelemetry();
   const retention = new ContactRetention(registrations, accounts, profiles);
   const dispatcher = new VerificationDispatcher(delivery, telemetry);
+  const sessions = new InMemoryFlowSessionRepository(database);
+  const idempotency = new InMemoryIdempotencyRepository(database);
+  const tokens = new FakeFlowTokens();
+  const gate = new RegistrationFlowGate(uow, sessions, idempotency, tokens, ids, clock, telemetry);
+  const request = new RequestContactVerification(uow, verifications, limits, retention, contacts, secrets, ids, clock, dispatcher, telemetry);
+  const resend = new ResendContactVerification(uow, verifications, limits, contacts, secrets, clock, dispatcher, telemetry);
+  const verify = new VerifyContact(uow, verifications, secrets, clock, telemetry);
+  const verifyByLink = new VerifyContactByLink(uow, verifications, secrets, clock, telemetry);
+  const start = new StartRegistration(uow, verifications, registrations, retention, new FakePasswordHasher(), new FakeCommonPasswordChecker(), ids, clock, telemetry);
+  const saveRequiredData = new SaveRequiredData(uow, registrations, accounts, profiles, ids, clock, telemetry);
+  const complete = new CompleteRegistration(uow, accounts, profiles, catalog, terms, ids, clock, telemetry);
 
   return {
     database,
@@ -414,13 +572,17 @@ export function createRegistrationHarness() {
     contacts,
     delivery,
     telemetry,
-    request: new RequestContactVerification(uow, verifications, limits, retention, contacts, secrets, ids, clock, dispatcher, telemetry),
-    resend: new ResendContactVerification(uow, verifications, limits, contacts, secrets, clock, dispatcher, telemetry),
-    verify: new VerifyContact(uow, verifications, secrets, clock, telemetry),
-    start: new StartRegistration(uow, verifications, registrations, retention, new FakePasswordHasher(), new FakeCommonPasswordChecker(), ids, clock, telemetry),
-    saveRequiredData: new SaveRequiredData(uow, registrations, accounts, profiles, ids, clock, telemetry),
-    complete: new CompleteRegistration(uow, accounts, profiles, catalog, terms, ids, clock, telemetry),
-    expireStale: new ExpireStaleRegistrations(uow, registrations, accounts, profiles, clock, telemetry),
+    request,
+    resend,
+    verify,
+    verifyByLink,
+    start,
+    saveRequiredData,
+    complete,
+    expireStale: new ExpireStaleRegistrations(uow, registrations, accounts, profiles, sessions, clock, telemetry),
+    eligibility: new CheckRegistrationEligibility(uow, sessions, tokens, ids, clock, telemetry),
+    legalDocuments: new ListApprovedLegalDocuments(uow, terms),
+    flow: new RegistrationFlow(gate, uow, sessions, tokens, clock, request, resend, verify, verifyByLink, start, saveRequiredData, complete),
   };
 }
 

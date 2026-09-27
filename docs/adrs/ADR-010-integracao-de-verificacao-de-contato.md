@@ -3,8 +3,8 @@
 - **Status:** accepted
 - **Data:** 2026-09-25
 - **Decisores:** produto, backend, operação e segurança
-- **Relacionado:** `specs/sdd-006-modelagem-conceitual-cadastro/tasks.md`
-- **Substitui/Substituído por:** N/A
+- **Relacionado:** `specs/sdd-006-modelagem-conceitual-cadastro/tasks.md`; ADR-024, ADR-025 e ADR-026
+- **Substitui/Substituído por:** WhatsApp inicial adiado pela ADR-025; provedor de e-mail substituído pela ADR-026
 
 ## Contexto
 
@@ -26,10 +26,16 @@ O cadastro solicita consentimento explícito para o envio transacional do códig
 
 ## Consequências
 
-- A implementação exige configuração segura de credenciais e templates aprovados, sem introduzir SDK de provedor no domínio ou aplicação.
+- A implementação exige configuração segura de credenciais e templates aprovados. Conforme ADR-024, o SDK oficial do Resend fica confinado ao adapter de infraestrutura; domínio e aplicação permanecem independentes de provedor.
 - Falhas de entrega não revelam existência de conta e não concluem verificação.
 - WhatsApp tem custo por mensagem/template aplicável pela Meta; Resend é usado inicialmente dentro de seu limite gratuito, sujeito aos limites vigentes do provedor.
 
 ## Condições de aceitação
 
 Antes da implementação, cadastrar e aprovar templates de autenticação, configurar domínio de e-mail e credenciais, e revisar os termos operacionais vigentes dos provedores. A cobertura inicial do MVP é o Brasil.
+
+## Atualização posterior
+
+A ADR-025, aceita em 2026-09-26, adia a ativação de WhatsApp. A primeira publicação permite cadastro somente por e-mail; WhatsApp aparece desabilitado como “Em breve” e o `noop` não simula entrega em produção.
+
+A ADR-026, aceita em 2026-09-26, substitui Resend por Brevo no canal de e-mail para permitir testes com destinatários reais sem custo de domínio. Portas, política de OTP e isolamento do provedor permanecem inalterados.

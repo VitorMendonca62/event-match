@@ -1,0 +1,74 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`registration HTTP contract v1 the OpenAPI contract is versioned and documents every route and internal header 1`] = `
+{
+  "/api/v1/catalog/interests": {
+    "get": [],
+  },
+  "/api/v1/registration": {
+    "get": [
+      "x-eventmatch-bff-token*",
+    ],
+  },
+  "/api/v1/registration/complete": {
+    "post": [
+      "Idempotency-Key*",
+      "x-eventmatch-bff-token*",
+    ],
+  },
+  "/api/v1/registration/contact-verification": {
+    "post": [
+      "Idempotency-Key*",
+      "x-eventmatch-bff-token*",
+      "x-eventmatch-origin-fingerprint*",
+    ],
+  },
+  "/api/v1/registration/contact-verification/confirm": {
+    "post": [
+      "Idempotency-Key*",
+      "x-eventmatch-bff-token*",
+    ],
+  },
+  "/api/v1/registration/contact-verification/confirm-link": {
+    "post": [
+      "Idempotency-Key",
+      "x-eventmatch-bff-token*",
+    ],
+  },
+  "/api/v1/registration/contact-verification/resend": {
+    "post": [
+      "Idempotency-Key*",
+      "x-eventmatch-bff-token*",
+    ],
+  },
+  "/api/v1/registration/eligibility": {
+    "post": [
+      "Idempotency-Key",
+      "x-eventmatch-bff-token*",
+    ],
+  },
+  "/api/v1/registration/email-delivery-test": {
+    "post": [
+      "Idempotency-Key*",
+      "x-eventmatch-bff-token*",
+    ],
+  },
+  "/api/v1/registration/legal-documents": {
+    "get": [
+      "x-eventmatch-bff-token*",
+    ],
+  },
+  "/api/v1/registration/password": {
+    "put": [
+      "Idempotency-Key*",
+      "x-eventmatch-bff-token*",
+    ],
+  },
+  "/api/v1/registration/required-data": {
+    "put": [
+      "Idempotency-Key*",
+      "x-eventmatch-bff-token*",
+    ],
+  },
+}
+`;

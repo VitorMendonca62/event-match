@@ -32,6 +32,18 @@ export class DrizzleVerificationRepository implements VerificationRepositoryPort
     return row ? verificationMapper.toDomain(row) : null;
   }
 
+  async findByLinkDigestForUpdate(
+    context: TransactionContext,
+    linkTokenDigest: Buffer,
+  ): Promise<ContactVerification | null> {
+    const [row] = await resolveExecutor(context)
+      .select()
+      .from(contactVerification)
+      .where(eq(contactVerification.linkTokenDigest, linkTokenDigest))
+      .for('update');
+    return row ? verificationMapper.toDomain(row) : null;
+  }
+
   async findActiveByContactForUpdate(
     context: TransactionContext,
     contactHash: Buffer,
@@ -65,6 +77,7 @@ export class DrizzleVerificationRepository implements VerificationRepositoryPort
       .update(contactVerification)
       .set({
         otpDigest: value.otpDigest,
+        linkTokenDigest: value.linkTokenDigest,
         expiresAt: value.expiresAt,
         status: value.status,
         failedAttempts: value.failedAttempts,

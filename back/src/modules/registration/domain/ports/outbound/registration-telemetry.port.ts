@@ -10,7 +10,9 @@ export type RegistrationEventName =
   | 'registration.started'
   | 'registration.required_data_saved'
   | 'account.activation'
-  | 'registration.stale_expired';
+  | 'registration.stale_expired'
+  | 'registration.eligibility'
+  | 'registration.flow';
 
 /** Structured event with opaque ids and result codes only; never contact, OTP or password. */
 export interface RegistrationEvent {
@@ -20,6 +22,8 @@ export interface RegistrationEvent {
   readonly verificationId?: string;
   readonly registrationId?: string;
   readonly accountId?: string;
+  readonly flowSessionId?: string;
+  readonly operation?: string;
   readonly count?: number;
 }
 

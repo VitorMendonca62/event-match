@@ -11,6 +11,7 @@ import type { ClockPort, IdGeneratorPort } from '../../domain/ports/outbound/run
 import { BirthDate } from '../../domain/value-objects/birth-date';
 import { coversRequiredTerms } from '../../domain/value-objects/terms-document-kind';
 import { REGISTRATION_POLICY } from '../../domain/value-objects/verification-policy';
+import type { TransactionHook } from '../contracts/transaction-hook';
 
 export interface CompleteRegistrationInput {
   readonly accountId: string;
@@ -39,7 +40,10 @@ export class CompleteRegistration {
    * Activation (RF001, RF005–RF006, ADR-012): adult birth date, three approved documents and at least
    * three active interests, validated under the account lock. Any refusal leaves no partial effect.
    */
-  async execute(input: CompleteRegistrationInput): Promise<{ accountId: string; status: 'active' }> {
+  async execute(
+    input: CompleteRegistrationInput,
+    withinTransaction?: TransactionHook<{ accountId: string }>,
+  ): Promise<{ accountId: string; status: 'active' }> {
     const birthDate = BirthDate.create(input.birthDate);
     const outcome = await this.uow.execute(async (context): Promise<Outcome> => {
       const now = this.clock.now();
@@ -74,6 +78,7 @@ export class CompleteRegistration {
         documents.map((document) => ({ id: this.ids.next(), documentId: document.id })),
         now,
       );
+      await withinTransaction?.(context, { accountId: account.id });
       return 'activated';
     });
 

@@ -3,8 +3,8 @@
 - **Status:** accepted
 - **Data:** 2026-09-25
 - **Decisores:** produto, backend, arquitetura e privacidade
-- **Relacionado:** `specs/sdd-006-modelagem-conceitual-cadastro/tasks.md`
-- **Substitui/Substituído por:** N/A
+- **Relacionado:** `specs/sdd-006-modelagem-conceitual-cadastro/tasks.md`; ADR-019
+- **Substitui/Substituído por:** substituída parcialmente pela ADR-019 somente na ordem da jornada e no momento da primeira validação do nascimento
 
 ## Contexto
 
@@ -31,3 +31,7 @@ Enquanto estiver em `account_incomplete`, a conta permite exclusivamente retomar
 ## Condições de aceitação
 
 A decisão está pronta para aceite. A implementação futura ainda deverá alinhar a política jurídica aplicável a aceites/dados provisórios antes de lançamento.
+
+## Atualização posterior
+
+A ADR-019, aceita em 2026-09-26, antecipa a informação e a primeira validação do nascimento para antes da coleta do contato. A data não é persistida nessa etapa e volta a ser solicitada e validada na conclusão. Os estados e os momentos de criação de `Registration` e `Account` definidos nesta ADR permanecem inalterados.

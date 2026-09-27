@@ -62,7 +62,8 @@ describe('registration use cases', () => {
 
       const result = await requestEmail();
 
-      expect(Object.keys(result).sort()).toEqual(['expiresAt', 'nextResendAt', 'verificationId']);
+      expect(Object.keys(result).sort()).toEqual(['expiresAt', 'issued', 'nextResendAt', 'verificationId']);
+      expect(result.issued).toBe(false);
       expect(harness.database.state.verifications.has(result.verificationId)).toBe(false);
       expect(verifications().filter((row) => row.status === 'open')).toHaveLength(openBefore);
       expect(harness.delivery.sent.slice(deliveriesBefore)).toEqual([
@@ -140,6 +141,18 @@ describe('registration use cases', () => {
       expect(failure).toMatchObject({ outcome: 'verify', channel: 'email' });
       expect(JSON.stringify(harness.telemetry.events)).not.toContain('example.test');
     });
+
+    test('rolls the challenge back and does not deliver when the transaction hook fails', async () => {
+      await expect(
+        harness.request.execute({ channel: 'email', contact: CONTACT }, async () => {
+          throw new Error('settlement failed');
+        }),
+      ).rejects.toThrow('settlement failed');
+
+      expect(harness.database.state.verifications.size).toBe(0);
+      expect(harness.database.state.rateWindows.size).toBe(1);
+      expect(harness.delivery.sent).toHaveLength(0);
+    });
   });
 
   describe('VerifyContact', () => {
@@ -149,6 +162,7 @@ describe('registration use cases', () => {
       await expect(harness.verify.execute({ verificationId, otp: harness.delivery.lastOtp() })).resolves.toEqual({
         verificationId,
         verified: true,
+        expiresAt: new Date(harness.clock.now().getTime() + 15 * MINUTE),
       });
     });
 
@@ -220,9 +234,26 @@ describe('registration use cases', () => {
     test('answers neutrally for an unknown challenge', async () => {
       const now = harness.clock.now();
       await expect(harness.resend.execute({ verificationId: 'missing' })).resolves.toEqual({
+        expiresAt: new Date(now.getTime() + 15 * MINUTE),
         nextResendAt: new Date(now.getTime() + MINUTE),
       });
       expect(harness.database.state.rateWindows.size).toBe(0);
+    });
+
+    test('rolls the OTP rotation back and does not deliver when the transaction hook fails', async () => {
+      const { verificationId } = await requestEmail();
+      const before = harness.database.state.verifications.get(verificationId);
+      const deliveries = harness.delivery.sent.length;
+      harness.clock.advance(MINUTE);
+
+      await expect(
+        harness.resend.execute({ verificationId }, async () => {
+          throw new Error('settlement failed');
+        }),
+      ).rejects.toThrow('settlement failed');
+
+      expect(harness.database.state.verifications.get(verificationId)).toEqual(before);
+      expect(harness.delivery.sent).toHaveLength(deliveries);
     });
   });
 
@@ -383,11 +414,11 @@ describe('registration use cases', () => {
       const { registrationId } = await harness.start.execute({ verificationId, password: 'uma senha longa' });
       harness.clock.advance(15 * DAY);
 
-      await expect(harness.expireStale.execute()).resolves.toEqual({ registrations: 1, accounts: 1 });
+      await expect(harness.expireStale.execute()).resolves.toEqual({ registrations: 1, accounts: 1, sessions: 0 });
       expect(harness.database.state.registrations.get(registrationId)?.status).toBe('expired');
       expect(harness.database.state.accounts.get(accountId)?.status).toBe('expired');
       expect(harness.database.state.profiles.get(accountId)).toEqual({ displayName: null, region: null });
-      await expect(harness.expireStale.execute()).resolves.toEqual({ registrations: 0, accounts: 0 });
+      await expect(harness.expireStale.execute()).resolves.toEqual({ registrations: 0, accounts: 0, sessions: 0 });
     });
   });
 });

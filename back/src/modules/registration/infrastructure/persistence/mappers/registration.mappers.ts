@@ -6,11 +6,22 @@ import {
 import { Registration, type RegistrationStatus } from '../../../domain/entities/registration';
 import { BirthDate } from '../../../domain/value-objects/birth-date';
 import type { ContactChannel } from '../../../domain/value-objects/contact-identifier';
-import type { account, contactVerification, registration } from '../schema/registration.schema';
+import {
+  FLOW_STAGES,
+  RegistrationFlowSession,
+  type FlowStage,
+} from '../../../domain/entities/registration-flow-session';
+import type {
+  account,
+  contactVerification,
+  registration,
+  registrationFlowSession,
+} from '../schema/registration.schema';
 
 export type ContactVerificationRow = typeof contactVerification.$inferSelect;
 export type RegistrationRow = typeof registration.$inferSelect;
 export type AccountRow = typeof account.$inferSelect;
+export type FlowSessionRow = typeof registrationFlowSession.$inferSelect;
 
 /** Row types stay inside infrastructure; only domain objects leave the adapters. */
 export const verificationMapper = {
@@ -22,6 +33,7 @@ export const verificationMapper = {
       contactCiphertext: row.contactCiphertext,
       keyVersion: row.keyVersion,
       otpDigest: row.otpDigest,
+      linkTokenDigest: row.linkTokenDigest,
       expiresAt: row.expiresAt,
       deliveryIdempotencyKey: row.deliveryIdempotencyKey,
       lastSentAt: row.lastSentAt,
@@ -43,7 +55,7 @@ export const verificationMapper = {
       contactCiphertext: value.contactCiphertext,
       keyVersion: value.keyVersion,
       otpDigest: value.otpDigest,
-      linkTokenDigest: null,
+      linkTokenDigest: value.linkTokenDigest,
       expiresAt: value.expiresAt,
       failedAttempts: value.failedAttempts,
       lockedUntil: value.lockedUntil,
@@ -119,6 +131,41 @@ export const accountMapper = {
       lastUpdatedAt: value.lastUpdatedAt,
       activatedAt: value.activatedAt,
       expiredAt: value.expiredAt,
+    };
+  },
+};
+
+export const flowSessionMapper = {
+  toDomain(row: FlowSessionRow): RegistrationFlowSession {
+    if (!(FLOW_STAGES as readonly string[]).includes(row.stage)) throw new Error('Unknown flow stage.');
+    return RegistrationFlowSession.restore({
+      id: row.id,
+      tokenDigest: row.tokenDigest,
+      previousTokenDigest: row.previousTokenDigest,
+      previousValidUntil: row.previousValidUntil,
+      stage: row.stage as FlowStage,
+      verificationId: row.verificationId,
+      registrationId: row.registrationId,
+      accountId: row.accountId,
+      expiresAt: row.expiresAt,
+      revokedAt: row.revokedAt,
+      updatedAt: row.updatedAt,
+    });
+  },
+
+  toRow(value: RegistrationFlowSession): Omit<FlowSessionRow, 'createdAt'> {
+    return {
+      id: value.id,
+      tokenDigest: value.tokenDigest,
+      previousTokenDigest: value.previousTokenDigest,
+      previousValidUntil: value.previousValidUntil,
+      stage: value.stage,
+      verificationId: value.verificationId,
+      registrationId: value.registrationId,
+      accountId: value.accountId,
+      expiresAt: value.expiresAt,
+      revokedAt: value.revokedAt,
+      updatedAt: value.updatedAt,
     };
   },
 };

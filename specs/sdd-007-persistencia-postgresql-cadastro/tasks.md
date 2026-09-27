@@ -263,3 +263,6 @@ A revisão de código de 2026-09-26 encontrou divergências bloqueantes; as corr
 - Testes de integração em banco efêmero `eventmatch_it_<aleatório>` com dois pools, conforme §7.
 - Pendências fora deste plano: limite por origem (ADR-015), adapters reais de entrega (ADR-010), purga física de tombstones (ADR-017) e rotação de chaves por `key_version`.
 
+Decisão posterior: a ADR-019, aceita em 2026-09-26, passa a exigir uma validação de nascimento sem persistência antes do contato. Esta fundação continua correta: `CompleteRegistration` revalida e grava `birthDate` somente na ativação; o novo estágio de elegibilidade e seu contrato pertencem à SDD-009.
+
+A ADR-023, aceita na mesma data, define a origem confiável do BFF na Vercel e encerra o adiamento arquitetural do limite por origem. A tabela/porta já previstas continuam corretas; o incremento do escopo `origin` será implementado e testado na SDD-009.

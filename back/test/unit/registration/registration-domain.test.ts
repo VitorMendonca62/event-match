@@ -7,11 +7,13 @@ import { BirthDate } from '../../../src/modules/registration/domain/value-object
 import { ContactIdentifier } from '../../../src/modules/registration/domain/value-objects/contact-identifier';
 import { Password } from '../../../src/modules/registration/domain/value-objects/password';
 import { DisplayName, Region, UsageIntent } from '../../../src/modules/registration/domain/value-objects/profile-fields';
+import { RegistrationFlowSession } from '../../../src/modules/registration/domain/entities/registration-flow-session';
 import { coversRequiredTerms } from '../../../src/modules/registration/domain/value-objects/terms-document-kind';
 import { REGISTRATION_POLICY as policy, rateWindowStart } from '../../../src/modules/registration/domain/value-objects/verification-policy';
 
 const now = new Date('2026-09-26T12:00:00.000Z');
 const MINUTE = 60_000;
+const DAY = 24 * 60 * MINUTE;
 const at = (offsetMs: number) => new Date(now.getTime() + offsetMs);
 
 const issue = (overrides: Partial<Parameters<typeof ContactVerification.issue>[0]> = {}) =>
@@ -23,6 +25,7 @@ const issue = (overrides: Partial<Parameters<typeof ContactVerification.issue>[0
       contactCiphertext: Buffer.alloc(40, 2),
       keyVersion: 1,
       otpDigest: Buffer.from('first'),
+      linkTokenDigest: Buffer.from('link'),
       deliveryIdempotencyKey: 'd',
       whatsappConsentAt: null,
       ...overrides,
@@ -112,9 +115,9 @@ describe('ContactVerification', () => {
 
   test('resends only after 60 seconds, rotating the digest and renewing the expiry', () => {
     const verification = issue();
-    expect(() => verification.resend(Buffer.from('second'), at(59_999), policy)).toThrow('VERIFICATION_UNAVAILABLE');
+    expect(() => verification.resend(Buffer.from('second'), null, at(59_999), policy)).toThrow('VERIFICATION_UNAVAILABLE');
 
-    const resent = verification.resend(Buffer.from('second'), at(MINUTE), policy);
+    const resent = verification.resend(Buffer.from('second'), null, at(MINUTE), policy);
     expect(resent.otpDigest.toString()).toBe('second');
     expect(resent.resendCount).toBe(1);
     expect(resent.expiresAt).toEqual(at(16 * MINUTE));
@@ -123,9 +126,9 @@ describe('ContactVerification', () => {
   test('allows at most three resends per challenge', () => {
     let verification = issue();
     for (let count = 1; count <= 3; count += 1) {
-      verification = verification.resend(Buffer.from(`otp${count}`), at(count * MINUTE), policy);
+      verification = verification.resend(Buffer.from(`otp${count}`), null, at(count * MINUTE), policy);
     }
-    expect(() => verification.resend(Buffer.from('otp4'), at(4 * MINUTE), policy)).toThrow('VERIFICATION_UNAVAILABLE');
+    expect(() => verification.resend(Buffer.from('otp4'), null, at(4 * MINUTE), policy)).toThrow('VERIFICATION_UNAVAILABLE');
   });
 
   test('is consumed once, after verification and before expiry', () => {
@@ -187,5 +190,71 @@ describe('Account', () => {
 
   test('expires without personal data', () => {
     expect(incomplete().expire(at(MINUTE))).toMatchObject({ status: 'expired', birthDate: null, expiredAt: at(MINUTE) });
+  });
+});
+
+describe('ContactVerification e-mail link (ADR-024)', () => {
+  test('verifies once by link and burns it', () => {
+    const verified = issue().verifyByLink(at(MINUTE), policy);
+    expect(verified.status).toBe('verified');
+    expect(verified.linkTokenDigest).toBeNull();
+    expect(() => verified.verifyByLink(at(MINUTE), policy)).toThrow('VERIFICATION_UNAVAILABLE');
+  });
+
+  test('refuses expired or locked challenges and challenges without a link', () => {
+    expect(() => issue().verifyByLink(at(15 * MINUTE), policy)).toThrow('VERIFICATION_UNAVAILABLE');
+    let locked = issue();
+    for (let attempt = 0; attempt < policy.maxAttempts; attempt += 1) locked = locked.verify(false, now, policy);
+    expect(() => locked.verifyByLink(now, policy)).toThrow('VERIFICATION_UNAVAILABLE');
+    expect(() => issue({ linkTokenDigest: null }).verifyByLink(now, policy)).toThrow('VERIFICATION_UNAVAILABLE');
+  });
+
+  test('an OTP success also burns the link', () => {
+    expect(issue().verify(true, now, policy).linkTokenDigest).toBeNull();
+  });
+});
+
+describe('RegistrationFlowSession (ADR-021)', () => {
+  const eligible = () => RegistrationFlowSession.issueEligible({ id: 's', tokenDigest: Buffer.from('t1') }, now, policy);
+
+  test('starts age_eligible for 30 minutes without any binding', () => {
+    const session = eligible();
+    expect(session).toMatchObject({ stage: 'age_eligible', verificationId: null, expiresAt: at(30 * MINUTE) });
+    expect(session.match(Buffer.from('t1'), at(30 * MINUTE))).toBeNull();
+  });
+
+  test('walks the stages in order and refuses skips', () => {
+    const session = eligible();
+    expect(() => session.startRegistration('r', at(DAY), now)).toThrow('FLOW_STAGE_CONFLICT');
+    const pending = session.awaitVerification('v', at(15 * MINUTE), now);
+    const verified = pending.confirmContact(at(15 * MINUTE), now);
+    const started = verified.startRegistration('r', at(DAY), now);
+    const incomplete = started.createAccount('a', at(15 * DAY), now);
+    expect(incomplete).toMatchObject({ stage: 'account_incomplete', verificationId: 'v', registrationId: 'r', accountId: 'a' });
+    expect(() => incomplete.awaitVerification('v2', at(15 * MINUTE), now)).toThrow('FLOW_STAGE_CONFLICT');
+  });
+
+  test('a neutral pending session can never confirm', () => {
+    const pending = eligible().awaitVerification(null, at(15 * MINUTE), now);
+    expect(() => pending.confirmContact(at(15 * MINUTE), now)).toThrow('FLOW_STAGE_CONFLICT');
+  });
+
+  test('rotation keeps the previous token for 60 seconds only', () => {
+    const rotated = eligible().rotate(Buffer.from('t2'), now, policy);
+    expect(rotated.match(Buffer.from('t2'), now)).toBe('current');
+    expect(rotated.match(Buffer.from('t1'), at(59_999))).toBe('previous');
+    expect(rotated.match(Buffer.from('t1'), at(MINUTE))).toBeNull();
+  });
+
+  test('completion revokes and nulls every digest', () => {
+    const incomplete = eligible()
+      .awaitVerification('v', at(15 * MINUTE), now)
+      .confirmContact(at(15 * MINUTE), now)
+      .startRegistration('r', at(DAY), now)
+      .createAccount('a', at(15 * DAY), now)
+      .rotate(Buffer.from('t2'), now, policy);
+    const completed = incomplete.complete(now);
+    expect(completed).toMatchObject({ stage: 'completed', tokenDigest: null, previousTokenDigest: null, revokedAt: now });
+    expect(completed.match(Buffer.from('t2'), now)).toBeNull();
   });
 });

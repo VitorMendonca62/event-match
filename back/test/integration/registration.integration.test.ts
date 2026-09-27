@@ -36,6 +36,8 @@ const REGISTRATION_TABLES = [
   'profile',
   'profile_usage_intent',
   'registration',
+  'registration_flow_session',
+  'registration_idempotency',
   'terms_acceptance',
   'terms_document',
   'verification_rate_window',
@@ -161,7 +163,7 @@ describe('registration persistence (PostgreSQL integration)', () => {
       const [interests] = await query<{ count: string }>(`select count(*)::text as count from interest`);
       const [ledger] = await query<{ count: string }>(`select count(*)::text as count from drizzle.__drizzle_migrations`);
       expect(interests?.count).toBe('20');
-      expect(ledger?.count).toBe('3');
+      expect(ledger?.count).toBe('4');
     });
   });
 

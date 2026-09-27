@@ -10,7 +10,10 @@ export type RegistrationErrorCode =
   | 'VERIFICATION_UNAVAILABLE'
   | 'REGISTRATION_UNAVAILABLE'
   | 'CONTACT_UNAVAILABLE'
-  | 'ACCOUNT_CANNOT_BE_ACTIVATED';
+  | 'ACCOUNT_CANNOT_BE_ACTIVATED'
+  | 'FLOW_UNAUTHORIZED'
+  | 'FLOW_STAGE_CONFLICT'
+  | 'IDEMPOTENCY_CONFLICT';
 
 /** Framework-independent error; presentation adapters translate codes into neutral responses. */
 export class RegistrationError extends Error {

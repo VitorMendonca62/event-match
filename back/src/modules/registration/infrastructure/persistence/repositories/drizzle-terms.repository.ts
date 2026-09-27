@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
 
 import type { TransactionContext } from '../../../../../shared/application/ports/unit-of-work.port';
 import { resolveExecutor } from '../../../../../shared/infrastructure/persistence/resolve-executor';
 import { isUuid } from '../../../../../shared/infrastructure/persistence/uuid';
 import type {
   ApprovedTermsDocument,
+  ApprovedTermsMetadata,
   TermsAcceptance,
   TermsRepositoryPort,
 } from '../../../domain/ports/outbound/persistence.ports';
@@ -14,6 +15,21 @@ import { termsAcceptance, termsDocument } from '../schema/registration.schema';
 
 @Injectable()
 export class DrizzleTermsRepository implements TermsRepositoryPort {
+  async listApproved(context: TransactionContext, locale: string): Promise<ApprovedTermsMetadata[]> {
+    const rows = await resolveExecutor(context)
+      .select({
+        id: termsDocument.id,
+        kind: termsDocument.kind,
+        version: termsDocument.version,
+        locale: termsDocument.locale,
+        effectiveAt: termsDocument.effectiveAt,
+      })
+      .from(termsDocument)
+      .where(and(eq(termsDocument.status, 'approved'), eq(termsDocument.locale, locale)))
+      .orderBy(asc(termsDocument.kind), asc(termsDocument.effectiveAt), asc(termsDocument.version));
+    return rows.map((row) => ({ ...row, kind: row.kind as TermsDocumentKind }));
+  }
+
   /**
    * Placeholders never count as acceptance (ADR-012). `FOR SHARE` keeps the selected documents
    * approved until the activation commits (ADR-013), while other activations can still read them.

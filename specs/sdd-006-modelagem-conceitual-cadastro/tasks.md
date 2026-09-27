@@ -127,9 +127,15 @@ Rollback: desabilitar fluxo/feature flag e reimplantar API anterior; migrations 
 - [x] Fluxo: contato → OTP → senha → dados obrigatórios → aceites e nascimento → interesses → onboarding de campos opcionais. Estados: `verification_pending` → `registration_in_progress` → `account_incomplete` → `active`, ou `expired`. Conta incompleta só retoma cadastro; `Registration` expira após 24 horas e conta incompleta é removida após 15 dias sem atualização, liberando o contato. Registrado na ADR-008 aceita.
 - [x] OTP: validade de 15 minutos; cinco tentativas inválidas; bloqueio de 20 minutos; reenvio após 60 segundos, no máximo três por contato/hora; cinco desafios por contato/hora e dez por origem/IP/hora. Registrado na ADR-009 aceita.
 - [x] E-mail oferece OTP e link por Resend; celular usa WhatsApp Cloud API direta da Meta no Brasil, sem SMS de fallback. Timeout de cinco segundos, até duas novas tentativas transitórias e uma chave de idempotência por desafio/entrega. Contato associado recebe recuperação no mesmo canal, com consentimento explícito para o envio transacional por WhatsApp. Registrado na ADR-010 aceita.
+
+Atualização posterior: a ADR-025, aceita em 2026-09-26, adiou a ativação de WhatsApp. O modelo de domínio permanece preparado para o canal futuro, mas a primeira API publicada aceita somente e-mail e a TASK 07 mostra WhatsApp desabilitado como “Em breve”.
+
+Atualização posterior: a ADR-026, aceita em 2026-09-26, substituiu Resend por Brevo para o e-mail da primeira publicação, sem alterar o modelo conceitual, o OTP ou a porta de entrega.
 - [x] Para contato associado, o fluxo neutro oferece recuperação no mesmo canal, sem revelar a conta.
 - [x] Lorem ipsum será usado exclusivamente em testes de interface, com rolagem completa antes de habilitar a ação; não habilita cadastro real nem gera aceite efetivo. Termos, política e regras definitivos serão criados posteriormente com respaldo jurídico, antes de lançamento ou aceite efetivo.
 - [x] O progresso local usa `sessionStorage` para etapa atual, nome de exibição, cidade/região, intenção, interesses e campos opcionais, com TTL deslizante de no máximo 30 minutos sem atualização; será apagado em conclusão, cancelamento, expiração e incompatibilidade de versão. Registrado na ADR-011 aceita.
+
+Decisão posterior: a ADR-019, aceita em 2026-09-26, substitui parcialmente a ordem registrada no primeiro item. O nascimento passa a ser informado e validado antes do contato, sem persistência; após refresh é solicitado novamente e, na conclusão, é reenviado, revalidado e persistido somente na conta ativa. Os estados e momentos de criação de `Registration` e `Account` permanecem os mesmos.
 
 ## 10. Checklist de Conformidade
 

@@ -2,7 +2,7 @@
 TASK 06 — API HTTP e entrega de verificação do fluxo de cadastro
 
 Objetivo:
-Planejar e implementar a fatia HTTP pública do cadastro no NestJS, expondo com segurança os casos de uso construídos na SDD-007 e substituindo o adapter de entrega `noop` por integrações reais de e-mail e WhatsApp. A API deve permitir que o futuro frontend execute o fluxo de contato, verificação, senha, dados obrigatórios, nascimento, aceites e interesses sem acessar o PostgreSQL nem conhecer tipos do Drizzle.
+Planejar e implementar a fatia HTTP pública do cadastro no NestJS, expondo com segurança os casos de uso construídos na SDD-007 e substituindo o adapter de entrega `noop` pela Brevo no canal de e-mail. WhatsApp fica adiado e indisponível no contrato publicado. A API deve permitir que o futuro frontend execute o fluxo de elegibilidade por nascimento, contato, verificação, senha, dados obrigatórios, aceites e interesses sem acessar o PostgreSQL nem conhecer tipos do Drizzle.
 
 Dependências e fontes de verdade:
 - Executar somente após a implementação e revisão da `specs/sdd-007-persistencia-postgresql-cadastro/tasks.md`.
@@ -12,14 +12,15 @@ Dependências e fontes de verdade:
 
 Escopo:
 - Planejar, documentar em OpenAPI e implementar endpoints versionados para:
-  - solicitar desafio de verificação por e-mail ou WhatsApp, registrando consentimento explícito para WhatsApp;
+  - validar nascimento e maioridade antes da coleta de contato, sem persistir a data nessa etapa;
+  - solicitar desafio de verificação por e-mail; rejeitar WhatsApp sem efeitos enquanto o canal estiver adiado;
   - reenviar o desafio respeitando cooldown e limites;
   - confirmar OTP e, no e-mail, consumir link de verificação com token opaco;
   - informar a senha e iniciar o `Registration` provisório;
   - salvar nome de exibição, cidade/região e intenções de uso, criando a `Account` incompleta;
   - listar interesses ativos em ordem estável;
   - consultar somente documentos jurídicos aprovados e suas versões vigentes;
-  - enviar nascimento, documentos aceitos e no mínimo três interesses para concluir o cadastro;
+  - reenviar e revalidar nascimento, documentos aceitos e no mínimo três interesses para concluir o cadastro;
   - consultar apenas o estado mínimo necessário para retomar o cadastro, sem devolver contato, senha, OTP, nascimento ou sinais de existência de outra conta.
 - Criar controllers e DTOs em `presentation/http`, com `class-validator`, transformação explícita, Swagger (`@ApiTags`, `@ApiOperation` e respostas tipadas) e DI por construtor.
 - Manter regras nos casos de uso e domínio; controllers apenas validam, traduzem contratos e invocam portas inbound/casos de uso.
@@ -27,15 +28,16 @@ Escopo:
 - Projetar e implementar uma credencial de continuação do cadastro: IDs públicos isoladamente não podem autorizar leitura ou mutação. Definir expiração, rotação, revogação, armazenamento no navegador/cookie, CSRF, CORS e vínculo com os estados do cadastro em ADR próprio.
 - Decidir em ADR se o browser chamará o NestJS diretamente ou se usará Route Handlers do Next.js como BFF. Se houver BFF, ele apenas autentica/autoriza e delega, sem duplicar regras nem acessar PostgreSQL.
 - Definir a origem confiável da requisição (proxy, cabeçalho e política de confiança) e então ativar o limite de dez desafios por origem/hora previsto na ADR-009; não confiar cegamente em `X-Forwarded-For`.
-- Implementar adapters substituíveis para Resend e WhatsApp Cloud API conforme ADR-010: timeout de cinco segundos, até duas novas tentativas apenas para falhas transitórias, idempotência, mensagens/templates aprovados e logs sem PII.
-- Validar configuração e segredos de provedores via `ConfigModule`/Zod; produção deve falhar cedo se o adapter real estiver habilitado sem configuração. O adapter `noop` pode permanecer somente em testes ou configuração explicitamente local.
+- Usar Vercel como deploy inicial do frontend/BFF de testes, diretamente e sem proxy adicional; isolar a resolução de origem para permitir migração futura à Cloudflare por nova ADR, sem alterar o NestJS ou o PostgreSQL.
+- Implementar adapter substituível para Brevo conforme ADR-026: SDK oficial confinado à infraestrutura, timeout de cinco segundos, até duas novas tentativas apenas para falhas transitórias, idempotência, template versionado em código e logs sem PII. A integração WhatsApp fica fora desta task.
+- Validar configuração e segredo da Brevo via `ConfigModule`/Zod; produção deve falhar cedo se o adapter real estiver habilitado sem configuração. O adapter `noop` pode permanecer somente em testes ou configuração explicitamente local e nunca habilita WhatsApp no contrato publicado.
 - Manter respostas neutras para contato existente, rate limit, desafio inexistente/expirado/bloqueado e recuperação no mesmo canal.
 - Atualizar `docs/04-integracoes-externas.md`, documentação de contratos/modelos, `.env.example`, README, `CHANGELOG.md` e versões aplicáveis.
 
 Decisões obrigatórias no planejamento:
-- Criar ADRs `proposed` separados para o contrato HTTP, a credencial segura de continuação, o limite de origem confiável e a topologia browser/BFF/NestJS;  todos devem ser aceitas por mim antes da implementação.
+- Criar ADRs `proposed` separados para o contrato HTTP, a credencial segura de continuação, o limite de origem confiável e a topologia browser/BFF/NestJS; todos devem ser aceitos por mim antes da implementação.
 - Confirmar URLs, métodos, DTOs, códigos HTTP, estratégia de idempotência e compatibilidade/versionamento.
-- Confirmar 2e faltarem, manter o plano `blocked`; não simular entrega em produção.
+- Confirmar os pré-requisitos operacionais da Brevo antes do smoke/deploy: conta, remetente individual verificado, API key, cota vigente e URL pública. A implementação usa fake HTTP e não simula entrega em produção. WhatsApp é uma integração futura conforme ADR-025.
 - Definir como o link de e-mail será construído, expira, é consumido uma única vez e redireciona sem colocar segredo em logs ou analytics.
 - Definir comportamento quando não houver documentos jurídicos aprovados: a API pode permitir testes isolados com fixtures, mas nunca ativar conta real com placeholder lorem ipsum.
 
@@ -48,15 +50,15 @@ Fora de escopo:
 Critérios de aceite:
 - OpenAPI cobre todos os endpoints, DTOs, respostas e erros públicos; alterações de contrato possuem testes de snapshot/contrato, documentação, changelog e versionamento.
 - `ValidationPipe` global rejeita propriedades desconhecidas; limites de tamanho e formato existem para todos os campos.
-- Testes unitários cobrem controllers, tradução de erros e adapters; testes contratuais cobrem Resend/Meta com servidor fake; E2E com PostgreSQL descartável cobre o fluxo por OTP, reenvio, expiração, bloqueio, antienumeração, idempotência e ativação.
+- Testes unitários cobrem controllers, tradução de erros e adapters; testes contratuais cobrem Brevo com servidor fake; E2E com PostgreSQL descartável cobre o fluxo por e-mail, rejeição sem efeitos de WhatsApp, OTP, reenvio, expiração, bloqueio, antienumeração, idempotência e ativação.
 - Testes garantem que contato, OTP, senha, token de link, credenciais, nascimento e SQL nunca aparecem em logs ou respostas indevidas.
-- Falhas transitórias/definitivas dos provedores respeitam timeout, retry e idempotência sem manter transação PostgreSQL aberta durante I/O externo.
+- Falhas transitórias/definitivas da Brevo respeitam timeout, retry e idempotência sem manter transação PostgreSQL aberta durante I/O externo.
 - `bun run --cwd back lint`, `typecheck`, `test`, `test:integration`, `test:e2e` e `build` passam; testes com banco usam o runner descartável da TASK 05.
 
 TASK 07 — Frontend Next.js do fluxo de cadastro
 
 Objetivo:
-Planejar e implementar no Next.js App Router a experiência responsiva e acessível de cadastro do EventMatch, consumindo exclusivamente o contrato público aprovado na TASK 06. O fluxo deve conduzir a pessoa por contato, OTP, senha, dados obrigatórios, nascimento e aceites, escolha de interesses e conclusão, preservando somente o progresso local não sensível autorizado.
+Planejar e implementar no Next.js App Router a experiência responsiva e acessível de cadastro do EventMatch, consumindo exclusivamente o contrato público aprovado na TASK 06. O fluxo deve conduzir a pessoa por elegibilidade por nascimento, contato, OTP, senha, dados obrigatórios, aceites, escolha de interesses e conclusão, preservando somente o progresso local não sensível autorizado.
 
 Dependências e fontes de verdade:
 - Executar após a TASK 06 possuir SDD `ready`, ADRs aceitas e contrato OpenAPI estável; a implementação E2E depende dos endpoints disponíveis.
@@ -66,11 +68,12 @@ Dependências e fontes de verdade:
 Escopo:
 - Criar rota de cadastro no App Router com Server Components por padrão e Client Components pequenos apenas onde houver formulário, temporizador, rolagem, seleção ou acesso a `sessionStorage`.
 - Implementar as etapas:
-  - escolha entre e-mail e WhatsApp, entrada/normalização visual do contato e consentimento explícito para WhatsApp;
+  - nascimento e validação de maioridade como primeira informação após a apresentação, sem persistência local ou remota da data nessa etapa;
+  - e-mail como canal selecionável; WhatsApp visível, desabilitado e acompanhado do texto acessível “Em breve”, sem solicitar telefone ou consentimento;
   - OTP de seis dígitos, feedback neutro, expiração de 15 minutos, reenvio liberado após 60 segundos e estados de bloqueio/limite sem enumeração;
   - criação e confirmação de senha, requisitos claros e tratamento de senha comum sem ecoar o valor;
   - nome de exibição, cidade/região e uma ou mais intenções de uso;
-  - nascimento, apresentação dos três documentos vigentes e confirmação acessível;
+  - apresentação dos três documentos vigentes e confirmação acessível, com novo envio da data de nascimento somente para revalidação final no backend;
   - seleção de pelo menos três interesses ativos;
   - conclusão e limpeza segura do progresso local.
 - Implementar retorno por link de verificação de e-mail sem expor token em UI, logs, analytics, histórico adicional ou mensagens de erro; remover/invalidar o segredo após o consumo conforme o contrato aprovado.
@@ -98,9 +101,9 @@ Fora de escopo:
 - Acesso ao PostgreSQL, regras de cadastro em Route Handlers ou armazenamento de segredos no navegador.
 
 Critérios de aceite:
-- O fluxo completo funciona por e-mail e WhatsApp contra a API da TASK 06; em ambiente sem documentos aprovados, a interface bloqueia a ativação real de forma clara e segura.
+- O fluxo completo funciona por e-mail contra a API da TASK 06; WhatsApp aparece desabilitado como “Em breve” e não dispara chamada. Em ambiente sem documentos aprovados, a interface bloqueia a ativação real de forma clara e segura.
 - Testes unitários cobrem validação visual, máquina de etapas, TTL/schema do `sessionStorage`, limpeza, countdown e acessibilidade básica; testes de integração cobrem cliente/BFF e contratos de erro.
-- E2E cobre caminho feliz, OTP inválido/expirado, reenvio, bloqueio, retorno por link de e-mail, atualização da página, expiração local, falha de provedor, menor de idade, menos de três interesses e ausência de documentos aprovados.
+- E2E cobre caminho feliz por e-mail, WhatsApp desabilitado sem requisição, OTP inválido/expirado, reenvio, bloqueio, retorno por link, atualização da página, expiração local, falha da Brevo, menor de idade, menos de três interesses e ausência de documentos aprovados.
 - Auditoria automatizada e manual cobre teclado, leitor de tela, foco, contraste e zoom; nenhum teste/snapshot contém PII ou segredo real.
 - Aplicar e citar no plano/revisão, quando pertinentes: `async-parallel`, `async-defer-await`, `server-no-shared-module-state`, `server-serialization`, `server-parallel-fetching`, `client-localstorage-schema`, `rerender-derived-state-no-effect` e `rerender-move-effect-to-event`.
 - `bun run --cwd front lint`, `typecheck`, `test` e `build` passam, além do E2E full-stack pelo runner descartável.

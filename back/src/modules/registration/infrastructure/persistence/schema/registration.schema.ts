@@ -15,6 +15,7 @@ import {
   uniqueIndex,
   uuid,
   customType,
+  foreignKey,
 } from 'drizzle-orm/pg-core';
 
 const utcNow = sql`now()`;
@@ -52,6 +53,7 @@ export const contactVerification = pgTable('contact_verification', {
   unique('contact_verification_delivery_key_unique').on(table.deliveryIdempotencyKey),
   uniqueIndex('contact_verification_open_contact_unique').on(table.contactHash, table.purpose).where(sql`${table.status} in ('open', 'verified')`),
   index('contact_verification_expires_at_index').on(table.expiresAt),
+  uniqueIndex('contact_verification_link_token_digest_unique').on(table.linkTokenDigest).where(sql`${table.linkTokenDigest} is not null`),
 ]);
 
 export const verificationRateWindow = pgTable('verification_rate_window', {
@@ -151,3 +153,78 @@ export const termsAcceptance = pgTable('terms_acceptance', {
   acceptedAt: timestamp('accepted_at', { withTimezone: true }).notNull(),
   context: jsonb('context').notNull(),
 }, (table) => [unique('terms_acceptance_account_document_unique').on(table.accountId, table.documentId)]);
+
+/** Continuation of the HTTP journey (ADR-021): digests only, never birth date, contact or secrets. */
+export const registrationFlowSession = pgTable('registration_flow_session', {
+  id: uuid('id').primaryKey(),
+  tokenDigest: bytea('token_digest'),
+  previousTokenDigest: bytea('previous_token_digest'),
+  previousValidUntil: timestamp('previous_valid_until', { withTimezone: true }),
+  stage: text('stage').notNull(),
+  verificationId: uuid('verification_id'),
+  registrationId: uuid('registration_id').references(() => registration.id),
+  accountId: uuid('account_id').references(() => account.id),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().default(utcNow),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
+}, (table) => [
+  // Explicit names: generated ones would exceed PostgreSQL's 63-byte identifier limit.
+  foreignKey({
+    name: 'registration_flow_session_verification_fk',
+    columns: [table.verificationId],
+    foreignColumns: [contactVerification.id],
+  }),
+  check(
+    'registration_flow_session_stage_check',
+    sql`${table.stage} in ('age_eligible', 'verification_pending', 'contact_verified', 'registration_in_progress', 'account_incomplete', 'completed')`,
+  ),
+  check(
+    'registration_flow_session_binding_check',
+    // Each stage carries exactly the bindings earned so far; a neutral request keeps no challenge.
+    sql`(${table.stage} = 'age_eligible' and ${table.verificationId} is null and ${table.registrationId} is null and ${table.accountId} is null) or (${table.stage} = 'verification_pending' and ${table.registrationId} is null and ${table.accountId} is null) or (${table.stage} = 'contact_verified' and ${table.verificationId} is not null and ${table.registrationId} is null and ${table.accountId} is null) or (${table.stage} = 'registration_in_progress' and ${table.verificationId} is not null and ${table.registrationId} is not null and ${table.accountId} is null) or (${table.stage} in ('account_incomplete', 'completed') and ${table.verificationId} is not null and ${table.registrationId} is not null and ${table.accountId} is not null)`,
+  ),
+  check(
+    'registration_flow_session_previous_token_check',
+    sql`(${table.previousTokenDigest} is null) = (${table.previousValidUntil} is null)`,
+  ),
+  check(
+    'registration_flow_session_completed_check',
+    sql`${table.stage} <> 'completed' or (${table.tokenDigest} is null and ${table.previousTokenDigest} is null and ${table.revokedAt} is not null)`,
+  ),
+  unique('registration_flow_session_token_digest_unique').on(table.tokenDigest),
+  index('registration_flow_session_previous_token_digest_index').on(table.previousTokenDigest),
+  index('registration_flow_session_verification_id_index').on(table.verificationId),
+  index('registration_flow_session_stage_expires_at_index').on(table.stage, table.expiresAt),
+]);
+
+/** Idempotent HTTP commands (ADR-021): key/payload HMACs and a secret-free outcome only. */
+export const registrationIdempotency = pgTable('registration_idempotency', {
+  id: uuid('id').primaryKey(),
+  flowSessionId: uuid('flow_session_id').notNull(),
+  operation: text('operation').notNull(),
+  keyHash: bytea('key_hash').notNull(),
+  requestHash: bytea('request_hash').notNull(),
+  responseBody: jsonb('response_body'),
+  rotates: boolean('rotates').notNull().default(false),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().default(utcNow),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().default(utcNow),
+}, (table) => [
+  foreignKey({
+    name: 'registration_idempotency_flow_session_fk',
+    columns: [table.flowSessionId],
+    foreignColumns: [registrationFlowSession.id],
+  }),
+  check(
+    'registration_idempotency_operation_check',
+    sql`${table.operation} in ('contact_request', 'contact_resend', 'contact_confirm', 'password', 'required_data', 'complete')`,
+  ),
+  check(
+    'registration_idempotency_outcome_check',
+    sql`(${table.completedAt} is null) = (${table.responseBody} is null)`,
+  ),
+  unique('registration_idempotency_key_unique').on(table.flowSessionId, table.operation, table.keyHash),
+  index('registration_idempotency_expires_at_index').on(table.expiresAt),
+]);

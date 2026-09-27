@@ -9,7 +9,7 @@ A fonte funcional canônica é [`DER-EventMatch-MVP.md`](DER-EventMatch-MVP.md),
 ## 2. Stack e fronteiras técnicas
 
 - Monorepo Bun.
-- `front/`: Next.js App Router, responsável por experiência web e, quando necessário, Route Handlers usados somente como BFF/proxy.
+- `front/`: Next.js App Router, responsável por experiência web e Route Handlers usados somente como BFF/proxy; o cadastro usa obrigatoriamente o BFF conforme ADR-022.
 - `back/`: NestJS com arquitetura hexagonal, responsável pela API de negócio, autorização, casos de uso, auditoria e integrações.
 - PostgreSQL: acessado exclusivamente por adapters do backend.
 - Persistência: Drizzle ORM sobre `node-postgres`, com pool singleton limitado a uma conexão nesta fundação; schema e builders permanecem em `infrastructure/persistence`.
@@ -27,7 +27,8 @@ A fundação em `back/` usa NestJS, TypeScript estrito e o mesmo workspace Bun. 
 ```text
 Browser -> front/ Next.js -> back/ NestJS -> PostgreSQL
             |                   |
-            | BFF opcional      +-> storage/notificações/serviços externos
+            | BFF/proxy         +-> storage/notificações/serviços externos
+            | obrigatório no cadastro
             +------------------->
 
 back/presentation -> application/use-cases -> domain/ports
@@ -35,6 +36,14 @@ back/presentation -> application/use-cases -> domain/ports
 ```
 
 A fundação PostgreSQL configura Drizzle e o pool no backend, preserva `GET /health` como liveness e expõe readiness separado para a dependência. Não cria schema físico nem migrations iniciais; cada bounded context será responsável por seu modelo e migrations futuras.
+
+### Cadastro HTTP v1 (SDD-009)
+
+O módulo `registration` expõe `RegistrationController` em `/api/v1/registration` e o módulo `catalog` expõe `GET /api/v1/catalog/interests`. A apresentação valida DTOs, exige a credencial interna do BFF (`BffInternalGuard`) e a forma da continuação (`ContinuationGuard`) antes de qualquer caso de uso, traduz `RegistrationError` em respostas tipadas (`RegistrationErrorFilter`) e aplica `Cache-Control: no-store`. A aplicação ganha `RegistrationFlow` e `RegistrationFlowGate`, que resolvem ids internos a partir da sessão autorizada, controlam idempotência e rotação e avançam a sessão na mesma transação do efeito de negócio por meio de ganchos transacionais nos casos de uso existentes. A infraestrutura adiciona os repositórios Drizzle de sessão e idempotência, o adapter de token HMAC e o `BrevoVerificationDeliveryAdapter`; o `noop` só é composto quando configurado explicitamente fora de produção.
+
+### Deploy inicial do frontend
+
+O frontend/BFF do ambiente publicado de testes será hospedado diretamente na Vercel, sem proxy adicional à frente. O cadastro deriva uma fingerprint de origem a partir do header específico da plataforma e autentica as chamadas BFF → NestJS, conforme ADR-023. A leitura da origem fica isolada em adapter server-only para permitir migração futura à Cloudflare mediante nova ADR, sem alterar regras de negócio, contrato interno ou PostgreSQL.
 
 ## 3. Atores e superfícies
 
@@ -99,3 +108,4 @@ RF068, RF073, RF074, RN068, RN080–RN083, RN093, RN096, RN100–RN104, RN115–
 - ADR-002: contextos e fronteiras de domínio do EventMatch, em estado `proposed`.
 - ADR-013 a ADR-017: schema físico do cadastro, proteção de segredos, limites persistidos, concorrência transacional e expiração lazy.
 - ADR-018: origem da lista de senhas comuns e estado `converted` do cadastro.
+- ADR-019 a ADR-023: ordem de maioridade, contrato HTTP do cadastro, continuação opaca, BFF obrigatório e origem confiável no deploy inicial da Vercel.

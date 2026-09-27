@@ -40,10 +40,11 @@ describe('migration 0002 over pre-0002 data', () => {
     await run(`insert into contact_verification (id, purpose, channel, contact_hash, contact_ciphertext, otp_digest,
                  expires_at, last_sent_at, delivery_idempotency_key, status)
                select gen_random_uuid(), 'registration', 'email', sha256(n::text::bytea), '\\x01', '\\x01',
-                 now(), now(), gen_random_uuid(), 'consumed' from generate_series(1, 3) n`);
+                 now(), now(), gen_random_uuid(), 'consumed' from generate_series(1, 4) n`);
     const verifications = (await run(`select id from contact_verification order by id`)).rows as { id: string }[];
     // Legacy states the pre-0002 schema accepted: in progress without key_version, an abandoned
-    // tombstone still holding the ciphertext, and a conversion recorded as 'expired'.
+    // tombstone still holding the ciphertext, a registration whose account later expired (stays
+    // 'expired') and a conversion to a live account recorded as 'expired' (becomes 'converted').
     await run(`insert into registration (id, verification_id, channel, contact_hash, contact_ciphertext, password_hash,
                  status, last_updated_at, expires_at, expired_at) values
                ('20000000-0000-7000-8000-000000000001', '${verifications[0]?.id}', 'email', '\\x0a', '\\x0b', 'h',
@@ -51,9 +52,12 @@ describe('migration 0002 over pre-0002 data', () => {
                ('20000000-0000-7000-8000-000000000002', '${verifications[1]?.id}', 'email', null, '\\x0c', 'h',
                  'expired', now(), now(), now()),
                ('20000000-0000-7000-8000-000000000003', '${verifications[2]?.id}', 'email', null, null, null,
+                 'expired', now(), now(), now()),
+               ('20000000-0000-7000-8000-000000000004', '${verifications[3]?.id}', 'email', null, null, null,
                  'expired', now(), now(), now())`);
     await run(`insert into account (id, registration_id, status, last_updated_at) values
-               ('30000000-0000-7000-8000-000000000001', '20000000-0000-7000-8000-000000000003', 'expired', now())`);
+               ('30000000-0000-7000-8000-000000000001', '20000000-0000-7000-8000-000000000003', 'expired', now()),
+               ('30000000-0000-7000-8000-000000000002', '20000000-0000-7000-8000-000000000004', 'account_incomplete', now())`);
     await run(`insert into account_contact (account_id, channel, contact_hash, contact_ciphertext, confirmed_at, holds_contact)
                values ('30000000-0000-7000-8000-000000000001', 'email', null, '\\x0d', now(), false)`);
 
@@ -67,7 +71,8 @@ describe('migration 0002 over pre-0002 data', () => {
     expect(registrations).toEqual([
       { id: '20000000-0000-7000-8000-000000000001', status: 'registration_in_progress', no_hash: false, no_cipher: false, key_version: 1, no_password: false, no_expired_at: true },
       { id: '20000000-0000-7000-8000-000000000002', status: 'expired', no_hash: true, no_cipher: true, key_version: null, no_password: true, no_expired_at: false },
-      { id: '20000000-0000-7000-8000-000000000003', status: 'converted', no_hash: true, no_cipher: true, key_version: null, no_password: true, no_expired_at: true },
+      { id: '20000000-0000-7000-8000-000000000003', status: 'expired', no_hash: true, no_cipher: true, key_version: null, no_password: true, no_expired_at: false },
+      { id: '20000000-0000-7000-8000-000000000004', status: 'converted', no_hash: true, no_cipher: true, key_version: null, no_password: true, no_expired_at: true },
     ]);
     const [contact] = (await run(`select contact_ciphertext from account_contact`)).rows;
     expect(contact).toEqual({ contact_ciphertext: null });
