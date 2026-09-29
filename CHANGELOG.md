@@ -10,7 +10,8 @@ Conteúdo dos documentos legais e aceite ou recusa no cadastro (SDD-011; ADR-028
 - Frontend: `LegalMarkdown` (Server Component, `react-markdown`) renderiza o texto no servidor. Os aceites saíram do passo “Documentos” (removido; agora sete etapas) e foram para a tela da senha (ADR-031): “Li e concordo com os Termos de Uso…”, em que o nome do documento é um link que abre o texto num diálogo com Aceitar e Recusar; a recusa abre um aviso com “Rever documentos” e “Cancelar cadastro”. Versão e vigência não são mais exibidas (a linha de versão do texto é ocultada só na exibição). Título “Regras de Convivência”. Uma nova versão durante o fluxo recarrega os documentos e descarta os aceites.
 - Cancelar o cadastro executa a expiração no backend (ADR-030): novo `DELETE /api/v1/registration` (e `DELETE /api/registration` no BFF) anula o e-mail e a senha retidos, expira a conta incompleta, libera o contato e revoga a continuação. “Cancelar cadastro” (cabeçalho e aviso de recusa) usa essa chamada; com o backend indisponível a pessoa permanece na tela com um aviso.
 - Testes: unidade (`LegalDocumentText`, caso de uso, controller, renderização do Markdown, estados de aceite e recusa), integração PostgreSQL (bytes, digest, `CHECK`s, trigger, vigência) e E2E (lista, recusa sem documento vigente, troca de versão).
-- Pendência conhecida, anterior a esta entrega: `baseUrl` do cliente Brevo está comentado em `brevo-verification-delivery.adapter.ts`, o que impede o E2E de receber o OTP no Brevo falso; os fluxos com OTP só passam com essa linha ativa.
+- `baseUrl` do cliente Brevo reativado em `brevo-verification-delivery.adapter.ts`: o E2E volta a receber o OTP e o link pelo Brevo falso e passa integralmente.
+- `react-markdown` fixado em `10.1.0` e `LegalMarkdown` restrito à lista de elementos e ao `urlTransform` da ADR-029.
 
 ## 0.10.0 — 2026-09-27
 

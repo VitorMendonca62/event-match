@@ -39,25 +39,26 @@ Versão: raiz e frontend passam de `0.10.0` para `0.11.0`; o backend passa de `0
 
 Inclui:
 
-- [ ] Migration `back/drizzle/0005_legal_document_content.sql` (ADR-028), com coluna `content`, backfill com os três arquivos integrais, `CHECK` de digest, `CHECK` de conteúdo obrigatório para `approved`, trigger de imutabilidade e atualização de `meta/_journal.json`. A `0004` não é alterada.
-- [ ] `termsDocument.content` no schema Drizzle.
-- [ ] Value object de domínio `LegalDocumentText`, que separa frontmatter e corpo, sem dependências de framework.
-- [ ] Porta com `listCurrent(context, locale, now)` substituindo `listApproved`, e `findCurrent(context, ids, now)` substituindo `findApproved`. O adapter devolve uma versão vigente por tipo (`DISTINCT ON (kind)`, `effective_at <= now`, `ORDER BY kind, effective_at DESC, version DESC`), mantendo `FOR SHARE` em `findCurrent`.
-- [ ] Caso de uso `ListCurrentLegalDocuments`, renomeado de `ListApprovedLegalDocuments`, com `ClockPort` injetado; devolve metadados e corpo. `CompleteRegistration` passa a usar `findCurrent` com o mesmo `now` da transação.
-- [ ] `LegalDocumentDto.content` (Markdown, sem frontmatter), exemplo de `version` corrigido para `1.0.0`, `@ApiOperation` atualizado e `Cache-Control: no-store` explícito.
-- [ ] Frontend: `legalDocumentSchema` com `content: z.string().min(1)`; `fetchDocuments` repassa o corpo apenas até o RSC.
-- [ ] `LegalMarkdown` (Server Component, ADR-029): `app/cadastro/page.tsx` gera `body: ReactNode` por documento e envia à ilha cliente sem o texto bruto.
-- [ ] `legal-step.tsx`: exibir `body` em região rolável acessível; checkbox “Li e aceito: <título>” desmarcado por padrão; botão “Não aceito” por documento; aviso de recusa com “Rever documentos” e “Sair do cadastro”.
-- [ ] Corrigir `LEGAL_DOCUMENT_TITLES.community_rules` para “Regras de Convivência”.
-- [ ] Tratar a troca de versão durante o fluxo: se a conclusão falhar porque um documento aceito deixou de ser vigente, recarregar os documentos (`router.refresh()`), limpar os aceites em memória e voltar ao passo de documentos com um aviso neutro.
-- [ ] Documentação: `docs/legal/README.md` (processo de publicação de nova versão e autorização jurídica de 2026-09-28), `docs/02-*`, `docs/03-*`, `docs/04-*`, `front/README.md`, `CHANGELOG.md`, versões, `DESIGN.md` se surgirem novos padrões visuais, e artefatos de revisão do Impeccable.
+- [x] Migration `back/drizzle/0005_legal_document_content.sql` (ADR-028), com coluna `content`, backfill com os três arquivos integrais, `CHECK` de digest, `CHECK` de conteúdo obrigatório para `approved`, trigger de imutabilidade e atualização de `meta/_journal.json`. A `0004` não é alterada.
+- [x] `termsDocument.content` no schema Drizzle.
+- [x] Value object de domínio `LegalDocumentText`, que separa frontmatter e corpo, sem dependências de framework.
+- [x] Porta com `listCurrent(context, locale, now)` substituindo `listApproved`, e `findCurrent(context, ids, now)` substituindo `findApproved`. O adapter devolve uma versão vigente por tipo (`DISTINCT ON (kind)`, `effective_at <= now`, `ORDER BY kind, effective_at DESC, version DESC`), mantendo `FOR SHARE` em `findCurrent`.
+- [x] Caso de uso `ListCurrentLegalDocuments`, renomeado de `ListApprovedLegalDocuments`, com `ClockPort` injetado; devolve metadados e corpo. `CompleteRegistration` passa a usar `findCurrent` com o mesmo `now` da transação.
+- [x] `LegalDocumentDto.content` (Markdown, sem frontmatter), exemplo de `version` corrigido para `1.0.0`, `@ApiOperation` atualizado e `Cache-Control: no-store` explícito.
+- [x] Frontend: `legalDocumentSchema` com `content: z.string().min(1)`; `fetchDocuments` repassa o corpo apenas até o RSC.
+- [x] `LegalMarkdown` (Server Component, ADR-029): `app/cadastro/page.tsx` gera `body: ReactNode` por documento e envia à ilha cliente sem o texto bruto.
+- [x] ~~`legal-step.tsx`~~ → `terms-consent.tsx` na tela da senha e na revisão (ADR-031): “Li e concordo com …” desmarcado por padrão, nome do documento abre diálogo com o `body` em região rolável acessível, **Aceitar** e **Recusar**; a recusa abre `alertdialog` com “Rever documentos” e “Cancelar cadastro”.
+- [x] Corrigir `LEGAL_DOCUMENT_TITLES.community_rules` para “Regras de Convivência”.
+- [x] Tratar a troca de versão durante o fluxo: se a conclusão falhar porque um documento aceito deixou de ser vigente, recarregar os documentos (`router.refresh()`), limpar os aceites em memória e pedir novo aceite na revisão com um aviso neutro (ADR-031).
+- [x] Cancelamento no backend (ADR-030): `CancelRegistration`, `DELETE /api/v1/registration` e `DELETE /api/registration` no BFF, usados por “Cancelar cadastro” no cabeçalho e no aviso de recusa.
+- [x] Documentação: `docs/legal/README.md` (processo de publicação de nova versão e autorização jurídica de 2026-09-28), `docs/02-*`, `docs/03-*`, `docs/04-*`, `front/README.md`, `CHANGELOG.md`, versões, `DESIGN.md` se surgirem novos padrões visuais, e artefatos de revisão do Impeccable.
 
 Exclui:
 
 - Redação ou revisão jurídica do conteúdo.
 - Reaceite de novas versões por contas já ativas, login e painel administrativo de publicação.
 - Idiomas além de `pt-BR`.
-- Operação de cancelamento no backend. “Sair do cadastro” não revoga a sessão de continuação, que expira pelo TTL.
+- ~~Operação de cancelamento no backend.~~ Incluída em 2026-09-29 pela ADR-030.
 - Cache entre requisições dos documentos (ADR-028).
 - Mudanças nos demais passos do cadastro.
 
@@ -84,7 +85,10 @@ front/src/shared/server/registration-view.ts
 front/src/features/registration/components/legal-markdown.tsx                 (novo, server)
 front/src/app/cadastro/page.tsx
 front/src/features/registration/components/registration-flow.tsx
-front/src/features/registration/components/steps/legal-step.tsx
+front/src/features/registration/components/terms-consent.tsx                  (substitui legal-step.tsx, ADR-031)
+front/src/components/client/ui/dialog.tsx                                     (novo, ADR-031)
+back/src/modules/registration/application/use-cases/cancel-registration.use-case.ts (novo, ADR-030)
+front/src/app/api/registration/route.ts                                       (+ DELETE, ADR-030)
 ```
 
 Fluxo:
@@ -110,6 +114,8 @@ PostgreSQL terms_document (content + digest + CHECK + trigger)
 |---|---|---|---|
 | Conteúdo em `terms_document.content`, integridade por `CHECK` de digest, imutabilidade por trigger, versão vigente por tipo, listagem com conteúdo, sem cache | `docs/adrs/ADR-028-armazenar-e-entregar-conteudo-dos-documentos-legais.md` | accepted | Contrato, schema, regra de vigência e cache são materiais. |
 | `react-markdown` como nova dependência, renderizado só no servidor | `docs/adrs/ADR-029-renderizar-markdown-legal-com-react-markdown-no-servidor.md` | accepted | Nova dependência e decisão de fronteira RSC/cliente. |
+| Cancelamento com expiração imediata no backend | `docs/adrs/ADR-030-cancelar-cadastro-com-expiracao-imediata.md` | accepted | Nova rota pública e mudança da regra de saída (2026-09-29). |
+| Aceite dos documentos na tela da senha, com diálogo | `docs/adrs/ADR-031-aceite-de-documentos-na-senha-com-dialogo.md` | accepted | Remove o passo “Documentos” e muda a posição do aceite no fluxo (2026-09-29). |
 
 A recusa sem gravação é regra de produto registrada em `docs/02-*`; não exige ADR.
 
@@ -220,7 +226,7 @@ Comportamento:
 - `UPDATE` do conteúdo ou do digest de uma linha `approved` é rejeitado pelo trigger. `approved → retired` é aceito.
 - `GET legal-documents` devolve três documentos com `content` sem frontmatter, apenas as versões vigentes, e `Cache-Control: no-store`. O Swagger mostra `content` e `version: 1.0.0`.
 - No cadastro, os três documentos aparecem formatados (títulos, negrito, listas), sem `---`/frontmatter, sem marcação literal e sem repetir o título `#` do arquivo. Com os três aceites, a conta é ativada e `terms_acceptance` guarda os três ids.
-- “Não aceito” mostra o aviso com as duas saídas. “Rever documentos” leva o foco ao primeiro documento não aceito. “Sair do cadastro” chama `clearDraft` e navega para `/`. Nenhuma chamada ao backend é feita.
+- “Recusar” mostra o aviso com as duas saídas (ADR-031). “Rever documentos” reabre o mesmo documento. “Cancelar cadastro” chama `DELETE /api/registration`, que expira o cadastro no backend e o cookie (ADR-030); em sucesso ou `401`, chama `clearDraft` e navega para `/`; com o backend indisponível, a pessoa permanece na tela com um aviso.
 - Um id `retired`, futuro ou inexistente em `documentIds` resulta em `422`; o frontend recarrega os documentos e zera os aceites.
 
 Segurança:
@@ -269,7 +275,7 @@ Backend E2E (`bun run --cwd back test:e2e`, Supertest):
 Frontend unitário e componentes (`bun run --cwd front test`):
 
 - `LegalMarkdown`: omissão do primeiro `#`, mapeamento dos demais títulos, descarte de HTML e imagens, ausência de frontmatter, links `https:`/`mailto:` com `rel` e aviso de nova aba, e `javascript:`/`http:`/`data:`/relativo convertidos em texto.
-- `legal-step`: estados de aceite, recusa, “Rever”, “Sair” (`clearDraft`), bloqueio sem `body`, fixture e título “Regras de Convivência”.
+- `terms-consent` (ADR-031): estados de aceite, recusa, “Rever documentos”, “Cancelar cadastro”, bloqueio sem `body`, fixture e título “Regras de Convivência”.
 - Schema zod exige `content`.
 
 Frontend integração:
@@ -280,7 +286,7 @@ Frontend integração:
 E2E full-stack (runner descartável):
 
 - Aceite total → `/cadastro/concluido`.
-- Recusa → aviso → sair.
+- Recusa → aviso → cancelar cadastro (ADR-030).
 - Documento ausente → bloqueio.
 - Troca de versão durante o fluxo → recarga e novo aceite.
 

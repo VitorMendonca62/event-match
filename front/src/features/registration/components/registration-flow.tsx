@@ -70,8 +70,8 @@ export function RegistrationFlow({ stage: initialStage, expiresAt, nextResendAt,
   const isClient = useSyncExternalStore(subscribeNever, () => true, () => false);
 
   // Session storage is browser-only, so the draft is read once after hydration. Document
-  // acceptances never survive a reload: a remembered `interests`/`review` substep resumes at
-  // `legal`, and the draft restores only the allowlisted, non-sensitive fields.
+  // acceptances never survive a reload (ADR-031); the draft restores only the allowlisted,
+  // non-sensitive fields.
   const restored = useMemo(
     () => (isClient && initialStage !== null ? readDraft(browserSessionStorage(), new Date()) : undefined),
     [isClient, initialStage],

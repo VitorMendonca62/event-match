@@ -147,3 +147,35 @@ Critérios de aceite:
 - Testes unitários cobrem caso de uso, mapper, renderização do Markdown e estados de aceite/recusa; testes de integração com o runner descartável cobrem migration, digest e persistência de `terms_acceptance`; E2E cobre aceite total, recusa, documento ausente e troca de versão durante o fluxo.
 - Auditoria de acessibilidade e capturas desktop e mobile cobrem teclado, leitor de tela, foco, contraste e zoom de 200%, seguidas do finish review do Impeccable.
 - `bun run --cwd back lint`, `typecheck`, `test`, `test:integration`, `test:e2e` e `build` passam; `bun run --cwd front lint`, `typecheck`, `test` e `build` passam.
+
+TASK 09 (backlog) — Buscar documentos e interesses no RSC só nas etapas que os usam
+
+Objetivo:
+Evitar chamadas desnecessárias ao backend a cada carregamento de `/cadastro`. Hoje `loadRegistrationView` (`front/src/shared/server/registration-view.ts`) inicia, com qualquer continuação válida, a busca dos documentos legais (~20 KB) e do catálogo de interesses em paralelo ao snapshot, e descarta o resultado (`void catalogsPromise`) quando a etapa não os usa (por exemplo, `age_eligible`, `verification_pending` e `registration_in_progress`).
+
+Origem: revisão da SDD-010/SDD-011 em 2026-09-29.
+
+Escopo a planejar:
+- Comparar a latência atual (snapshot e catálogos em paralelo) com buscar os catálogos só depois do snapshot, conforme a etapa (`contact_verified` → documentos; `account_incomplete` → documentos e interesses), ou com cache entre requisições (exige ADR, conforme ADR-028 e a regra de cache do `AGENTS.md`).
+- Manter `async-parallel`/`server-parallel-fetching` onde houver ganho real, `async-defer-await` e `server-serialization`.
+- Atualizar o teste de carregamento paralelo do RSC em `front/tests/integration/`.
+
+Critérios de aceite:
+- Nenhuma chamada a `legal-documents` ou `catalog/interests` nas etapas que não os exibem.
+- O tempo até o conteúdo nas etapas que os usam não piora de forma mensurável.
+
+TASK 10 — E2E full-stack do cadastro no navegador e revisão com leitor de tela
+
+Objetivo:
+Fechar as pendências da SDD-010 §2.0 e da SDD-011 §7: um runner E2E que abre um navegador real contra Next.js + NestJS + PostgreSQL descartável + Brevo falso e percorre o cadastro como uma pessoa usaria, e um roteiro de revisão manual com leitor de tela real.
+
+Origem: revisão da SDD-010/SDD-011 em 2026-09-29.
+
+Escopo:
+- Escolher a ferramenta de navegador (nova dependência → ADR), o modo de subir o frontend no runner e o isolamento entre cenários.
+- Cobrir os cenários E2E listados na SDD-010 §7 e na SDD-011 §7, incluindo teclado, foco, acessibilidade automatizada, viewport móvel e zoom de 200%.
+- Roteiro manual com Orca + Firefox (e, se houver acesso, NVDA ou VoiceOver) e registro do resultado.
+
+Critérios de aceite:
+- `bun run --cwd front test:e2e` sobe o ambiente descartável, roda os cenários e o derruba, sem PII ou segredo real em fixtures, traces ou capturas.
+- Lint, typecheck, testes, builds e o E2E do backend continuam verdes.

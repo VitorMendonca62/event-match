@@ -73,7 +73,6 @@ if (require.main === module) {
     ) {
       console.error(error.message);
     } else {
-      console.log(error);
       console.error('Application failed to start.');
     }
 

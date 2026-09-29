@@ -43,6 +43,12 @@ describe('LegalMarkdown (ADR-029)', () => {
     expect(html).not.toContain('<img');
   });
 
+  test('unwraps elements outside the allowlist, keeping their text', () => {
+    const html = render('# T\n\nUse `codigo` aqui.\n\n```\nbloco\n```\n\n##### Nota fina\n');
+    expect(html).not.toMatch(/<(code|pre|h6)\b/);
+    for (const text of ['codigo', 'bloco', 'Nota fina']) expect(html).toContain(text);
+  });
+
   test('https links open in a new tab with rel and an accessible notice', () => {
     const html = render('# T\n\nVeja [a lei](https://example.test/lei).');
     expect(html).toContain('href="https://example.test/lei"');
