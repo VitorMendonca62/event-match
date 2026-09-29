@@ -62,7 +62,7 @@ bun run --cwd front test:e2e            # tudo
 bun run --cwd front test:e2e --project=chromium-desktop -g "caminho feliz"
 ```
 
-O script `scripts/test-front-e2e.sh` sobe PostgreSQL, Brevo falso e NestJS em containers, faz `next build` + `next start` no host (`NODE_ENV=test`, `EDGE_PROVIDER=fixture`, porta `FRONT_E2E_PORT`, padrão `3100`), roda o Playwright com Bun e derruba tudo ao final. Os projetos são `chromium-desktop`, `chromium-mobile`, `firefox-desktop` e `destructive` (por último; aposenta os documentos legais do banco descartável). Traces e capturas só em falha, em `test-results/` e `playwright-report/` (ignorados pelo Git). A revisão com leitor de tela real segue `specs/sdd-012-e2e-frontend-cadastro/leitor-de-tela.md`.
+O script `scripts/test-front-e2e.sh` sobe PostgreSQL, Brevo falso e NestJS em containers, faz `next build` + `next start` no host (`NODE_ENV=test`, `EDGE_PROVIDER=fixture`, porta `FRONT_E2E_PORT`, padrão `3100`), roda o Playwright com Bun e derruba tudo ao final. Os projetos são `chromium-desktop`, `chromium-mobile`, `firefox-desktop` e `destructive` (por último; aposenta os documentos legais do banco descartável). Traces e capturas só em falha, em `test-results/` e `playwright-report/` (ignorados pelo Git).
 
 ## Docker
 

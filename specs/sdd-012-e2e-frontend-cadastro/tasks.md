@@ -3,10 +3,12 @@
 - **Slug:** e2e-frontend-cadastro
 - **Autor do plano:** Code-Planner (SDD)
 - **Data:** 2026-09-29
-- **Status:** ready
+- **Status:** implemented
 - **Versão-alvo:** 0.11.0 (ainda não publicada; só testes e ferramentas de desenvolvimento)
 - **Tipo:** chore
 - **Impacto público:** none
+
+> **Atualização de 2026-09-29:** a revisão manual com leitor de tela real (roteiro `leitor-de-tela.md`) foi retirada do escopo por decisão da pessoa responsável e o roteiro foi removido. A acessibilidade fica coberta pelo E2E (axe, foco, teclado, zoom e aria snapshot). Registro da implementação em §2.1.
 
 ## 1. Contexto e Motivação
 
@@ -29,16 +31,23 @@ Rastreabilidade: `docs/DER-EventMatch-MVP.md` v1.3 RF001–RF007, RNF (acessibil
 
 Inclui:
 
-- [ ] Dependências de desenvolvimento `@playwright/test` 1.63.0 e `@axe-core/playwright` 4.13.0 no `front/`, fixadas exatamente (ADR-032).
-- [ ] `front/playwright.config.ts`: `testMatch: '**/*.e2e.ts'`, projetos `chromium-desktop` (1440×900), `chromium-mobile` (390×844, toque), `firefox-desktop` (1440×900) e `destructive` (roda por último, depende dos demais), trace/captura só em falha, `workers: 1`.
-- [ ] `scripts/test-front-e2e.sh` e o script `test:e2e` em `front/package.json`: reaproveita `docker-compose.back.test.yml`, aplica migrations, sobe o backend com `FRONTEND_PUBLIC_URL=http://localhost:${FRONT_E2E_PORT}`, faz `next build` + `next start` no host com `NODE_ENV=test`, `EDGE_PROVIDER=fixture`, segredos descartáveis e o mesmo `BFF_INTERNAL_TOKEN`; espera `/cadastro` responder, roda o Playwright com Bun e derruba tudo em `trap`.
-- [ ] `docker-compose.back.test.yml`: `FRONTEND_PUBLIC_URL: ${FRONTEND_PUBLIC_URL:-http://localhost:3000}` (hoje fixo), mantendo o E2E do backend igual.
-- [ ] Suporte de teste em `front/tests/e2e/support/`: `brevo.ts` (último OTP/link por destinatário), `db.ts` (`Bun.SQL` sobre `E2E_DATABASE_URL`: limpar janela de origem, publicar nova versão de documento com `content`/digest coerentes, aposentar documentos no projeto destrutivo), `flow.ts` (passos reutilizáveis: nascimento, e-mail, OTP, senha + aceites, dados, interesses, revisão).
-- [ ] Cenários em `front/tests/e2e/*.e2e.ts` (§7).
-- [ ] `.gitignore`: `front/test-results/`, `front/playwright-report/`, `front/blob-report/`.
-- [ ] Roteiro manual de leitor de tela em `specs/sdd-012-e2e-frontend-cadastro/leitor-de-tela.md` (Orca + Firefox no Pop!_OS; NVDA ou VoiceOver quando houver acesso), com tabela de resultado por etapa, data, leitor e navegador.
-- [ ] Documentação: `front/README.md` (como rodar, pré-requisito `bunx playwright install chromium firefox`), `AGENTS.md` §2 (novo comando) e §10 (exceção: o suporte de E2E pode acessar o PostgreSQL descartável criado pelo runner, nunca `front/src/`), `CHANGELOG.md` 0.11.0, SDD-010 §2.0 e SDD-011 §7 marcando as pendências como resolvidas.
-- [ ] Se o E2E confirmar falhas reais (por exemplo, o foco em “Rever documentos”), corrigi-las nesta task com teste que falhava antes.
+- [x] Dependências de desenvolvimento `@playwright/test` 1.63.0 e `@axe-core/playwright` 4.13.0 no `front/`, fixadas exatamente (ADR-032).
+- [x] `front/playwright.config.ts`: `testMatch: '**/*.e2e.ts'`, projetos `chromium-desktop` (1440×900), `chromium-mobile` (390×844, toque), `firefox-desktop` (1440×900) e `destructive` (roda por último, depende dos demais), trace/captura só em falha, `workers: 1`.
+- [x] `scripts/test-front-e2e.sh` e o script `test:e2e` em `front/package.json`: reaproveita `docker-compose.back.test.yml`, aplica migrations, sobe o backend com `FRONTEND_PUBLIC_URL=http://localhost:${FRONT_E2E_PORT}`, faz `next build` + `next start` no host com `NODE_ENV=test`, `EDGE_PROVIDER=fixture`, segredos descartáveis e o mesmo `BFF_INTERNAL_TOKEN`; espera `/cadastro` responder, roda o Playwright com Bun e derruba tudo em `trap`.
+- [x] `docker-compose.back.test.yml`: `FRONTEND_PUBLIC_URL: ${FRONTEND_PUBLIC_URL:-http://localhost:3000}` (hoje fixo), mantendo o E2E do backend igual.
+- [x] Suporte de teste em `front/tests/e2e/support/`: `brevo.ts` (último OTP/link por destinatário), `db.ts` (`Bun.SQL` sobre `E2E_DATABASE_URL`: limpar janela de origem, publicar nova versão de documento com `content`/digest coerentes, aposentar documentos no projeto destrutivo), `flow.ts` (passos reutilizáveis: nascimento, e-mail, OTP, senha + aceites, dados, interesses, revisão).
+- [x] Cenários em `front/tests/e2e/*.e2e.ts` (§7).
+- [x] `.gitignore`: `front/test-results/`, `front/playwright-report/`, `front/blob-report/`.
+- [ ] ~~Roteiro manual de leitor de tela em `specs/sdd-012-e2e-frontend-cadastro/leitor-de-tela.md` (Orca + Firefox no Pop!_OS; NVDA ou VoiceOver quando houver acesso), com tabela de resultado por etapa, data, leitor e navegador.~~ Retirado do escopo em 2026-09-29.
+- [x] Documentação: `front/README.md` (como rodar, pré-requisito `bunx playwright install chromium firefox`), `AGENTS.md` §2 (novo comando) e §10 (exceção: o suporte de E2E pode acessar o PostgreSQL descartável criado pelo runner, nunca `front/src/`), `CHANGELOG.md` 0.11.0, SDD-010 §2.0 e SDD-011 §7 marcando as pendências como resolvidas.
+- [x] Se o E2E confirmar falhas reais (por exemplo, o foco em “Rever documentos”), corrigi-las nesta task com teste que falhava antes.
+
+### 2.1 Registro de implementação (2026-09-29)
+
+- Entregue: dependências fixadas, `playwright.config.ts`, `scripts/test-front-e2e.sh`, `FRONTEND_PUBLIC_URL` parametrizável, suporte (`brevo.ts`, `db.ts`, `flow.ts`, `a11y-walk.ts`, `dialogs.ts`, `keyboard.ts`) e os 15 cenários de §7 (`cadastro`, `link`, `cancelamento`, `documentos`, `documentos-ausentes`, `teclado`, `acessibilidade`).
+- Falha real confirmada e corrigida: o foco em “Rever documentos” (`Dialog.returnFocus`, cenário 9) e o contraste do texto do botão primário no Firefox (token `--primary-foreground`, `AGENTS.md` §5).
+- Validação de 2026-09-29: `bun run --cwd front test:e2e` com 54 aprovados e 1 pulado (cenário 13 no `chromium-mobile`, por desenho). Houve falhas intermitentes em execuções anteriores. A do OTP no móvel coincidiu com a suspensão da máquina. A do axe (`color-contrast` em “Salvar senha”, primeiro teste com servidor frio) era do teste: o axe media o botão durante a transição de cor de 200 ms, quando os documentos chegavam por `router.refresh()`. Corrigido em `support/test.ts` (espera `document.getAnimations()`) e em `support/a11y-walk.ts` (espera a lista de documentos). O cenário 8 passou a verificar que “Sim, cancelar” e “Continuar cadastro” ficam desabilitados enquanto o cancelamento está pendente.
+- Não entregue: a revisão com leitor de tela real (retirada do escopo). Pendências menores, sem bloquear: o cenário 8 cancela em `contact_verified`, antes de salvar a senha, e a liberação do contato é provada pelo E2E do backend (`back/test/e2e/registration.e2e.test.ts`); o aria snapshot cobre só a etapa de nascimento, não as demais etapas e diálogos (§7, item 14); e o cenário 10 publica versões de documento fora do projeto `destructive`, o que é inofensivo no banco descartável.
 
 Exclui:
 
@@ -155,7 +164,7 @@ bun run --cwd front test:e2e
 bun run --cwd back test && bun run --cwd back test:e2e
 ```
 
-Manual (roteiro `leitor-de-tela.md`): Orca + Firefox, caminho feliz, erro de OTP, diálogo de documento, recusa e cancelamento; registrar o resultado e abrir correções para o que falhar.
+~~Manual (roteiro `leitor-de-tela.md`)~~: retirado do escopo em 2026-09-29.
 
 ## 8. Dependências e Riscos
 

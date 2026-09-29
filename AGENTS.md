@@ -198,6 +198,8 @@ Toda interface do EventMatch deve utilizar os tokens abaixo como paleta padrão.
   --primary-hover: #fb3c5a;
   --primary-active: #be123c;
   --primary-muted: rgba(225, 29, 72, 0.15);
+  /* Texto sobre --primary sólido: 4,7:1 (o #fafafa dá 4,5:1 exato e o axe reprova no Firefox). */
+  --primary-foreground: #ffffff;
 
   --foreground: #fafafa;
   --muted-foreground: #a1a1aa;

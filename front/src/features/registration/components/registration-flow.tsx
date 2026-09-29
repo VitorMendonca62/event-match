@@ -67,6 +67,8 @@ export function RegistrationFlow({ stage: initialStage, expiresAt, nextResendAt,
   // Acceptances live only in memory until the final submit (plan §4.5).
   const [acceptedDocuments, setAcceptedDocuments] = useState<string[]>([]);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
+  // Blocks a second click while the backend expires the registration (plan §6: controls disabled while pending).
+  const [cancelling, setCancelling] = useState(false);
   const isClient = useSyncExternalStore(subscribeNever, () => true, () => false);
 
   // Session storage is browser-only, so the draft is read once after hydration. Document
@@ -155,8 +157,11 @@ export function RegistrationFlow({ stage: initialStage, expiresAt, nextResendAt,
 
   /** The backend runs the expiration first; only if it cannot be reached does the person stay (ADR-030). */
   async function cancel() {
+    if (cancelling) return;
+    setCancelling(true);
     const result = await cancelRegistration();
     if (result.kind !== 'ok' && result.kind !== 'expired') {
+      setCancelling(false);
       setConfirmingCancel(false);
       setBanner({ tone: 'error', title: 'Não foi possível cancelar', text: MESSAGES.cancelFailed });
       return;
@@ -194,10 +199,10 @@ export function RegistrationFlow({ stage: initialStage, expiresAt, nextResendAt,
             navegador. Para participar depois, é preciso começar de novo.
           </p>
           <div className="flex flex-wrap gap-3">
-            <Button variant="secondary" onClick={cancel}>
+            <Button variant="secondary" onClick={cancel} pending={cancelling} pendingLabel="Cancelando…">
               Sim, cancelar
             </Button>
-            <Button variant="quiet" onClick={() => setConfirmingCancel(false)}>
+            <Button variant="quiet" onClick={() => setConfirmingCancel(false)} disabled={cancelling}>
               Continuar cadastro
             </Button>
           </div>

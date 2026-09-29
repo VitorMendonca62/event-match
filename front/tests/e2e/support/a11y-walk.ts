@@ -44,6 +44,8 @@ export async function walkRegistration(page: Page, check: ScreenCheck): Promise<
 
   await confirmOtp(page, email);
   await expectStep(page, TITLES.password);
+  // The documents arrive through `router.refresh()`; check the screen once they are in place.
+  await expect(page.getByRole('list', { name: 'Documentos para aceitar' })).toBeVisible();
   await check(page);
 
   const first = DOCUMENT_TITLES[0];
