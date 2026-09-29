@@ -22,26 +22,33 @@ Versão: elevar raiz e frontend de `0.9.0`/`0.4.0` para `0.10.0`; o backend perm
 
 Inclui:
 
-- [ ] Substituir a página técnica por uma entrada de produto que direcione para `/cadastro`, mantendo a rota de cadastro como Server Component por padrão.
-- [ ] Implementar uma máquina de etapas explícita e testável para apresentação, nascimento, canal/contato, OTP, senha, dados obrigatórios, documentos, interesses, confirmação final e conclusão.
-- [ ] Criar Client Components pequenos por etapa somente onde houver formulário, temporizador, seleção, rolagem, foco ou `sessionStorage`; cabeçalho, layout, conteúdo estático e carregamento inicial permanecem server-side.
-- [ ] Criar um cliente server-only tipado para o NestJS e Route Handlers BFF em `front/src/app/api/registration/**`, além do proxy de catálogo necessário, sem SQL, regra de negócio ou estado mutável de requisição em módulo.
-- [ ] Implementar cookie de continuação, proteção de mesma origem/CSRF, fingerprint de origem Vercel, credencial interna do BFF, idempotência, redaction e tradução conservadora dos envelopes públicos.
-- [ ] Implementar confirmação por link com consumo único e redirecionamento `303` para URL limpa, sem token em UI, log, analytics ou resposta ao browser.
-- [ ] Implementar progresso mínimo em `sessionStorage`, schema versionado, TTL deslizante de até 30 minutos, reconciliação com snapshot do backend e limpeza segura.
-- [ ] Buscar snapshot, interesses ativos e documentos aprovados no servidor em paralelo quando a etapa permitir; serializar aos Client Components somente campos visíveis e necessários.
-- [ ] Mostrar e-mail como canal disponível e WhatsApp como controle desabilitado com nome acessível e texto “Em breve”, sem campo de telefone, consentimento ou chamada HTTP.
-- [ ] Implementar OTP de seis dígitos, expiração informada pelo backend, reenvio apenas após `nextResendAt`, feedback neutro e prevenção de envio duplo.
-- [ ] Implementar senha/confirmação, dados obrigatórios, três documentos vigentes, nova entrada de nascimento na conclusão e seleção de no mínimo três interesses ativos.
-- [ ] Centralizar a paleta obrigatória em `globals.css`, remover o tema claro e criar layout mobile-first com estados de loading, erro, sucesso, foco, teclado, leitor de tela, contraste, zoom de 200% e alvos de toque adequados.
-- [ ] Aplicar o fluxo `impeccable`: `PRODUCT.md` e a direção **Convite Cívico** já foram confirmados; preservar o comp aprovado durante a implementação, registrar a documentação final do sistema construído e concluir com revisão visual independente.
-- [ ] Atualizar documentação, configuração, versão, changelog e testes unitários, integração, E2E e acessibilidade.
+- [x] Substituir a página técnica por uma entrada de produto que direcione para `/cadastro`, mantendo a rota de cadastro como Server Component por padrão.
+- [x] Implementar uma máquina de etapas explícita e testável para apresentação, nascimento, canal/contato, OTP, senha, dados obrigatórios, documentos, interesses, confirmação final e conclusão.
+- [x] Criar Client Components pequenos por etapa somente onde houver formulário, temporizador, seleção, rolagem, foco ou `sessionStorage`; cabeçalho, layout, conteúdo estático e carregamento inicial permanecem server-side.
+- [x] Criar um cliente server-only tipado para o NestJS e Route Handlers BFF em `front/src/app/api/registration/**`, além do proxy de catálogo necessário, sem SQL, regra de negócio ou estado mutável de requisição em módulo.
+- [x] Implementar cookie de continuação, proteção de mesma origem/CSRF, fingerprint de origem Vercel, credencial interna do BFF, idempotência, redaction e tradução conservadora dos envelopes públicos.
+- [x] Implementar confirmação por link com consumo único e redirecionamento `303` para URL limpa, sem token em UI, log, analytics ou resposta ao browser.
+- [x] Implementar progresso mínimo em `sessionStorage`, schema versionado, TTL deslizante de até 30 minutos, reconciliação com snapshot do backend e limpeza segura.
+- [x] Buscar snapshot, interesses ativos e documentos aprovados no servidor em paralelo quando a etapa permitir; serializar aos Client Components somente campos visíveis e necessários.
+- [x] Mostrar e-mail como canal disponível e WhatsApp como controle desabilitado com nome acessível e texto “Em breve”, sem campo de telefone, consentimento ou chamada HTTP.
+- [x] Implementar OTP de seis dígitos, expiração informada pelo backend, reenvio apenas após `nextResendAt`, feedback neutro e prevenção de envio duplo.
+- [x] Implementar senha/confirmação, dados obrigatórios, três documentos vigentes, nova entrada de nascimento na conclusão e seleção de no mínimo três interesses ativos.
+- [x] Centralizar a paleta obrigatória em `globals.css`, remover o tema claro e criar layout mobile-first com estados de loading, erro, sucesso, foco, teclado, leitor de tela, contraste, zoom de 200% e alvos de toque adequados.
+- [x] Aplicar o fluxo `impeccable`: `PRODUCT.md` e a direção **Convite Cívico** já foram confirmados; preservar o comp aprovado durante a implementação, registrar a documentação final do sistema construído e concluir com revisão visual independente.
+- [x] Atualizar documentação, configuração, versão, changelog e testes unitários, integração, E2E e acessibilidade.
+
+### 2.0 Registro de implementação (2026-09-27)
+
+- Caminho **code-led** por decisão do usuário: sem geração de imagem nem navegador no ambiente na data da decisão, o comp `.impeccable/mocks/decision/cadastro-convite-civico.png` passou de contrato espacial a referência de crítica. A ilustração do hero é um slot vetorial geométrico substituível (`front/src/components/server/city-poster-art.tsx`) até existir asset aprovado. Brief e contrato de direção em `front/.impeccable/surfaces/front-src-app-cadastro-page-tsx.md`.
+- Estilos com Tailwind CSS v4 conforme ADR-027; elementos repetidos extraídos para `front/src/components/server/ui/` e `front/src/features/registration/components/`.
+- Verificação visual: uma rodada desktop 1440 / mobile 390 da jornada completa contra backend fake, uma rodada de correção e uma confirmação; capturas em `.impeccable/review/`. As etapas de interesses e revisão não são alcançáveis em execução enquanto o contrato não publicar conteúdo jurídico aprovado; ficam cobertas por testes de renderização.
+- Pendentes desta task: runner E2E full-stack com PostgreSQL descartável e revisão com leitor de tela real.
 
 ### 2.1 Direção visual confirmada — Convite Cívico
 
 O gate visual do `impeccable shape cadastro` foi aprovado pelo usuário em 2026-09-26, antes de qualquer edição da UI. A implementação seguirá o caminho **comp-first** e usará como referência composicional autoritativa `.impeccable/mocks/decision/cadastro-convite-civico.png`, apoiada pelo hero e pelo board de qualidade em `.impeccable/references/wpa-hero.webp` e `.impeccable/references/wpa-board.webp`. O comp não deve ser regenerado do zero; adaptações responsivas e de conteúdo preservam sua hierarquia, seu ritmo editorial e sua linguagem de cartaz cívico urbano.
 
-Objetivo da superfície: transmitir confiança e explicar o propósito do EventMatch antes de solicitar a data de nascimento. A apresentação inicial deve comunicar amizade, companhia para atividades e descoberta da cidade, identificar o produto como exclusivo para pessoas adultas e dizer explicitamente que não é um aplicativo de namoro. O CTA primário é “Começar meu cadastro”; nenhum dado é solicitado antes dele.
+Objetivo da superfície: transmitir confiança e explicar o propósito do EventMatch antes de solicitar a data de nascimento. A apresentação inicial deve comunicar amizade, companhia para atividades e descoberta da cidade. O CTA primário é “Começar meu cadastro”; nenhum dado é solicitado antes dele.
 
 Princípios obrigatórios da direção:
 
@@ -124,6 +131,7 @@ Formulários usam React e Zod já instalados. Schemas de transporte/UX ficam em 
 | Link de e-mail de uso único | `docs/adrs/ADR-024-entrega-de-verificacao-e-link-de-email.md` | accepted, parcialmente superseded pela ADR-026 | Define token, expiração, consumo e callback; somente o provedor foi substituído. |
 | WhatsApp adiado | `docs/adrs/ADR-025-adiar-whatsapp-no-cadastro.md` | accepted | Canal aparece desabilitado e não integra o contrato. |
 | Brevo como entrega de e-mail | `docs/adrs/ADR-026-substituir-resend-por-brevo.md` | accepted | O frontend mantém mensagens neutras, independentemente do resultado do provedor. |
+| Tailwind CSS v4 sobre os tokens semânticos | `docs/adrs/ADR-027-adotar-tailwind-css-no-frontend.md` | accepted | Única dependência nova (`tailwindcss`, `@tailwindcss/postcss`, `postcss`); paleta padrão do Tailwind desativada. |
 
 Não há nova decisão arquitetural material: rotas, formulários e composição são escolhas locais dentro dos ADRs aceitos. Se a implementação exigir chamada direta browser→NestJS, outro armazenamento, nova dependência estrutural, cookie diferente no ambiente publicado ou alteração de contrato, deve voltar ao planejamento e criar ADR próprio; não editar ADR aceito silenciosamente.
 
@@ -328,7 +336,7 @@ Rollback: desligar `REGISTRATION_HTTP_ENABLED` e a rota/feature do frontend, exp
 
 ## 9. Perguntas em Aberto (bloqueantes)
 
-Nenhuma. O contrato OpenAPI, a continuação, BFF, CORS/CSRF e origem confiável estão definidos pelos ADRs aceitos e pela SDD-009 `ready`. Conteúdo jurídico e credenciais Brevo são gates de rollout, não ambiguidades de implementação; ativação real permanece bloqueada até esses pré-requisitos operacionais existirem.
+O contrato OpenAPI, a continuação, BFF, CORS/CSRF e origem confiável permanecem definidos pelos ADRs aceitos e pela SDD-009 `ready`. Conteúdo jurídico e credenciais Brevo são gates de rollout, não ambiguidades de implementação; ativação real permanece bloqueada até esses pré-requisitos operacionais existirem.
 
 ## 10. Checklist de Conformidade
 

@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.10.0 — 2026-09-27
+
+Jornada de cadastro no Next.js e BFF do navegador (SDD-010; ADR-011, ADR-012, ADR-019 a ADR-027). Mudança aditiva; o contrato do backend não muda (permanece em `0.9.0`).
+
+- `/` passa a ser a apresentação “Convite Cívico”: amizade, companhia e descoberta da cidade, 18+, “Não é app de namoro” e a única ação “Começar meu cadastro”, antes de qualquer dado.
+- `/cadastro` (RSC + ilha cliente) conduz nascimento → e-mail (WhatsApp desabilitado “Em breve”) → código de 6 dígitos com prazo e reenvio → senha → dados obrigatórios → documentos → interesses (mínimo 3) → revisão com novo nascimento; `/cadastro/concluido` confirma sem exibir dados da conta. Máquina de etapas explícita com estágio remoto autoritativo, ressincronização única em `409` e reinício em `401`; foco no título a cada etapa e no resumo de erro.
+- Documentos sem conteúdo aprovado bloqueiam a ativação (o contrato v1 publica só metadados); nenhum placeholder jurídico é exibido fora de fixtures de teste.
+- Seed jurídico `0004_seed_legal_documents`: Termos de Uso, Política de Privacidade e Regras de Convivência `pt-BR` v1.0.0 foram publicados como documentos aprovados, com UUIDs estáveis e SHA-256 dos artefatos em `docs/legal/`.
+- Progresso mínimo em `sessionStorage` (schema v1, allowlist, TTL deslizante de 30 min); contato, código, senha, nascimento, aceites, tokens e chaves de idempotência nunca são gravados.
+- BFF em `front/src/app/api/registration/**` e `front/src/app/api/catalog/interests`: origem/`Content-Type`/idempotência validados antes do backend, cookie `__Host-` `HttpOnly`, credencial interna, fingerprint de origem Vercel via HMAC, timeout sem retry implícito, tradução conservadora de erros, callback do link com `303` para URL limpa e logs sem PII.
+- Tailwind CSS v4 (`tailwindcss`, `@tailwindcss/postcss`, `postcss`) com a paleta padrão desativada e os tokens do `AGENTS.md` expostos como utilitários (ADR-027). Primitives reutilizáveis: `Button`/`ButtonLink`, `TextField`, `Choice`, `Notice`, `BrandMark`, ícones autorais, `StepFrame`, `ProgressRail` e `PosterHeadline`. Fontes Archivo e Figtree auto-hospedadas por `next/font`.
+- `bun run --cwd front build` não executa mais `validate:env`: a configuração do BFF é validada em `dev`/`start` e no início do container de produção, e a base continua validada pelo `next.config.ts`.
+- Testes: contratos, máquina de etapas, storage, countdown, cliente HTTP, renderização (copy não romântica, WhatsApp desabilitado, progresso textual, bloqueio de documentos, contador de interesses) e integração do BFF contra backend fake (origem, idempotência, cookie, 401/completo, 422/5xx/timeout, fingerprint, callback, configuração e carregamento paralelo do RSC).
+- **Ação necessária:** configure `BACKEND_INTERNAL_URL`, `FRONTEND_PUBLIC_URL`, `BFF_INTERNAL_TOKEN` (igual ao do backend), `ORIGIN_FINGERPRINT_KEY` (base64, 32+ bytes) e `EDGE_PROVIDER` no `front/.env` (veja `front/.env.example`) e só então ligue `REGISTRATION_HTTP_ENABLED` no backend.
+
 ## 0.9.0 — 2026-09-26
 
 Primeira fatia HTTP pública do cadastro (SDD-009; ADR-019 a ADR-026). Mudança aditiva.

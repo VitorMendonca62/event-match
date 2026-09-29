@@ -107,3 +107,43 @@ Critérios de aceite:
 - Auditoria automatizada e manual cobre teclado, leitor de tela, foco, contraste e zoom; nenhum teste/snapshot contém PII ou segredo real.
 - Aplicar e citar no plano/revisão, quando pertinentes: `async-parallel`, `async-defer-await`, `server-no-shared-module-state`, `server-serialization`, `server-parallel-fetching`, `client-localstorage-schema`, `rerender-derived-state-no-effect` e `rerender-move-effect-to-event`.
 - `bun run --cwd front lint`, `typecheck`, `test` e `build` passam, além do E2E full-stack pelo runner descartável.
+
+TASK 08 — Publicar o conteúdo dos documentos legais no banco e apresentá-los no cadastro para aceite ou recusa
+
+Objetivo:
+Persistir no PostgreSQL o texto integral dos três documentos legais aprovados em `docs/legal/pt-BR/` (Termos de Uso, Política de Privacidade e Regras de Convivência, v1.0.0), entregá-lo pela API do backend e exibi-lo no passo de documentos do cadastro do Next.js, para que a pessoa leia cada documento e aceite ou recuse de forma explícita. Hoje o seed `back/drizzle/0004_seed_legal_documents.sql` grava apenas metadados e SHA-256 em `terms_document`, o caso de uso `ListApprovedLegalDocuments` devolve só metadados e `LegalDocumentView.content` no frontend nunca é preenchido, então `legal-step.tsx` permanece bloqueado como "em aprovação".
+
+Dependências e fontes de verdade:
+- Partir do estado da branch `feat/sdd-009` (TASK 06 e TASK 07 implementadas): `docs/legal/README.md`, `back/drizzle/0004_seed_legal_documents.sql`, tabelas `terms_document` e `terms_acceptance`, `back/src/modules/registration/application/use-cases/list-approved-legal-documents.use-case.ts`, `front/src/app/api/registration/legal-documents/route.ts` e `front/src/features/registration/components/steps/legal-step.tsx`.
+- Consultar `docs/DER-EventMatch-MVP.md` v1.3 (RF005, aceites e versionamento de documentos), `docs/02-regras-de-negocio.md` §2, `docs/03-modelos-de-dominio.md`, `docs/04-integracoes-externas.md`, ADR-012 (placeholders/lorem ipsum só em teste) e ADR-020 a ADR-027.
+- Aplicar `nestjs-expert` e `nestjs-hexagonal-architecture` no backend; `vercel-react-best-practices` e `impeccable` no frontend, respeitando `DESIGN.md`, `PRODUCT.md` e a paleta obrigatória.
+
+Escopo:
+- Definir onde o texto vive no banco (coluna `content` em `terms_document` ou tabela própria), migration versionada `0005_*` aditiva e reversível, sem editar a `0004` já aplicada. O backfill deve carregar exatamente os bytes dos arquivos Markdown e uma verificação (teste ou constraint) deve garantir que `sha256(content)` seja igual a `content_digest`, preservando a imutabilidade da versão publicada.
+- Estender a porta `TermsRepositoryPort`, o caso de uso e o adapter PostgreSQL para retornar id, tipo, versão, idioma, vigência e conteúdo dos documentos `approved`, sem expor `placeholder` ou `retired`. Atualizar DTO, OpenAPI/Swagger e o mapper do BFF, sem regra de negócio em controller ou Route Handler.
+- Frontend: renderizar o Markdown de forma segura (sem HTML bruto, sem `dangerouslySetInnerHTML` sobre conteúdo não sanitizado), com título, versão, vigência e área rolável acessível por teclado e leitor de tela, buscando os documentos no servidor em paralelo e serializando apenas o necessário (`async-parallel`, `server-parallel-fetching`, `server-serialization`).
+- Aceite: um controle explícito e não pré-marcado por documento, com "Li e aceito" para cada um e um caminho claro de recusa ("Não aceito"), que explique que sem os três aceites a conta não é ativada, permita voltar ou encerrar o cadastro e não registre aceite parcial. O aceite deve continuar persistido em `terms_acceptance` com id, versão e data do documento na conclusão do cadastro, e deve ser rejeitado no backend se o id não for de um documento aprovado e vigente.
+- Definir o comportamento quando uma nova versão for publicada durante o cadastro em andamento e como o conteúdo antigo deixa de ser oferecido, sem alterar a linha já aceita.
+- Remover o estado permanentemente bloqueado do passo de documentos quando os três documentos existirem, mantendo o bloqueio seguro se algum estiver ausente. Conteúdo de teste continua marcado como fixture, sem efeito de ativação.
+- Atualizar `docs/legal/README.md`, `docs/03-*`, `docs/04-*`, `front/README.md`, `CHANGELOG.md` e versões. Criar ADR `proposed` para a decisão de armazenamento e entrega do conteúdo (coluna x tabela, embutir o texto na listagem x endpoint por documento, política de cache), e outro se a renderização de Markdown exigir nova dependência.
+
+Decisões obrigatórias no planejamento:
+- Modelo de armazenamento do conteúdo e mecanismo que garanta a coincidência com o digest, além do processo de publicar uma nova versão (novo arquivo, novo identificador, nova migration/seed).
+- Contrato da API: lista com conteúdo ou metadados mais endpoint por documento; cabeçalhos de cache e ETag por versão imutável, conforme a regra de cache do `AGENTS.md`.
+- Biblioteca e estratégia de renderização de Markdown; se o pacote for novo, justificar e registrar ADR.
+- Semântica da recusa: encerra o fluxo, volta ao passo anterior ou mantém o rascunho; o que é limpo do `sessionStorage` e do backend.
+- Validação jurídica: o jurídico autorizou os documentos v1.0.0 e o registro de aceites em 2026-09-28; registrar a autorização no plano, na ADR e em `docs/legal/README.md`.
+
+Fora de escopo:
+- Redação ou revisão jurídica do conteúdo dos documentos.
+- Login, reaceite de novas versões por contas já ativas, painel administrativo para publicar documentos e outros idiomas além de `pt-BR`.
+- Alterar o restante do fluxo de cadastro, exceto o passo de documentos.
+
+Critérios de aceite:
+- Após `db:migrate`, os três documentos `approved` estão no banco com o texto integral idêntico a `docs/legal/pt-BR/*.md` e `sha256(content)` igual a `content_digest`.
+- `GET` dos documentos aprovados devolve o conteúdo, sem expor `placeholder`/`retired`, e o OpenAPI reflete o contrato.
+- No cadastro, a pessoa lê os três documentos, aceita cada um e conclui a ativação; ao recusar qualquer um, a conta não é ativada, nenhum aceite parcial é gravado e a interface mostra uma saída clara.
+- O backend rejeita aceites de ids inexistentes, não aprovados ou de versão não vigente.
+- Testes unitários cobrem caso de uso, mapper, renderização do Markdown e estados de aceite/recusa; testes de integração com o runner descartável cobrem migration, digest e persistência de `terms_acceptance`; E2E cobre aceite total, recusa, documento ausente e troca de versão durante o fluxo.
+- Auditoria de acessibilidade e capturas desktop e mobile cobrem teclado, leitor de tela, foco, contraste e zoom de 200%, seguidas do finish review do Impeccable.
+- `bun run --cwd back lint`, `typecheck`, `test`, `test:integration`, `test:e2e` e `build` passam; `bun run --cwd front lint`, `typecheck`, `test` e `build` passam.

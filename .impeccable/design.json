@@ -1,0 +1,462 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-27T03:22:16.083Z",
+  "title": "Design System: EventMatch",
+  "extensions": {
+    "colorMeta": {
+      "background": {
+        "role": "neutral",
+        "displayName": "Noite",
+        "canonical": "#09090b",
+        "tonalRamp": [
+          "oklch(15% 0.004 285.8)",
+          "oklch(25% 0.004 285.8)",
+          "oklch(35% 0.004 285.8)",
+          "oklch(45% 0.004 285.8)",
+          "oklch(55% 0.004 285.8)",
+          "oklch(65% 0.004 285.8)",
+          "oklch(80% 0.004 285.8)",
+          "oklch(95% 0.004 285.8)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Asfalto",
+        "canonical": "#111113",
+        "tonalRamp": [
+          "oklch(15% 0.004 286.0)",
+          "oklch(25% 0.004 286.0)",
+          "oklch(35% 0.004 286.0)",
+          "oklch(45% 0.004 286.0)",
+          "oklch(55% 0.004 286.0)",
+          "oklch(65% 0.004 286.0)",
+          "oklch(80% 0.004 286.0)",
+          "oklch(95% 0.004 286.0)"
+        ]
+      },
+      "card": {
+        "role": "neutral",
+        "displayName": "Concreto",
+        "canonical": "#18181b",
+        "tonalRamp": [
+          "oklch(15% 0.006 285.9)",
+          "oklch(25% 0.006 285.9)",
+          "oklch(35% 0.006 285.9)",
+          "oklch(45% 0.006 285.9)",
+          "oklch(55% 0.006 285.9)",
+          "oklch(65% 0.006 285.9)",
+          "oklch(80% 0.006 285.9)",
+          "oklch(95% 0.006 285.9)"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Fio",
+        "canonical": "#2a2a2e",
+        "tonalRamp": [
+          "oklch(15% 0.007 285.9)",
+          "oklch(25% 0.007 285.9)",
+          "oklch(35% 0.007 285.9)",
+          "oklch(45% 0.007 285.9)",
+          "oklch(55% 0.007 285.9)",
+          "oklch(65% 0.007 285.9)",
+          "oklch(80% 0.007 285.9)",
+          "oklch(95% 0.007 285.9)"
+        ]
+      },
+      "primary": {
+        "role": "primary",
+        "displayName": "Carmim de Cartaz",
+        "canonical": "#e11d48",
+        "tonalRamp": [
+          "oklch(15% 0.200 17.6)",
+          "oklch(25% 0.200 17.6)",
+          "oklch(35% 0.200 17.6)",
+          "oklch(45% 0.200 17.6)",
+          "oklch(55% 0.200 17.6)",
+          "oklch(65% 0.200 17.6)",
+          "oklch(80% 0.200 17.6)",
+          "oklch(95% 0.200 17.6)"
+        ]
+      },
+      "primary-hover": {
+        "role": "primary",
+        "displayName": "Carmim Aceso",
+        "canonical": "#fb3c5a",
+        "tonalRamp": [
+          "oklch(15% 0.200 17.9)",
+          "oklch(25% 0.200 17.9)",
+          "oklch(35% 0.200 17.9)",
+          "oklch(45% 0.200 17.9)",
+          "oklch(55% 0.200 17.9)",
+          "oklch(65% 0.200 17.9)",
+          "oklch(80% 0.200 17.9)",
+          "oklch(95% 0.200 17.9)"
+        ]
+      },
+      "primary-active": {
+        "role": "primary",
+        "displayName": "Carmim Prensado",
+        "canonical": "#be123c",
+        "tonalRamp": [
+          "oklch(15% 0.198 16.9)",
+          "oklch(25% 0.198 16.9)",
+          "oklch(35% 0.198 16.9)",
+          "oklch(45% 0.198 16.9)",
+          "oklch(55% 0.198 16.9)",
+          "oklch(65% 0.198 16.9)",
+          "oklch(80% 0.198 16.9)",
+          "oklch(95% 0.198 16.9)"
+        ]
+      },
+      "primary-muted": {
+        "role": "primary",
+        "displayName": "Véu Carmim",
+        "canonical": "rgba(225, 29, 72, 0.15)",
+        "tonalRamp": [
+          "oklch(15% 0.200 17.6)",
+          "oklch(25% 0.200 17.6)",
+          "oklch(35% 0.200 17.6)",
+          "oklch(45% 0.200 17.6)",
+          "oklch(55% 0.200 17.6)",
+          "oklch(65% 0.200 17.6)",
+          "oklch(80% 0.200 17.6)",
+          "oklch(95% 0.200 17.6)"
+        ]
+      },
+      "foreground": {
+        "role": "neutral",
+        "displayName": "Papel",
+        "canonical": "#fafafa",
+        "tonalRamp": [
+          "oklch(15% 0.000 89.9)",
+          "oklch(25% 0.000 89.9)",
+          "oklch(35% 0.000 89.9)",
+          "oklch(45% 0.000 89.9)",
+          "oklch(55% 0.000 89.9)",
+          "oklch(65% 0.000 89.9)",
+          "oklch(80% 0.000 89.9)",
+          "oklch(95% 0.000 89.9)"
+        ]
+      },
+      "muted-foreground": {
+        "role": "neutral",
+        "displayName": "Grafite Claro",
+        "canonical": "#a1a1aa",
+        "tonalRamp": [
+          "oklch(15% 0.013 286.1)",
+          "oklch(25% 0.013 286.1)",
+          "oklch(35% 0.013 286.1)",
+          "oklch(45% 0.013 286.1)",
+          "oklch(55% 0.013 286.1)",
+          "oklch(65% 0.013 286.1)",
+          "oklch(80% 0.013 286.1)",
+          "oklch(95% 0.013 286.1)"
+        ]
+      },
+      "disabled": {
+        "role": "neutral",
+        "displayName": "Apagado",
+        "canonical": "#71717a",
+        "tonalRamp": [
+          "oklch(15% 0.014 285.9)",
+          "oklch(25% 0.014 285.9)",
+          "oklch(35% 0.014 285.9)",
+          "oklch(45% 0.014 285.9)",
+          "oklch(55% 0.014 285.9)",
+          "oklch(65% 0.014 285.9)",
+          "oklch(80% 0.014 285.9)",
+          "oklch(95% 0.014 285.9)"
+        ]
+      },
+      "success": {
+        "role": "status",
+        "displayName": "Verde Confirmado",
+        "canonical": "#22c55e",
+        "tonalRamp": [
+          "oklch(15% 0.192 149.6)",
+          "oklch(25% 0.192 149.6)",
+          "oklch(35% 0.192 149.6)",
+          "oklch(45% 0.192 149.6)",
+          "oklch(55% 0.192 149.6)",
+          "oklch(65% 0.192 149.6)",
+          "oklch(80% 0.192 149.6)",
+          "oklch(95% 0.192 149.6)"
+        ]
+      },
+      "warning": {
+        "role": "secondary",
+        "displayName": "Âmbar de Sinalização",
+        "canonical": "#f59e0b",
+        "tonalRamp": [
+          "oklch(15% 0.165 70.1)",
+          "oklch(25% 0.165 70.1)",
+          "oklch(35% 0.165 70.1)",
+          "oklch(45% 0.165 70.1)",
+          "oklch(55% 0.165 70.1)",
+          "oklch(65% 0.165 70.1)",
+          "oklch(80% 0.165 70.1)",
+          "oklch(95% 0.165 70.1)"
+        ]
+      },
+      "error": {
+        "role": "status",
+        "displayName": "Vermelho Legível",
+        "canonical": "#f87171",
+        "tonalRamp": [
+          "oklch(15% 0.166 22.2)",
+          "oklch(25% 0.166 22.2)",
+          "oklch(35% 0.166 22.2)",
+          "oklch(45% 0.166 22.2)",
+          "oklch(55% 0.166 22.2)",
+          "oklch(65% 0.166 22.2)",
+          "oklch(80% 0.166 22.2)",
+          "oklch(95% 0.166 22.2)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display (manchete de cartaz)",
+        "purpose": "Manchete em duas tintas da apresentação; Archivo 900 caixa alta, font-stretch 82%."
+      },
+      "headline": {
+        "displayName": "Headline (título de etapa)",
+        "purpose": "h1 de cada etapa e alvo de foco; mesmo tratamento condensado."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Rótulo do CTA primário e títulos de destaque em caixas."
+      },
+      "body-lead": {
+        "displayName": "Body lead",
+        "purpose": "Parágrafo de apresentação e explicação de por que o dado é pedido, 46–52ch."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Texto corrido e avisos."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Rótulos visíveis de campos e opções."
+      },
+      "label-progress": {
+        "displayName": "Label de progresso",
+        "purpose": "“Etapa N de 8” em caixa alta com numerais tabulares."
+      },
+      "tag": {
+        "displayName": "Tag",
+        "purpose": "Selo de estado como “Em breve”."
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "ease-out-expo",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Curva única de transições e entradas."
+      },
+      {
+        "name": "state-transition",
+        "value": "200ms ease-out-expo",
+        "purpose": "Cor, borda e escala de botões, campos e opções."
+      },
+      {
+        "name": "progress-transition",
+        "value": "500ms ease-out-expo",
+        "purpose": "Altura e cor dos segmentos do progresso."
+      },
+      {
+        "name": "band-in",
+        "value": "560ms ease-out-expo; clip-path inset(0 0 22% 0) → inset(0)",
+        "purpose": "Entrada da faixa numerada de etapa, a partir de estado já visível."
+      },
+      {
+        "name": "rise-in",
+        "value": "480ms ease-out-expo; translateY(0.5rem) → 0",
+        "purpose": "Entrada do conteúdo da etapa."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "1ms",
+        "purpose": "Com prefers-reduced-motion, animações e transições colapsam para 1ms."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      }
+    ],
+    "focusRing": {
+      "value": "3px solid var(--warning)",
+      "offset": "3px (2px em campos de texto)",
+      "purpose": "Foco visível em todo elemento interativo."
+    },
+    "containers": [
+      {
+        "name": "intro",
+        "value": "1280px",
+        "purpose": "Apresentação em duas colunas no desktop."
+      },
+      {
+        "name": "flow",
+        "value": "1152px",
+        "purpose": "Fluxo de cadastro; etapa em grade 5fr/6fr com 64px de intervalo em lg."
+      }
+    ],
+    "openItems": [
+      "No desktop, a apresentação deixa espaço vazio acima da coluna de arte.",
+      "A ilustração definitiva aprovada ainda não existe; CityPosterArt é um substituto."
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button (forward)",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "CTA carmim em cápsula com chevron de avanço; uma por tela.",
+      "html": "<button class=\"ds-btn-primary\"><span>Começar meu cadastro</span><svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m9 5 7 7-7 7\"/></svg></button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 56px; padding: 0 20px 0 32px; border: 0; border-radius: 9999px; background: var(--primary); color: var(--foreground); font-family: var(--font-body), sans-serif; font-size: 1.125rem; font-weight: 700; cursor: pointer; transition: background-color 200ms cubic-bezier(0.16,1,0.3,1), border-color 200ms cubic-bezier(0.16,1,0.3,1), color 200ms cubic-bezier(0.16,1,0.3,1), transform 200ms cubic-bezier(0.16,1,0.3,1); } .ds-btn-primary span { margin: 0 auto; } .ds-btn-primary:hover { background: var(--primary-hover); } .ds-btn-primary:active { background: var(--primary-active); transform: scale(0.99); } .ds-btn-primary:focus-visible { outline: 3px solid var(--warning); outline-offset: 3px; } .ds-btn-primary:disabled { background: var(--card); color: var(--disabled); cursor: not-allowed; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Ação alternativa em cápsula vazada com borda de 2px.",
+      "html": "<button class=\"ds-btn-secondary\">Voltar para o início</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 24px; border: 2px solid var(--border); border-radius: 9999px; background: transparent; color: var(--foreground); font-family: var(--font-body), sans-serif; font-weight: 700; cursor: pointer; transition: background-color 200ms cubic-bezier(0.16,1,0.3,1), border-color 200ms cubic-bezier(0.16,1,0.3,1), color 200ms cubic-bezier(0.16,1,0.3,1), transform 200ms cubic-bezier(0.16,1,0.3,1); } .ds-btn-secondary:hover { border-color: var(--muted-foreground); } .ds-btn-secondary:active { background: var(--card); } .ds-btn-secondary:focus-visible { outline: 3px solid var(--warning); outline-offset: 3px; }"
+    },
+    {
+      "name": "Quiet Button",
+      "kind": "button",
+      "refersTo": "button-quiet",
+      "description": "Ação de saída sublinhada, como Cancelar cadastro.",
+      "html": "<button class=\"ds-btn-quiet\">Cancelar cadastro</button>",
+      "css": ".ds-btn-quiet { min-height: 44px; padding: 0 12px; border: 0; border-radius: 9999px; background: transparent; color: var(--muted-foreground); font-family: var(--font-body), sans-serif; font-weight: 600; text-decoration: underline; text-decoration-color: var(--border); text-decoration-thickness: 2px; text-underline-offset: 0.2em; cursor: pointer; transition: background-color 200ms cubic-bezier(0.16,1,0.3,1), border-color 200ms cubic-bezier(0.16,1,0.3,1), color 200ms cubic-bezier(0.16,1,0.3,1), transform 200ms cubic-bezier(0.16,1,0.3,1); } .ds-btn-quiet:hover { color: var(--foreground); text-decoration-color: var(--primary); } .ds-btn-quiet:focus-visible { outline: 3px solid var(--warning); outline-offset: 3px; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "text-field",
+      "description": "Campo com rótulo visível, dica ligada e erro com ícone.",
+      "html": "<div class=\"ds-field\"><label class=\"ds-field-label\" for=\"ds-email\">Seu e-mail</label><p class=\"ds-field-hint\">Usado para confirmar que o contato é seu.</p><input id=\"ds-email\" class=\"ds-field-input\" type=\"email\" placeholder=\"voce@exemplo.com\"><p class=\"ds-field-error\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 3.5 2.5 16h19L12 3.5Z\"/><path d=\"M12 10v4.5M12 17.2h.01\"/></svg>Informe um e-mail válido.</p></div>",
+      "css": ".ds-field { display: grid; gap: 8px; font-family: var(--font-body), sans-serif; } .ds-field-label { font-weight: 600; color: var(--foreground); } .ds-field-hint { margin: 0; font-size: 0.875rem; color: var(--muted-foreground); } .ds-field-input { min-height: 52px; padding: 0 16px; border: 2px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--foreground); font-size: 1.125rem; transition: border-color 200ms; } .ds-field-input::placeholder { color: var(--disabled); } .ds-field-input:hover { border-color: var(--muted-foreground); } .ds-field-input:focus-visible { border-color: var(--foreground); outline: 3px solid var(--warning); outline-offset: 2px; } .ds-field-error { display: flex; gap: 8px; align-items: flex-start; margin: 0; font-size: 0.875rem; font-weight: 600; color: var(--error); }"
+    },
+    {
+      "name": "Choice Card",
+      "kind": "card",
+      "refersTo": "choice-card",
+      "description": "Opção explicada com marcador de 24px; selecionada ganha véu carmim, borda papel e check.",
+      "html": "<label class=\"ds-choice\"><input type=\"radio\" name=\"ds-ch\" checked><span class=\"ds-choice-mark\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m5 12.5 4.5 4.5L19 7.5\"/></svg></span><span class=\"ds-choice-text\"><span class=\"ds-choice-label\">E-mail</span><span class=\"ds-choice-desc\">Enviamos um código de 6 dígitos.</span></span></label><label class=\"ds-choice\"><input type=\"radio\" name=\"ds-ch\"><span class=\"ds-choice-mark\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m5 12.5 4.5 4.5L19 7.5\"/></svg></span><span class=\"ds-choice-text\"><span class=\"ds-choice-label\">WhatsApp</span><span class=\"ds-choice-desc\"><span class=\"ds-tag\">Em breve</span></span></span></label>",
+      "css": ".ds-choice { position: relative; display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 16px; margin-bottom: 12px; border: 2px solid var(--border); border-radius: 16px; background: var(--surface); color: var(--foreground); font-family: var(--font-body), sans-serif; cursor: pointer; transition: border-color 200ms, background-color 200ms; } .ds-choice input { position: absolute; opacity: 0; width: 1px; height: 1px; } .ds-choice:hover { border-color: var(--muted-foreground); } .ds-choice:has(:checked) { border-color: var(--foreground); background: var(--primary-muted); } .ds-choice:has(:focus-visible) { outline: 3px solid var(--warning); outline-offset: 3px; } .ds-choice-mark { display: grid; place-items: center; width: 24px; height: 24px; flex-shrink: 0; border: 2px solid var(--muted-foreground); border-radius: 9999px; color: transparent; } .ds-choice:has(:checked) .ds-choice-mark { border-color: var(--primary); background: var(--primary); color: var(--foreground); } .ds-choice-label { display: block; font-weight: 600; } .ds-choice-desc { display: flex; gap: 8px; margin-top: 2px; font-size: 0.875rem; color: var(--muted-foreground); } .ds-tag { padding: 2px 8px; border: 1px solid color-mix(in srgb, var(--warning) 60%, transparent); border-radius: 9999px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--warning); }"
+    },
+    {
+      "name": "Interest Chip",
+      "kind": "chip",
+      "refersTo": "choice-chip",
+      "description": "Opção densa em cápsula para listas como interesses.",
+      "html": "<label class=\"ds-chip\"><input type=\"checkbox\" checked><span class=\"ds-chip-mark\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m5 12.5 4.5 4.5L19 7.5\"/></svg></span>Caminhadas</label><label class=\"ds-chip\"><input type=\"checkbox\"><span class=\"ds-chip-mark\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m5 12.5 4.5 4.5L19 7.5\"/></svg></span>Jogos de tabuleiro</label>",
+      "css": ".ds-chip { position: relative; display: inline-flex; align-items: center; gap: 12px; min-height: 48px; padding: 8px 16px 8px 12px; margin: 0 8px 8px 0; border: 2px solid var(--border); border-radius: 9999px; background: var(--surface); color: var(--foreground); font-family: var(--font-body), sans-serif; font-weight: 600; cursor: pointer; transition: border-color 200ms, background-color 200ms; } .ds-chip input { position: absolute; opacity: 0; width: 1px; height: 1px; } .ds-chip:hover { border-color: var(--muted-foreground); } .ds-chip:has(:checked) { border-color: var(--foreground); background: var(--primary-muted); } .ds-chip:has(:focus-visible) { outline: 3px solid var(--warning); outline-offset: 3px; } .ds-chip-mark { display: grid; place-items: center; width: 24px; height: 24px; border: 2px solid var(--muted-foreground); border-radius: 6px; color: transparent; } .ds-chip:has(:checked) .ds-chip-mark { border-color: var(--primary); background: var(--primary); color: var(--foreground); }"
+    },
+    {
+      "name": "Notice (error)",
+      "kind": "card",
+      "refersTo": "notice",
+      "description": "Mensagem de estado com ícone, rótulo e texto; nunca só cor.",
+      "html": "<div class=\"ds-notice\" role=\"alert\"><svg viewBox=\"0 0 24 24\" width=\"20\" height=\"20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 3.5 2.5 20h19L12 3.5Z\"/><path d=\"M12 10v4.5M12 17.2h.01\"/></svg><div><p class=\"ds-notice-title\">Não foi possível continuar</p><p class=\"ds-notice-body\">O código expirou. Peça um novo código.</p></div></div>",
+      "css": ".ds-notice { display: flex; gap: 12px; padding: 16px; border: 2px solid color-mix(in srgb, var(--error) 70%, transparent); border-radius: 16px; background: var(--surface); font-family: var(--font-body), sans-serif; } .ds-notice > svg { flex-shrink: 0; margin-top: 2px; color: var(--error); } .ds-notice p { margin: 0; } .ds-notice-title { font-weight: 600; color: var(--foreground); } .ds-notice-body { margin-top: 4px; color: var(--muted-foreground); }"
+    },
+    {
+      "name": "Progress Rail",
+      "kind": "nav",
+      "refersTo": "progress-segment-current",
+      "description": "Progresso em texto e altura de segmento: concluído 6px papel, atual 12px carmim, pendente 6px fio.",
+      "html": "<nav class=\"ds-progress\" aria-label=\"Progresso do cadastro\"><p><span class=\"ds-progress-count\">Etapa 2 de 8</span><span class=\"ds-progress-name\">E-mail</span></p><ol><li class=\"done\"></li><li class=\"current\" aria-current=\"step\"></li><li></li><li></li><li></li><li></li><li></li><li></li></ol></nav>",
+      "css": ".ds-progress p { display: flex; justify-content: space-between; align-items: baseline; margin: 0 0 12px; font-size: 0.875rem; } .ds-progress-count { font-family: var(--font-poster), var(--font-body), sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--foreground); font-variant-numeric: tabular-nums; } .ds-progress-name { font-family: var(--font-body), sans-serif; color: var(--muted-foreground); } .ds-progress ol { display: flex; align-items: flex-end; gap: 6px; height: 12px; margin: 0; padding: 0; list-style: none; } .ds-progress li { flex: 1; height: 6px; border-radius: 9999px; background: var(--border); transition: height 500ms cubic-bezier(0.16,1,0.3,1), background-color 500ms cubic-bezier(0.16,1,0.3,1); } .ds-progress li.done { background: var(--foreground); } .ds-progress li.current { height: 12px; background: var(--primary); }"
+    },
+    {
+      "name": "Step Band + Title",
+      "kind": "custom",
+      "refersTo": "step-band",
+      "description": "Assinatura: faixa carmim numerada colada ao título de etapa condensado.",
+      "html": "<div class=\"ds-step\"><span class=\"ds-step-band\" aria-hidden=\"true\"><span>02</span><i></i></span><h1 class=\"ds-step-title\">Como confirmamos que é você?</h1></div>",
+      "css": ".ds-step { display: flex; align-items: stretch; gap: 16px; } .ds-step-band { display: flex; flex-direction: column; align-items: center; justify-content: space-between; width: 56px; flex-shrink: 0; padding: 12px 4px 8px; border-radius: 0 0 8px 8px; background: var(--primary); color: var(--foreground); animation: ds-band-in 560ms cubic-bezier(0.16,1,0.3,1) both; } .ds-step-band span { font-family: var(--font-poster), var(--font-body), sans-serif; font-size: 1.5rem; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; } .ds-step-band i { display: block; width: 20px; height: 2px; margin-top: 12px; background: var(--foreground); } .ds-step-title { align-self: flex-end; margin: 0; padding: 4px 0; font-family: var(--font-poster), var(--font-body), sans-serif; font-size: clamp(2rem, 6vw, 3.25rem); font-weight: 900; font-stretch: 82%; line-height: 0.95; letter-spacing: -0.02em; word-spacing: 0.12em; text-transform: uppercase; text-wrap: balance; color: var(--foreground); } @keyframes ds-band-in { from { clip-path: inset(0 0 22% 0); } to { clip-path: inset(0 0 0 0); } } @media (prefers-reduced-motion: reduce) { .ds-step-band { animation-duration: 1ms; } }"
+    },
+    {
+      "name": "Poster Headline",
+      "kind": "custom",
+      "refersTo": "poster-headline",
+      "description": "Assinatura: manchete de cartaz em duas tintas, caixa alta condensada 900.",
+      "html": "<h1 class=\"ds-poster\"><span>Interesses em comum.</span><span class=\"accent\">Mais vida na sua cidade.</span></h1>",
+      "css": ".ds-poster { margin: 0; font-family: var(--font-poster), var(--font-body), sans-serif; font-size: clamp(2.75rem, 11vw, 5rem); font-weight: 900; font-stretch: 82%; line-height: 0.9; letter-spacing: -0.02em; word-spacing: 0.12em; text-transform: uppercase; text-wrap: balance; } .ds-poster span { display: block; color: var(--foreground); } .ds-poster .accent { color: var(--primary); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Convite Cívico",
+    "overview": "O EventMatch se apresenta como um cartaz serigrafado de convocação colado na cidade à noite: fundo quase preto, tinta plana carmim e âmbar, manchetes condensadas em caixa alta pesada e texto corrido humanista que explica, com calma, por que cada dado é pedido. A voz visual é pública e coletiva, não íntima: convida a ocupar a cidade junto, e por isso nada nela lembra a linguagem de namoro (sem corações decorativos, sem rosa suave, sem fotos de casal).\n\nA densidade é de formulário generoso: alvos de 44px ou mais, um único fluxo por coluna no mobile e, no desktop, a explicação ao lado do formulário que ela justifica. A profundidade vem de camadas tonais e fios finos, nunca de sombra; a ênfase vem de peso tipográfico e da faixa carmim, nunca de gradiente. A arte é geometria urbana plana (torres, faixas, viaduto, escadaria, copas) sem figuras humanas, e ocupa um slot substituível.\n\nO movimento é breve e editorial: cada etapa entra desmascarando sua faixa numerada a partir de um estado já visível, e tudo colapsa para 1ms com `prefers-reduced-motion`.",
+    "keyCharacteristics": [
+      "Tema escuro único, paleta semântica fechada (paleta padrão do Tailwind removida).",
+      "Manchete de cartaz em duas tintas: linha em `foreground`, linha em `primary`.",
+      "Faixa vertical carmim numerada como marcador de etapa.",
+      "Botões em cápsula, campos e cartões com cantos suaves e borda de 2px.",
+      "Estado nunca depende só de cor: ícone, texto, espessura de borda ou altura acompanham.",
+      "Foco visível âmbar de 3px em todo elemento interativo."
+    ],
+    "rules": [
+      {
+        "name": "The Closed Palette Rule",
+        "body": "Só os 14 tokens semânticos existem; o `@theme` do Tailwind zera `--color-*`, então nenhum utilitário pode introduzir cor fora do sistema. Hex avulso em componente é defeito.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Inks Rule",
+        "body": "Carmim e âmbar são as únicas tintas cromáticas de expressão. O carmim carrega ação e ênfase; o âmbar sinaliza atenção e foco. Nenhum gradiente decorativo.",
+        "section": "colors"
+      },
+      {
+        "name": "The Poster Voice Rule",
+        "body": "Caixa alta condensada 900 é reservada para manchete, título de etapa, número da faixa e marca. Texto que explica, pede ou orienta é sempre Figtree em caixa normal.",
+        "section": "typography"
+      },
+      {
+        "name": "The Weight Not Gradient Rule",
+        "body": "Ênfase tipográfica vem de peso, tamanho e troca de tinta entre linhas; nunca de gradiente em texto.",
+        "section": "typography"
+      },
+      {
+        "name": "The Reason Beside Form Rule",
+        "body": "Toda etapa mostra por que o dado é pedido ao lado (desktop) ou acima (mobile) do campo que o pede.",
+        "section": "layout"
+      },
+      {
+        "name": "The Flat Ink Rule",
+        "body": "Nada flutua. Se um elemento precisa se destacar, ele muda de tinta ou de espessura de borda, nunca ganha sombra.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** use apenas os tokens semânticos de `globals.css` através dos utilitários do Tailwind (`bg-primary`, `text-muted-foreground`, `border-border`).",
+      "**Do** componha manchetes em duas tintas (`foreground` + `primary`) com Archivo 900 caixa alta condensada (`font-stretch: 82%`).",
+      "**Do** marque cada etapa com a faixa carmim numerada e mova o foco para o h1 da etapa a cada troca.",
+      "**Do** mantenha alvos interativos com pelo menos 44px (48px chips e secundários, 56px no CTA primário).",
+      "**Do** sinalize estado com ícone, texto, espessura de borda ou altura além da cor.",
+      "**Do** use o anel de foco âmbar de 3px com afastamento de 3px em todo interativo.",
+      "**Do** anime só a entrada da faixa (`band-in`, 560ms) e do conteúdo (`rise-in`, 480ms) em `ease-out-expo`, partindo de estado já visível, e respeite `prefers-reduced-motion`.",
+      "**Do** use os ícones autorais de 24px com traço de 2px em `currentColor`."
+    ],
+    "donts": [
+      "**Don't** use gradiente decorativo em fundo, texto ou arte.",
+      "**Don't** use `box-shadow` para dar profundidade; troque tinta ou borda.",
+      "**Don't** reintroduza a paleta padrão do Tailwind nem hex avulso em componentes.",
+      "**Don't** use linguagem visual de namoro: corações decorativos, rosa suave, pares românticos.",
+      "**Don't** coloque figuras humanas na arte da cidade.",
+      "**Don't** use caixa alta condensada em texto de instrução, dica ou parágrafo.",
+      "**Don't** empacote o cadastro em cartão centralizado com stepper genérico e benefícios em ícones soltos."
+    ]
+  }
+}

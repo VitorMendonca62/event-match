@@ -41,6 +41,10 @@ A fundação PostgreSQL configura Drizzle e o pool no backend, preserva `GET /he
 
 O módulo `registration` expõe `RegistrationController` em `/api/v1/registration` e o módulo `catalog` expõe `GET /api/v1/catalog/interests`. A apresentação valida DTOs, exige a credencial interna do BFF (`BffInternalGuard`) e a forma da continuação (`ContinuationGuard`) antes de qualquer caso de uso, traduz `RegistrationError` em respostas tipadas (`RegistrationErrorFilter`) e aplica `Cache-Control: no-store`. A aplicação ganha `RegistrationFlow` e `RegistrationFlowGate`, que resolvem ids internos a partir da sessão autorizada, controlam idempotência e rotação e avançam a sessão na mesma transação do efeito de negócio por meio de ganchos transacionais nos casos de uso existentes. A infraestrutura adiciona os repositórios Drizzle de sessão e idempotência, o adapter de token HMAC e o `BrevoVerificationDeliveryAdapter`; o `noop` só é composto quando configurado explicitamente fora de produção.
 
+### Jornada de cadastro no frontend (SDD-010)
+
+`/` apresenta o EventMatch e leva a `/cadastro`, rota RSC dinâmica que lê o cookie de continuação somente no servidor e, quando ele existe, inicia snapshot, documentos e interesses em paralelo, aguardando os catálogos apenas no estágio `account_incomplete`. A ilha cliente `RegistrationFlow` conduz uma máquina de etapas explícita (`features/registration/flow-machine.ts`) em que o estágio do backend é autoritativo; o navegador guarda no `sessionStorage` apenas o rascunho allowlisted do ADR-011. Toda chamada do navegador passa pelos Route Handlers finos de `front/src/app/api/registration/**` e `front/src/app/api/catalog/interests`, que validam origem/JSON/idempotência e forma do corpo, convertem o cookie `HttpOnly` em bearer, injetam a credencial interna e a fingerprint de origem e traduzem a resposta de forma conservadora (`front/src/shared/server/`). O BFF não contém regra de negócio nem acessa PostgreSQL. Estilos usam Tailwind CSS v4 sobre os tokens semânticos do `globals.css`, sem a paleta padrão do Tailwind (ADR-027); primitives de apresentação ficam em `front/src/components/server/ui/`.
+
 ### Deploy inicial do frontend
 
 O frontend/BFF do ambiente publicado de testes será hospedado diretamente na Vercel, sem proxy adicional à frente. O cadastro deriva uma fingerprint de origem a partir do header específico da plataforma e autentica as chamadas BFF → NestJS, conforme ADR-023. A leitura da origem fica isolada em adapter server-only para permitir migração futura à Cloudflare mediante nova ADR, sem alterar regras de negócio, contrato interno ou PostgreSQL.
@@ -109,3 +113,4 @@ RF068, RF073, RF074, RN068, RN080–RN083, RN093, RN096, RN100–RN104, RN115–
 - ADR-013 a ADR-017: schema físico do cadastro, proteção de segredos, limites persistidos, concorrência transacional e expiração lazy.
 - ADR-018: origem da lista de senhas comuns e estado `converted` do cadastro.
 - ADR-019 a ADR-023: ordem de maioridade, contrato HTTP do cadastro, continuação opaca, BFF obrigatório e origem confiável no deploy inicial da Vercel.
+- ADR-027: Tailwind CSS v4 no frontend, consumindo somente os tokens semânticos do EventMatch.
