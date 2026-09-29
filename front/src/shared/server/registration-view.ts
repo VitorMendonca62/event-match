@@ -5,7 +5,7 @@ import {
   legalDocumentListDataSchema,
   snapshotDataSchema,
 } from '../../features/registration/contracts';
-import type { Catalog, InterestOption, LegalDocumentView } from '../../features/registration/view-models';
+import type { Catalog, InterestOption, LegalDocumentSource } from '../../features/registration/view-models';
 import type { BffEnv } from '../config/bff-env.server';
 import { callBackend } from './backend-client';
 
@@ -15,13 +15,13 @@ export type RegistrationView = Readonly<{
   nextResendAt?: string;
   /** A continuation cookie existed but the backend no longer accepts it. */
   sessionExpired: boolean;
-  documents: Catalog<LegalDocumentView>;
+  documents: Catalog<LegalDocumentSource>;
   interests: Catalog<InterestOption>;
 }>;
 
 type Deps = Readonly<{ env: BffEnv; fetchImpl?: typeof fetch }>;
 
-async function fetchDocuments(deps: Deps): Promise<Catalog<LegalDocumentView>> {
+async function fetchDocuments(deps: Deps): Promise<Catalog<LegalDocumentSource>> {
   const upstream = await callBackend(
     { method: 'GET', path: '/registration/legal-documents?locale=pt-BR', internal: true },
     deps.env,
@@ -30,10 +30,10 @@ async function fetchDocuments(deps: Deps): Promise<Catalog<LegalDocumentView>> {
   const envelope = envelopeSchema.safeParse(upstream.body);
   const data = upstream.status === 200 && envelope.success ? legalDocumentListDataSchema.safeParse(envelope.data.data) : undefined;
   if (!data?.success) return { status: 'unavailable' };
-  // Only the fields the UI renders are serialized (`server-serialization`).
+  // The text stays on the server: `page.tsx` renders it to elements (`server-serialization`).
   return {
     status: 'ready',
-    items: data.data.documents.map(({ id, kind, version, effectiveAt }) => ({ id, kind, version, effectiveAt })),
+    items: data.data.documents.map(({ id, kind, version, effectiveAt, content }) => ({ id, kind, version, effectiveAt, content })),
   };
 }
 

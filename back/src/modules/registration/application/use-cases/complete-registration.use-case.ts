@@ -58,7 +58,7 @@ export class CompleteRegistration {
       if (!birthDate.isAdultAt(now)) return 'rejected';
 
       const interests = await this.interests.findActiveByIds(context, [...new Set(input.interestIds)]);
-      const documents = await this.terms.findApproved(context, [...new Set(input.documentIds)]);
+      const documents = await this.terms.findCurrent(context, [...new Set(input.documentIds)], now);
       if (
         interests.length < this.policy.minInterests ||
         !coversRequiredTerms(documents.map((document) => document.kind))

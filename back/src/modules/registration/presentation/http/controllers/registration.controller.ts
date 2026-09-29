@@ -40,7 +40,7 @@ import {
 import { API_V1_PREFIX } from '../../../../../shared/presentation/http/api-version';
 import { LocaleQueryDto } from '../../../../../shared/presentation/http/locale-query.dto';
 import { CheckRegistrationEligibility } from '../../../application/use-cases/check-registration-eligibility.use-case';
-import { ListApprovedLegalDocuments } from '../../../application/use-cases/list-approved-legal-documents.use-case';
+import { ListCurrentLegalDocuments } from '../../../application/use-cases/list-current-legal-documents.use-case';
 import { RegistrationFlow } from '../../../application/use-cases/registration-flow.use-case';
 import { SendEmailDeliveryTest } from '../../../application/use-cases/send-email-delivery-test.use-case';
 import { BffInternalGuard } from '../bff-internal.guard';
@@ -128,7 +128,7 @@ export class RegistrationController {
   constructor(
     private readonly eligibility: CheckRegistrationEligibility,
     private readonly flow: RegistrationFlow,
-    private readonly legalDocuments: ListApprovedLegalDocuments,
+    private readonly legalDocuments: ListCurrentLegalDocuments,
     private readonly emailDeliveryTest: SendEmailDeliveryTest,
   ) {}
 
@@ -288,13 +288,25 @@ export class RegistrationController {
   }
 
   @Get('legal-documents')
-  @ApiOperation({ summary: 'Metadata of approved legal documents (empty until legal content exists)' })
-  @ApiOkResponse({ type: LegalDocumentListResponseDto })
-  async listLegalDocuments(@Query() query: LocaleQueryDto) {
+  @ApiOperation({
+    summary: 'Currently effective legal documents with their Markdown text (one version per kind)',
+  })
+  @ApiOkResponse({
+    type: LegalDocumentListResponseDto,
+    headers: { 'Cache-Control': { description: 'no-store', schema: { type: 'string' } } },
+  })
+  async listLegalDocuments(@Query() query: LocaleQueryDto, @Res({ passthrough: true }) response: Response) {
     const documents = await this.legalDocuments.execute({ locale: query.locale ?? 'pt-BR' });
+    response.setHeader('Cache-Control', 'no-store');
     return new OkResponseDto(
-      { documents: documents.map((document) => ({ ...document, effectiveAt: document.effectiveAt.toISOString() })) },
-      'Documentos aprovados.',
+      {
+        documents: documents.map(({ body, effectiveAt, ...metadata }) => ({
+          ...metadata,
+          effectiveAt: effectiveAt.toISOString(),
+          content: body,
+        })),
+      },
+      'Documentos vigentes.',
     );
   }
 

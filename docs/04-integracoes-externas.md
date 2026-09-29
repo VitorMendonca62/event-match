@@ -34,7 +34,7 @@ Enquanto os grupos de produto não forem implementados, o backend expõe somente
 
 Toda resposta HTTP com corpo segue o envelope público `data` (objeto), `message` (string) e `statusCode` (número serializado de `HttpStatus`). A camada de apresentação converte erros conhecidos e inesperados nesse formato sem retornar stack trace, erro bruto de validação ou detalhe de infraestrutura. O OpenAPI do NestJS fica disponível no caminho configurado pelo ambiente e pode ser desabilitado sem alterar `/health`.
 
-### Contrato v1 do cadastro (SDD-009, versão 0.9.0)
+### Contrato v1 do cadastro (SDD-009, versão 0.9.0; SDD-011 acrescenta `content` na listagem de documentos, versão 0.10.0)
 
 Prefixo `/api/v1` (ADR-020). Toda rota de `/api/v1/registration` exige `X-EventMatch-BFF-Token` (comparado em tempo constante com `BFF_INTERNAL_TOKEN`; ausente ou inválido → `401`), responde `Cache-Control: no-store` inclusive em erros e fica atrás da flag `REGISTRATION_HTTP_ENABLED` (desligada → `404`) até a TASK 07 publicar o BFF. Nenhuma rota aceita `verificationId`, `registrationId` ou `accountId` do navegador; `forbidNonWhitelisted` rejeita esses campos com `400`.
 
@@ -49,7 +49,7 @@ Prefixo `/api/v1` (ADR-020). Toda rota de `/api/v1/registration` exige `X-EventM
 | `PUT /api/v1/registration/password` | `{ password, passwordConfirmation }` | `200 { stage, expiresAt }`; rotaciona | Bearer, `Idempotency-Key`; `contact_verified` |
 | `PUT /api/v1/registration/required-data` | `{ displayName, region, usageIntents[] }` | `200 { stage, expiresAt }`; rotaciona | Bearer, `Idempotency-Key`; `registration_in_progress` |
 | `GET /api/v1/registration` | — | `200 { stage, expiresAt, nextResendAt? }` | Bearer atual (o anterior não serve) |
-| `GET /api/v1/registration/legal-documents?locale=pt-BR` | — | `200 { documents[] }` só `approved` (Termos, Privacidade e Convivência v1.0.0) | apenas credencial do BFF |
+| `GET /api/v1/registration/legal-documents?locale=pt-BR` | — | `200 { documents[] }` com `id`, `kind`, `version`, `locale`, `effectiveAt` e `content` (Markdown sem frontmatter); só a versão vigente `approved` de cada tipo (ADR-028); `Cache-Control: no-store` | apenas credencial do BFF |
 | `POST /api/v1/registration/complete` | `{ birthDate, documentIds[], interestIds[] }` | `200 { status: 'active' }`; revoga a sessão | Bearer, `Idempotency-Key`; `account_incomplete` |
 | `GET /api/v1/catalog/interests?locale=pt-BR` | — | `200 { interests[] }` ativos, ordem estável | pública |
 
@@ -75,7 +75,7 @@ O navegador conversa apenas com a mesma origem. Cada Route Handler delega a exat
 | `PUT /api/registration/password` · `PUT /api/registration/required-data` | mesmas rotas | rotacionam o cookie |
 | `GET /api/registration` | `GET /api/v1/registration` | snapshot mínimo |
 | `DELETE /api/registration` | — | cancelamento local: expira o cookie (não há revogação server-side no contrato v1) |
-| `GET /api/registration/legal-documents` | `GET …/legal-documents?locale=pt-BR` | — |
+| `GET /api/registration/legal-documents` | `GET …/legal-documents?locale=pt-BR` | — (propaga `content`; a página `/cadastro` renderiza o Markdown no servidor, ADR-029) |
 | `POST /api/registration/complete` | `POST …/complete` | expira o cookie em sucesso |
 | `GET /api/catalog/interests` | `GET /api/v1/catalog/interests?locale=pt-BR` | pública, sem credencial interna |
 

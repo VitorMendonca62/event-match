@@ -2,7 +2,9 @@ import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
+import { LegalMarkdown } from '@/features/registration/components/legal-markdown';
 import { type FlowNotice, RegistrationFlow } from '@/features/registration/components/registration-flow';
+import type { Catalog, LegalDocumentSource, LegalDocumentView } from '@/features/registration/view-models';
 import { getBffEnv } from '@/shared/config/bff-env.server';
 import { LINK_RESULT_PARAM } from '@/shared/server/confirm-link';
 import { continuationCookieName, isContinuationToken } from '@/shared/server/continuation-cookie';
@@ -16,6 +18,21 @@ export const metadata: Metadata = {
 type RegistrationPageProps = Readonly<{
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }>;
+
+/** Renders each text to elements here so the raw Markdown never reaches the client island. */
+function toDocumentViews(documents: Catalog<LegalDocumentSource>): Catalog<LegalDocumentView> {
+  if (documents.status !== 'ready') return documents;
+  return {
+    status: 'ready',
+    items: documents.items.map(({ id, kind, version, effectiveAt, content }) => ({
+      id,
+      kind,
+      version,
+      effectiveAt,
+      body: <LegalMarkdown source={content} />,
+    })),
+  };
+}
 
 export default async function RegistrationPage({ searchParams }: RegistrationPageProps) {
   // Request data first: it makes the route dynamic before any server-only configuration is read.
@@ -41,7 +58,7 @@ export default async function RegistrationPage({ searchParams }: RegistrationPag
       expiresAt={view.expiresAt}
       nextResendAt={view.nextResendAt}
       notice={notice}
-      documents={view.documents}
+      documents={toDocumentViews(view.documents)}
       interests={view.interests}
     />
   );

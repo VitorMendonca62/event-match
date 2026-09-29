@@ -101,6 +101,8 @@ export const legalDocumentSchema = z.object({
   version: z.string().min(1),
   locale: z.string().min(1),
   effectiveAt: isoDateTime,
+  /** Markdown without frontmatter (ADR-028). */
+  content: z.string().min(1),
 });
 export const legalDocumentListDataSchema = z.object({ documents: z.array(legalDocumentSchema) });
 export const interestSchema = z.object({ id: z.uuid(), slug: z.string().min(1), label: z.string().min(1) });

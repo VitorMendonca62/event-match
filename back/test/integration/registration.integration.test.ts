@@ -117,8 +117,8 @@ describe('registration persistence (PostgreSQL integration)', () => {
     // Approved documents exist only in this disposable database (ADR-012).
     for (const [index, kind] of ['terms', 'privacy', 'community_rules'].entries()) {
       await query(
-        `insert into terms_document (id, kind, version, locale, effective_at, content_digest, status)
-         values ($1, $2, 'test', 'pt-BR', now(), '\\x00', 'approved')`,
+        `insert into terms_document (id, kind, version, locale, effective_at, content_digest, content, status)
+         values ($1, $2, 'test', 'pt-BR', now() - interval '1 hour', sha256(convert_to('# fixture', 'UTF8')), '# fixture', 'approved')`,
         [DOCUMENT_IDS[index], kind],
       );
     }
@@ -189,7 +189,7 @@ describe('registration persistence (PostgreSQL integration)', () => {
       const [interests] = await query<{ count: string }>(`select count(*)::text as count from interest`);
       const [ledger] = await query<{ count: string }>(`select count(*)::text as count from drizzle.__drizzle_migrations`);
       expect(interests?.count).toBe('20');
-      expect(ledger?.count).toBe('5');
+      expect(ledger?.count).toBe('6');
     });
   });
 

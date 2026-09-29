@@ -3,7 +3,7 @@
 - **Slug:** publicar-conteudo-documentos-legais
 - **Autor do plano:** Code-Planner (SDD)
 - **Data:** 2026-09-28
-- **Status:** ready
+- **Status:** implemented
 - **Versão-alvo:** 0.11.0
 - **Tipo:** feature
 - **Impacto público:** additive

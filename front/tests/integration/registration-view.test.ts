@@ -18,7 +18,7 @@ function routedBackend(stage: string | null, order: string[] = []) {
     if (path.endsWith('/legal-documents')) {
       return Response.json({
         data: {
-          documents: [{ id: UUID, kind: 'terms', version: '2026-10-01', locale: 'pt-BR', effectiveAt: '2026-10-01T00:00:00.000Z' }],
+          documents: [{ id: UUID, kind: 'terms', version: '2026-10-01', locale: 'pt-BR', effectiveAt: '2026-10-01T00:00:00.000Z', content: '# Termos\n\nTexto.' }],
         },
         message: 'x',
         statusCode: 200,
@@ -44,7 +44,9 @@ describe('loadRegistrationView', () => {
     expect(view.interests).toEqual({ status: 'ready', items: [{ id: UUID, label: 'Café' }] });
     expect(view.documents).toEqual({
       status: 'ready',
-      items: [{ id: UUID, kind: 'terms', version: '2026-10-01', effectiveAt: '2026-10-01T00:00:00.000Z' }],
+      items: [
+        { id: UUID, kind: 'terms', version: '2026-10-01', effectiveAt: '2026-10-01T00:00:00.000Z', content: '# Termos\n\nTexto.' },
+      ],
     });
     expect(JSON.stringify(view)).not.toContain(TOKEN);
   });

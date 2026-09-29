@@ -160,6 +160,14 @@ export function RegistrationFlow({ stage: initialStage, expiresAt, nextResendAt,
     router.push('/');
   }
 
+  // A version published mid-flow: accepted ids that are no longer offered are dropped and the
+  // person returns to the documents. Adjusted during render because it follows a prop change.
+  if (documents.status === 'ready' && acceptedDocuments.some((id) => !documents.items.some((item) => item.id === id))) {
+    setAcceptedDocuments([]);
+    setStep('legal');
+    setBanner({ tone: 'warning', title: 'Documentos atualizados', text: MESSAGES.documentsChanged });
+  }
+
   const base = { headingRef, onFailure };
   const readyDocuments = documents.status === 'ready' ? documents.items : [];
   const readyInterests = interests.status === 'ready' ? interests.items : [];
@@ -254,6 +262,10 @@ export function RegistrationFlow({ stage: initialStage, expiresAt, nextResendAt,
             accepted={acceptedDocuments}
             onAcceptedChange={setAcceptedDocuments}
             onContinue={() => goTo(nextLocalStep('legal') ?? 'interests')}
+            onExit={() => {
+              clearDraft(browserSessionStorage());
+              router.push('/');
+            }}
             onRetry={refreshCatalogs}
             retrying={refreshing}
           />
@@ -280,6 +292,7 @@ export function RegistrationFlow({ stage: initialStage, expiresAt, nextResendAt,
             interests={readyInterests.filter((interest) => interestIds.includes(interest.id))}
             documents={readyDocuments.filter((document) => acceptedDocuments.includes(document.id))}
             onBack={() => goTo(previousStep('review') ?? 'interests')}
+            onActivationRefused={refreshCatalogs}
             onActivated={() => {
               clearDraft(browserSessionStorage());
               router.replace('/cadastro/concluido');

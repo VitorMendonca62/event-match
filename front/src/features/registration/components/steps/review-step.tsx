@@ -20,9 +20,11 @@ type ReviewStepProps = StepBaseProps &
     documents: readonly LegalDocumentView[];
     onBack: () => void;
     onActivated: () => void;
+    /** The refusal may mean a newer document version; the flow reloads the documents. */
+    onActivationRefused: () => void;
   }>;
 
-export function ReviewStep({ headingRef, onFailure, profile, interests, documents, onBack, onActivated }: ReviewStepProps) {
+export function ReviewStep({ headingRef, onFailure, profile, interests, documents, onBack, onActivated, onActivationRefused }: ReviewStepProps) {
   const [birthDate, setBirthDate] = useState('');
   const [fieldError, setFieldError] = useState<string>();
   const { pending, run } = useCommand();
@@ -50,6 +52,7 @@ export function ReviewStep({ headingRef, onFailure, profile, interests, document
     }
     if (result.kind === 'unprocessable') {
       form.show(messageForReason(result.reason));
+      if (result.reason === 'activation_unavailable') onActivationRefused();
       return;
     }
     const message = await onFailure(result);

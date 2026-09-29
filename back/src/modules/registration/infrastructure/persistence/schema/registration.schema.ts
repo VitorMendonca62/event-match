@@ -139,9 +139,11 @@ export const termsDocument = pgTable('terms_document', {
   locale: text('locale').notNull(),
   effectiveAt: timestamp('effective_at', { withTimezone: true }).notNull(),
   contentDigest: bytea('content_digest').notNull(),
+  content: text('content'),
   status: text('status').notNull().default('placeholder'),
 }, (table) => [
   check('terms_document_kind_check', sql`${table.kind} in ('terms', 'privacy', 'community_rules')`),
+  check('terms_document_approved_content_check', sql`${table.status} <> 'approved' or ${table.content} is not null`),
   check('terms_document_status_check', sql`${table.status} in ('placeholder', 'approved', 'retired')`),
   unique('terms_document_kind_version_locale_unique').on(table.kind, table.version, table.locale),
 ]);

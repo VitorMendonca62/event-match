@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 import type { LegalDocumentKind } from './contracts';
 
 /**
@@ -7,16 +9,23 @@ import type { LegalDocumentKind } from './contracts';
  */
 export type InterestOption = Readonly<{ id: string; label: string }>;
 
-export type LegalDocumentView = Readonly<{
+type LegalDocumentMeta = Readonly<{
   id: string;
   kind: LegalDocumentKind;
   version: string;
   effectiveAt: string;
-  /** Approved text; the v1 contract publishes metadata only, so it is absent until it does. */
-  content?: string;
-  /** Marks non-legal fixtures used by visual tests; acceptance has no effect. */
-  fixture?: boolean;
 }>;
+
+/** Server-only shape: carries the raw Markdown and never crosses into the client island (ADR-029). */
+export type LegalDocumentSource = LegalDocumentMeta & Readonly<{ content: string }>;
+
+export type LegalDocumentView = LegalDocumentMeta &
+  Readonly<{
+    /** Text rendered on the server; absent means the step stays blocked. */
+    body?: ReactNode;
+    /** Marks non-legal fixtures used by visual tests; acceptance has no effect. */
+    fixture?: boolean;
+  }>;
 
 export type Catalog<T> =
   | Readonly<{ status: 'ready'; items: readonly T[] }>
@@ -26,5 +35,5 @@ export type Catalog<T> =
 export const LEGAL_DOCUMENT_TITLES: Record<LegalDocumentKind, string> = {
   terms: 'Termos de Uso',
   privacy: 'Política de Privacidade',
-  community_rules: 'Regras da Comunidade',
+  community_rules: 'Regras de Convivência',
 };

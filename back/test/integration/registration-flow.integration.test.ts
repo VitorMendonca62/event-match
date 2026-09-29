@@ -11,7 +11,7 @@ import { ProfilesModule } from '../../src/modules/profiles/profiles.module';
 import type { FlowCredentials } from '../../src/modules/registration/application/services/registration-flow-gate';
 import { CheckRegistrationEligibility } from '../../src/modules/registration/application/use-cases/check-registration-eligibility.use-case';
 import { ExpireStaleRegistrations } from '../../src/modules/registration/application/use-cases/expire-stale-registrations.use-case';
-import { ListApprovedLegalDocuments } from '../../src/modules/registration/application/use-cases/list-approved-legal-documents.use-case';
+import { ListCurrentLegalDocuments } from '../../src/modules/registration/application/use-cases/list-current-legal-documents.use-case';
 import { RegistrationFlow } from '../../src/modules/registration/application/use-cases/registration-flow.use-case';
 import { REGISTRATION_TELEMETRY_PORT } from '../../src/modules/registration/domain/ports/outbound/registration-telemetry.port';
 import { CLOCK_PORT } from '../../src/modules/registration/domain/ports/outbound/runtime.ports';
@@ -59,7 +59,7 @@ async function createNode(clock: FakeClock, delivery: CapturingDelivery, telemet
     flow: module.get(RegistrationFlow),
     expireStale: module.get(ExpireStaleRegistrations),
     interests: module.get(ListActiveInterests),
-    documents: module.get(ListApprovedLegalDocuments),
+    documents: module.get(ListCurrentLegalDocuments),
   };
 }
 
@@ -148,8 +148,8 @@ describe('registration HTTP flow (PostgreSQL integration)', () => {
     test('activates end to end and leaves no token, birth date or contact outside the account', async () => {
       for (const [index, kind] of ['terms', 'privacy', 'community_rules'].entries()) {
         await query(
-          `insert into terms_document (id, kind, version, locale, effective_at, content_digest, status)
-           values ($1, $2, 'flow-test', 'pt-BR', now(), '\\x00', 'approved')`,
+          `insert into terms_document (id, kind, version, locale, effective_at, content_digest, content, status)
+           values ($1, $2, 'flow-test', 'pt-BR', now() - interval '1 hour', sha256(convert_to('# fixture', 'UTF8')), '# fixture', 'approved')`,
           [DOCUMENT_IDS[index], kind],
         );
       }
@@ -276,11 +276,14 @@ describe('registration HTTP flow (PostgreSQL integration)', () => {
       expect(interests[0]).toEqual({ id: INTEREST_IDS[0], slug: 'cafe-e-gastronomia', label: 'Café e gastronomia' });
 
       await query(
-        `insert into terms_document (id, kind, version, locale, effective_at, content_digest, status) values
-         (gen_random_uuid(), 'terms', 'placeholder-v1', 'pt-BR', now(), '\\x00', 'placeholder'),
-         (gen_random_uuid(), 'privacy', 'retired-v1', 'pt-BR', now(), '\\x00', 'retired')`,
+        `insert into terms_document (id, kind, version, locale, effective_at, content_digest, content, status) values
+         (gen_random_uuid(), 'terms', 'placeholder-v1', 'pt-BR', now(), '\\x00', null, 'placeholder'),
+         (gen_random_uuid(), 'privacy', 'retired-v1', 'pt-BR', now(), '\\x00', null, 'retired')`,
       );
-      await expect(nodeA.documents.execute({ locale: 'pt-BR' })).resolves.toEqual([]);
+      const documents = await nodeA.documents.execute({ locale: 'pt-BR' });
+      // Only the three seeded approved versions are offered, without frontmatter (ADR-028).
+      expect(documents.map((document) => document.kind)).toEqual(['community_rules', 'privacy', 'terms']);
+      expect(documents.every((document) => document.version === '1.0.0' && !document.body.startsWith('---'))).toBe(true);
     });
   });
 

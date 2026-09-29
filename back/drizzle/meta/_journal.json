@@ -36,6 +36,13 @@
       "when": 1790627341524,
       "tag": "0004_seed_legal_documents",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790713600000,
+      "tag": "0005_legal_document_content",
+      "breakpoints": true
     }
   ]
 }

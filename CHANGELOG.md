@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.11.0 — 2026-09-28
+
+Conteúdo dos documentos legais e aceite ou recusa no cadastro (SDD-011; ADR-028, ADR-029). Mudança aditiva: o backend passa a `0.10.0` e o frontend a `0.11.0`. Rollout: aplicar a migration `0005` antes do backend `0.10.0` e depois publicar o frontend.
+
+- O jurídico autorizou os documentos v1.0.0 e o registro de aceites em 2026-09-28 (registrado em `docs/legal/README.md` e na ADR-028). A ativação real da conta fica habilitada com os três documentos vigentes.
+- Migration `0005_legal_document_content`: coluna `terms_document.content` com o texto integral dos três arquivos de `docs/legal/pt-BR/`, `CHECK` de `sha256(content) = content_digest`, `CHECK` de texto obrigatório em linhas `approved`, trigger de imutabilidade e índice de vigência. A `0004` não foi alterada.
+- `GET /api/v1/registration/legal-documents` devolve o Markdown sem frontmatter em `content`, apenas a versão vigente de cada tipo, com `Cache-Control: no-store`; exemplo de `version` corrigido para `1.0.0`. `TermsRepositoryPort.listApproved/findApproved` foram substituídos por `listCurrent/findCurrent`; `CompleteRegistration` rejeita ids inexistentes, não aprovados, futuros ou de versão superada.
+- Frontend: `LegalMarkdown` (Server Component, `react-markdown`) renderiza o texto no servidor; região rolável acessível por teclado, checkbox “Li e aceito” por documento (desmarcado), “Não aceito” com aviso, “Rever documentos” e “Sair do cadastro”; título “Regras de Convivência”. Uma nova versão durante o fluxo recarrega os documentos e descarta os aceites.
+- Testes: unidade (`LegalDocumentText`, caso de uso, controller, renderização do Markdown, estados de aceite e recusa), integração PostgreSQL (bytes, digest, `CHECK`s, trigger, vigência) e E2E (lista, recusa sem documento vigente, troca de versão).
+- Pendência conhecida, anterior a esta entrega: `baseUrl` do cliente Brevo está comentado em `brevo-verification-delivery.adapter.ts`, o que impede o E2E de receber o OTP no Brevo falso; os fluxos com OTP só passam com essa linha ativa.
+
 ## 0.10.0 — 2026-09-27
 
 Jornada de cadastro no Next.js e BFF do navegador (SDD-010; ADR-011, ADR-012, ADR-019 a ADR-027). Mudança aditiva; o contrato do backend não muda (permanece em `0.9.0`).

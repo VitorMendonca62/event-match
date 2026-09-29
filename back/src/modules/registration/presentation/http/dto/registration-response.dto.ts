@@ -48,7 +48,7 @@ export class LegalDocumentDto {
   @ApiProperty({ enum: REQUIRED_TERMS_KINDS })
   readonly kind!: TermsDocumentKind;
 
-  @ApiProperty({ example: '2026-10-01' })
+  @ApiProperty({ example: '1.0.0' })
   readonly version!: string;
 
   @ApiProperty({ example: 'pt-BR' })
@@ -56,6 +56,9 @@ export class LegalDocumentDto {
 
   @ApiProperty({ format: 'date-time' })
   readonly effectiveAt!: string;
+
+  @ApiProperty({ description: 'Markdown sem frontmatter' })
+  readonly content!: string;
 }
 
 export class LegalDocumentListDto {

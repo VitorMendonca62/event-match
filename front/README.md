@@ -68,3 +68,7 @@ docker compose -f docker-compose.front.yml up --build
 ```
 
 A imagem de produção é multi-stage, executa sem volume de código-fonte e usa usuário sem privilégios de root.
+
+## Documentos legais no cadastro (SDD-011)
+
+O passo de documentos exibe o texto vigente de Termos de Uso, Política de Privacidade e Regras de Convivência, entregue pelo backend em `content` (Markdown). `app/cadastro/page.tsx` renderiza cada texto no servidor com `LegalMarkdown` (`react-markdown`, ADR-029) e envia à ilha cliente só elementos prontos: o Markdown bruto e a biblioteca não entram no bundle do navegador. HTML embutido e imagens são descartados; apenas links `https:` (nova aba, com `rel="noopener noreferrer"`) e `mailto:` ficam ativos. Aceites ficam só em memória. “Não aceito” mostra o aviso, “Rever documentos” devolve o foco ao primeiro texto sem aceite e “Sair do cadastro” limpa o rascunho local e volta a `/`, sem chamar o backend.

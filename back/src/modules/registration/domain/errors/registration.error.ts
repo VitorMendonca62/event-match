@@ -13,7 +13,8 @@ export type RegistrationErrorCode =
   | 'ACCOUNT_CANNOT_BE_ACTIVATED'
   | 'FLOW_UNAUTHORIZED'
   | 'FLOW_STAGE_CONFLICT'
-  | 'IDEMPOTENCY_CONFLICT';
+  | 'IDEMPOTENCY_CONFLICT'
+  | 'INVALID_LEGAL_DOCUMENT';
 
 /** Framework-independent error; presentation adapters translate codes into neutral responses. */
 export class RegistrationError extends Error {
