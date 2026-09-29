@@ -6,6 +6,9 @@ exports[`registration HTTP contract v1 the OpenAPI contract is versioned and doc
     "get": [],
   },
   "/api/v1/registration": {
+    "delete": [
+      "x-eventmatch-bff-token*",
+    ],
     "get": [
       "x-eventmatch-bff-token*",
     ],

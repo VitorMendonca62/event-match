@@ -8,7 +8,7 @@ export const ORIGIN_FINGERPRINT_HEADER = 'x-eventmatch-origin-fingerprint';
 export const CONTINUATION_RESPONSE_HEADER = 'x-registration-continuation';
 
 export type BackendRequest = Readonly<{
-  method: 'GET' | 'POST' | 'PUT';
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE';
   /** Path under `/api/v1`, including an allowlisted query when needed. */
   path: string;
   body?: unknown;

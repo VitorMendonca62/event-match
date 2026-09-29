@@ -2,29 +2,54 @@ import { type FormEvent, type ReactNode, useState } from 'react';
 
 import { Button } from '@/components/server/ui/button';
 import { CheckIcon } from '@/components/server/ui/icons';
+import { Notice } from '@/components/server/ui/notice';
 import { TextField } from '@/components/server/ui/text-field';
 import { cn } from '@/shared/ui/cn';
 
 import { PASSWORD_MAX, PASSWORD_MIN, type StageData, stageDataSchema } from '../../contracts';
-import { messageForReason } from '../../messages';
+import { MESSAGES, messageForReason } from '../../messages';
 import { useCommand } from '../../use-command';
 import { useFormError } from '../../use-form-error';
+import type { Catalog, LegalDocumentView } from '../../view-models';
 import { FormError } from '../form-error';
 import { StepFrame } from '../step-frame';
+import { allAccepted, documentsReady, TermsConsent } from '../terms-consent';
 import type { StepBaseProps } from './step-types';
 
-type PasswordStepProps = StepBaseProps & Readonly<{ onSaved: (stage: StageData) => void }>;
+type PasswordStepProps = StepBaseProps &
+  Readonly<{
+    onSaved: (stage: StageData) => void;
+    documents: Catalog<LegalDocumentView>;
+    accepted: readonly string[];
+    onAcceptedChange: (ids: string[]) => void;
+    /** Gives up the registration from the refusal dialog (ADR-030). */
+    onCancel: () => void;
+    onRetry: () => void;
+    retrying: boolean;
+  }>;
 
-export function PasswordStep({ headingRef, onFailure, onSaved }: PasswordStepProps) {
+export function PasswordStep({
+  headingRef,
+  onFailure,
+  onSaved,
+  documents,
+  accepted,
+  onAcceptedChange,
+  onCancel,
+  onRetry,
+  retrying,
+}: PasswordStepProps) {
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
   const [visible, setVisible] = useState(false);
   const [fieldError, setFieldError] = useState<string>();
+  const [showConsentError, setShowConsentError] = useState(false);
   const { pending, run } = useCommand();
   const form = useFormError();
 
   const lengthOk = password.length >= PASSWORD_MIN && password.length <= PASSWORD_MAX;
   const matches = password.length > 0 && password === confirmation;
+  const consented = allAccepted(documents, accepted);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -34,6 +59,10 @@ export function PasswordStep({ headingRef, onFailure, onSaved }: PasswordStepPro
       return;
     }
     setFieldError(undefined);
+    if (!consented) {
+      setShowConsentError(true);
+      return;
+    }
     const result = await run(
       { path: '/api/registration/password', method: 'PUT', body: { password, passwordConfirmation: confirmation } },
       stageDataSchema,
@@ -62,7 +91,8 @@ export function PasswordStep({ headingRef, onFailure, onSaved }: PasswordStepPro
       why={
         <p>
           Seu e-mail está confirmado. A senha protege sua conta; uma frase longa que só você conhece é mais
-          segura e fácil de lembrar.
+          segura e fácil de lembrar. Para criar a conta, você também precisa ler e aceitar os documentos do
+          EventMatch.
         </p>
       }
     >
@@ -104,7 +134,30 @@ export function PasswordStep({ headingRef, onFailure, onSaved }: PasswordStepPro
           />
           Mostrar senhas
         </label>
-        <Button type="submit" wide forward pending={pending} pendingLabel="Salvando…">
+        <div className="space-y-3 border-t-2 border-border pt-6">
+          <h2 className="font-display text-lg font-bold">Documentos</h2>
+          <TermsConsent
+            documents={documents}
+            accepted={accepted}
+            onAcceptedChange={onAcceptedChange}
+            onCancel={onCancel}
+            onRetry={onRetry}
+            retrying={retrying}
+          />
+          {showConsentError && !consented && documentsReady(documents) ? (
+            <Notice tone="error" role="alert" title="Faltam aceites">
+              {MESSAGES.consentRequired}
+            </Notice>
+          ) : null}
+        </div>
+        <Button
+          type="submit"
+          wide
+          forward
+          pending={pending}
+          pendingLabel="Salvando…"
+          disabled={!documentsReady(documents)}
+        >
           Salvar senha
         </Button>
       </form>

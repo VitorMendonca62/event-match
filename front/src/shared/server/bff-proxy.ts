@@ -32,7 +32,7 @@ export type BffDependencies = Readonly<{
 export type BffOperation = Readonly<{
   /** Stable name for logs; never includes values. */
   operation: string;
-  method: 'GET' | 'POST' | 'PUT';
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE';
   backendPath: string;
   /** Registration routes carry the internal credential; the public catalog does not. */
   internal: boolean;

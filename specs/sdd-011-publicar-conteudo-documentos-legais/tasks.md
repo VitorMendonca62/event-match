@@ -8,6 +8,8 @@
 - **Tipo:** feature
 - **Impacto público:** additive
 
+> **Atualização de 2026-09-29 (ADR-030, ADR-031):** o passo “Documentos” foi removido e os aceites foram para a tela da senha, com link e diálogo; versão e vigência deixaram de ser exibidas; “Cancelar cadastro” expira o cadastro no backend. Onde este plano descreve o passo `legal-step.tsx`, vale o ADR-031.
+
 ## 1. Contexto e Motivação
 
 A TASK 08 de `specs/tasks.txt` pede que o texto dos documentos legais em `docs/legal/pt-BR/` fique no PostgreSQL e seja apresentado no cadastro, para que a pessoa aceite ou não cada documento.
@@ -204,7 +206,7 @@ export function LegalMarkdown(props: { source: string }): ReactNode;
 | 1 | Qualquer documento `approved` aparece e pode ser aceito | Só a versão vigente de cada tipo (`approved`, maior `effective_at <= now`) aparece e pode ser aceita | RF005, ADR-012, ADR-028 |
 | 2 | Texto não existe no banco | Texto integral imutável e coincidente com o digest; linha `approved` sem texto é inválida | ADR-012, ADR-028 |
 | 3 | Passo bloqueado por falta de conteúdo | Com as três versões vigentes, o passo permite ler e aceitar; se faltar alguma, continua bloqueado | RF005 |
-| 4 | Recusa = não marcar o checkbox | “Não aceito” explícito: aviso de que a conta não será ativada, “Rever documentos” ou “Sair do cadastro”; nenhum aceite ou recusa é gravado; o cadastro provisório expira pelo TTL | Decisão de produto 2026-09-28 |
+| 4 | Recusa = não marcar o checkbox | “Não aceito” explícito: aviso de que a conta não será ativada, “Rever documentos” ou “Sair do cadastro”; nenhum aceite ou recusa é gravado; “Sair do cadastro” cancela o cadastro no backend, expirando-o de imediato (atualizado em 2026-09-29 pela ADR-030; antes, expirava pelo TTL) | Decisão de produto 2026-09-28 e 2026-09-29 |
 | 5 | — | Aceites ficam só em memória até a conclusão, nunca em `sessionStorage` | ADR-011, `docs/02` §2 |
 | 6 | — | Se a versão mudar durante o fluxo, a conclusão falha, os documentos são recarregados e os aceites anteriores são descartados | ADR-028 |
 | 7 | — | Fixture de teste continua sem efeito de ativação | ADR-012 |

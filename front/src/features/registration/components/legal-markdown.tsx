@@ -7,10 +7,15 @@ import Markdown, { type Components } from 'react-markdown';
  */
 
 const TITLE_LINE = /^\s*#[ \t]+[^\n]*\n?/;
+/** “**Versão 1.0.0 · Vigente a partir de … · Idioma: …**” plus the rule under it (ADR-031). */
+const VERSION_LINE = /^\s*\*\*Versão [^\n]*\*\*[ \t]*\n(?:\s*---[ \t]*\n)?/;
 
-/** The document title is the step's `h2`; the leading `#` of the body would repeat it. */
-function withoutTitle(source: string): string {
-  return source.replace(TITLE_LINE, '');
+/**
+ * The document title is the dialog heading, and the version line is not shown to the person
+ * (ADR-031). Only the display is trimmed: the stored text and its digest stay untouched.
+ */
+function withoutHeader(source: string): string {
+  return source.replace(TITLE_LINE, '').replace(VERSION_LINE, '');
 }
 
 function safeHref(href: string | undefined): { href: string; external: boolean } | null {
@@ -68,7 +73,7 @@ const COMPONENTS: Components = {
 export function LegalMarkdown({ source }: Readonly<{ source: string }>): ReactNode {
   return (
     <Markdown skipHtml components={COMPONENTS} urlTransform={(url) => url}>
-      {withoutTitle(source)}
+      {withoutHeader(source)}
     </Markdown>
   );
 }

@@ -1,6 +1,6 @@
 import type { z } from 'zod';
 
-import { envelopeSchema, errorReasonDataSchema, type PublicErrorReason } from './contracts';
+import { cancelledDataSchema, envelopeSchema, errorReasonDataSchema, type PublicErrorReason } from './contracts';
 
 /** Browser outcome of one BFF call, already reduced to what the UI may act on (plan §4.5). */
 export type ApiResult<T> =
@@ -64,6 +64,11 @@ export async function callRegistrationApi<T>(
     default:
       return { kind: 'failed' };
   }
+}
+
+/** Gives up the registration: the backend expires it and the BFF drops the continuation cookie (ADR-030). */
+export function cancelRegistration(fetchImpl: typeof fetch = fetch): Promise<ApiResult<{ cancelled: true }>> {
+  return callRegistrationApi({ path: '/api/registration', method: 'DELETE', body: {} }, cancelledDataSchema, fetchImpl);
 }
 
 export function newIdempotencyKey(): string {

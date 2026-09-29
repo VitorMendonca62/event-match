@@ -82,7 +82,7 @@ describe('registration draft storage', () => {
 
   test('clearDraft removes the whole key and tolerates unavailable storage', () => {
     const storage = memoryStorage();
-    writeDraft(storage, { localStep: 'legal' }, T0);
+    writeDraft(storage, { localStep: 'interests' }, T0);
     clearDraft(storage);
     expect(storage.map.size).toBe(0);
 
@@ -98,7 +98,7 @@ describe('registration draft storage', () => {
       },
     };
     expect(readDraft(broken, T0)).toBeUndefined();
-    expect(() => writeDraft(broken, { localStep: 'legal' }, T0)).not.toThrow();
+    expect(() => writeDraft(broken, { localStep: 'interests' }, T0)).not.toThrow();
     expect(() => clearDraft(broken)).not.toThrow();
   });
 });

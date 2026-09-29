@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import { callRegistrationApi } from '../../src/features/registration/api-client';
+import { callRegistrationApi, cancelRegistration } from '../../src/features/registration/api-client';
 import { eligibilityDataSchema } from '../../src/features/registration/contracts';
 
 function reply(status: number, data: object = {}) {
@@ -52,5 +52,29 @@ describe('callRegistrationApi', () => {
     expect(headers['content-type']).toBe('application/json');
     expect(headers['idempotency-key']).toBe('key-0123456789abcdef');
     expect(captured?.credentials).toBe('same-origin');
+  });
+});
+
+describe('cancelRegistration (ADR-030)', () => {
+  test('sends one same-origin DELETE with a JSON body and maps the outcome', async () => {
+    const seen: { url: string; init: RequestInit }[] = [];
+    const fetchImpl = (async (url: string, init: RequestInit) => {
+      seen.push({ url, init });
+      return new Response(JSON.stringify({ data: { cancelled: true }, message: 'x', statusCode: 200 }), { status: 200 });
+    }) as unknown as typeof fetch;
+
+    expect(await cancelRegistration(fetchImpl)).toEqual({ kind: 'ok', data: { cancelled: true } });
+    expect(seen).toHaveLength(1);
+    expect(seen[0]?.url).toBe('/api/registration');
+    expect(seen[0]?.init.method).toBe('DELETE');
+    expect((seen[0]?.init.headers as Record<string, string>)['content-type']).toBe('application/json');
+    expect(seen[0]?.init.body).toBe('{}');
+    expect(seen[0]?.init.credentials).toBe('same-origin');
+  });
+
+  test('an expired session counts as expired and an unreachable backend as failed', async () => {
+    expect((await cancelRegistration(reply(401))).kind).toBe('expired');
+    expect((await cancelRegistration(reply(503))).kind).toBe('failed');
+    expect((await cancelRegistration((async () => { throw new Error('offline'); }) as unknown as typeof fetch)).kind).toBe('failed');
   });
 });

@@ -107,6 +107,7 @@ export const legalDocumentSchema = z.object({
 export const legalDocumentListDataSchema = z.object({ documents: z.array(legalDocumentSchema) });
 export const interestSchema = z.object({ id: z.uuid(), slug: z.string().min(1), label: z.string().min(1) });
 export const interestListDataSchema = z.object({ interests: z.array(interestSchema) });
+export const cancelledDataSchema = z.object({ cancelled: z.literal(true) });
 export const activatedDataSchema = z.object({ status: z.literal('active') });
 export const errorReasonDataSchema = z.object({ reason: z.enum(PUBLIC_ERROR_REASONS).optional() });
 

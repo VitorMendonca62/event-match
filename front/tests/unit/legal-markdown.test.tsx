@@ -18,6 +18,16 @@ describe('LegalMarkdown (ADR-029)', () => {
     expect(html).toContain('<strong');
   });
 
+  test('hides the version line and the rule under it, keeping the rest of the text', () => {
+    const html = render(
+      '# Termos\n\n**Versão 1.0.0 · Vigente a partir de 28 de setembro de 2026 · Idioma: português do Brasil**\n\n---\n\nEstes Termos regulam.\n\n## 1. Objeto\n',
+    );
+    expect(html).not.toMatch(/Versão|Vigente|Idioma/);
+    expect(html).not.toContain('<hr');
+    expect(html).toContain('Estes Termos regulam.');
+    expect(html).toContain('1. Objeto');
+  });
+
   test('renders lists without literal Markdown markers', () => {
     const html = render('# T\n\n- um\n- dois\n\n1. a\n2. b\n');
     expect(html).toContain('<ul');

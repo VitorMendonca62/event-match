@@ -219,7 +219,7 @@ Uma noite neutra levemente fria, uma tinta carmim dominante e o âmbar como segu
 - **Body lead** (400, 1.125rem, 1.625): parágrafo de apresentação e explicação "por que pedimos este dado", até 46–52ch.
 - **Body** (400, 1rem, 1.5): texto corrido e avisos.
 - **Label** (600, 1rem): rótulos de campo e de opção, sempre visíveis acima do campo.
-- **Label de progresso** (Archivo 700, 0.875rem, `0.18em`, caixa alta): "Etapa N de 8", com numerais tabulares.
+- **Label de progresso** (Archivo 700, 0.875rem, `0.18em`, caixa alta): "Etapa N de 7", com numerais tabulares.
 - **Tag** (700, 0.75rem, `0.05em`, caixa alta): selo de estado, como "Em breve".
 
 ### Named Rules
@@ -282,8 +282,12 @@ O cartão de opção (`Choice` em modo card) tem 64px de altura mínima, marcado
 Mensagem de estado com ícone + rótulo oculto para leitor de tela + título + texto; nunca só cor. Tons: `info` (borda `border`), `success`, `warning`, `error` (borda do tom a 50–70% de opacidade) e `blocked` (fundo `card`, cadeado). 16px de raio, borda de 2px, 16px de preenchimento.
 
 ### Navigation
-- **Progress rail:** "Etapa N de 8" em Archivo caixa alta à esquerda, nome da etapa em `muted-foreground` à direita, e oito segmentos em cápsula: concluído 6px `foreground`, atual 12px `primary`, pendente 6px `border`. A altura, não só a cor, marca a etapa atual; transição de 500ms.
+- **Progress rail:** "Etapa N de 7" em Archivo caixa alta à esquerda, nome da etapa em `muted-foreground` à direita, e sete segmentos em cápsula: concluído 6px `foreground`, atual 12px `primary`, pendente 6px `border`. A altura, não só a cor, marca a etapa atual; transição de 500ms.
 - **Cabeçalho do fluxo:** marca pequena à esquerda e ação quiet "Cancelar cadastro" à direita.
+
+### Consent Row e Document Dialog
+- **Consent row:** linha de 64px+ (`surface`, borda 2px `border`; marcada: borda `foreground` e fundo `primary-muted`) com caixa de seleção de 24px e o texto “Li e concordo com os <link>”, em que o nome do documento é um botão sublinhado (decoração `primary` 2px). A caixa nunca marca sozinha: clicar nela abre o documento.
+- **Document dialog:** `<dialog>` nativo, 44rem no máximo, `card` com borda 2px `border`, cabeçalho com o título (Archivo), região de leitura rolável com foco por teclado e rodapé com “Recusar” (secundário) e “Aceitar” (primário). Fundo escurecido sólido (`background` a 85%), sem desfoque. A recusa abre um segundo diálogo (`alertdialog`) com “Rever documentos” e “Cancelar cadastro”. Nenhum deles mostra versão ou vigência.
 
 ### Step Band (signature)
 Faixa carmim de 56px de largura, reta no topo e com base arredondada em 8px, com o número da etapa em dois dígitos (Archivo 900, 1.5rem, tabular) e um traço `foreground` de 20×2px embaixo. Fica colada ao título da etapa e entra com `band-in` (560ms, recorte de 22% na base se desfazendo).

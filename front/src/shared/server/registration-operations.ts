@@ -1,5 +1,6 @@
 import {
   activatedDataSchema,
+  cancelledDataSchema,
   completeRequestSchema,
   confirmContactRequestSchema,
   contactVerificationRequestSchema,
@@ -94,6 +95,18 @@ export const REGISTRATION_OPERATIONS = {
     responseSchema: snapshotDataSchema,
     continuation: 'required',
     idempotency: 'none',
+  },
+  /** The person gives up: the backend expires the registration and revokes the continuation (ADR-030). */
+  cancel: {
+    operation: 'registration.cancel',
+    method: 'DELETE',
+    backendPath: '/registration',
+    internal: true,
+    requestSchema: emptyRequestSchema,
+    responseSchema: cancelledDataSchema,
+    continuation: 'required',
+    idempotency: 'none',
+    onSuccess: 'expire',
   },
   legalDocuments: {
     operation: 'registration.legal-documents',

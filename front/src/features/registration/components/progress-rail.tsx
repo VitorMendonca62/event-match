@@ -2,7 +2,7 @@ import { cn } from '@/shared/ui/cn';
 
 import { STEP_LABELS, STEPS, type Step, stepIndex } from '../flow-machine';
 
-/** Progress told in text (“Etapa 3 de 8”) and by segment height, never by color alone. */
+/** Progress told in text (“Etapa 3 de 7”) and by segment height, never by color alone. */
 export function ProgressRail({ current }: Readonly<{ current: Step }>) {
   const index = stepIndex(current);
   return (

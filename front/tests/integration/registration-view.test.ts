@@ -44,16 +44,23 @@ describe('loadRegistrationView', () => {
     expect(view.interests).toEqual({ status: 'ready', items: [{ id: UUID, label: 'Café' }] });
     expect(view.documents).toEqual({
       status: 'ready',
-      items: [
-        { id: UUID, kind: 'terms', version: '2026-10-01', effectiveAt: '2026-10-01T00:00:00.000Z', content: '# Termos\n\nTexto.' },
-      ],
+      items: [{ id: UUID, kind: 'terms', content: '# Termos\n\nTexto.' }],
     });
     expect(JSON.stringify(view)).not.toContain(TOKEN);
   });
 
-  test('catalogs are deferred before account_incomplete and a 401 marks the session expired', async () => {
+  test('documents load from contact_verified for the password step; interests wait for the account', async () => {
     const early = await loadRegistrationView(TOKEN, { env, fetchImpl: routedBackend('verification_pending') });
     expect(early.documents).toEqual({ status: 'deferred' });
+    expect(early.interests).toEqual({ status: 'deferred' });
+
+    const verified = await loadRegistrationView(TOKEN, { env, fetchImpl: routedBackend('contact_verified') });
+    expect(verified.documents).toMatchObject({ status: 'ready' });
+    expect(verified.interests).toEqual({ status: 'deferred' });
+
+    const inProgress = await loadRegistrationView(TOKEN, { env, fetchImpl: routedBackend('registration_in_progress') });
+    expect(inProgress.documents).toEqual({ status: 'deferred' });
+
     const expired = await loadRegistrationView(TOKEN, { env, fetchImpl: routedBackend(null) });
     expect(expired).toMatchObject({ stage: null, sessionExpired: true });
   });

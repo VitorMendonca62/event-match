@@ -15,7 +15,7 @@ type InterestsStepProps = Pick<StepBaseProps, 'headingRef'> &
     interests: Catalog<InterestOption>;
     selected: readonly string[];
     onSelectedChange: (ids: string[]) => void;
-    onBack: () => void;
+    onBack?: () => void;
     onContinue: () => void;
     onRetry: () => void;
     retrying: boolean;

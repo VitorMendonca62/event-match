@@ -33,7 +33,7 @@ async function fetchDocuments(deps: Deps): Promise<Catalog<LegalDocumentSource>>
   // The text stays on the server: `page.tsx` renders it to elements (`server-serialization`).
   return {
     status: 'ready',
-    items: data.data.documents.map(({ id, kind, version, effectiveAt, content }) => ({ id, kind, version, effectiveAt, content })),
+    items: data.data.documents.map(({ id, kind, content }) => ({ id, kind, content })),
   };
 }
 
@@ -79,10 +79,14 @@ export async function loadRegistrationView(continuation: string | undefined, dep
 
   const { stage, expiresAt, nextResendAt } = data.data;
   const base = { stage, expiresAt, ...(nextResendAt ? { nextResendAt } : {}), sessionExpired: false };
-  if (stage !== 'account_incomplete') {
+  // Documents are accepted in the password step, so they are needed from `contact_verified` on;
+  // interests only once the account exists (`async-defer-await`).
+  const needsDocuments = stage === 'contact_verified' || stage === 'account_incomplete';
+  const needsInterests = stage === 'account_incomplete';
+  if (!needsDocuments) {
     void catalogsPromise;
     return { ...base, documents: DEFERRED, interests: DEFERRED };
   }
   const [documents, interests] = await catalogsPromise;
-  return { ...base, documents, interests };
+  return { ...base, documents, interests: needsInterests ? interests : DEFERRED };
 }

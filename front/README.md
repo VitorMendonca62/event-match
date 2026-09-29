@@ -69,6 +69,10 @@ docker compose -f docker-compose.front.yml up --build
 
 A imagem de produção é multi-stage, executa sem volume de código-fonte e usa usuário sem privilégios de root.
 
-## Documentos legais no cadastro (SDD-011)
+## Documentos legais no cadastro (SDD-011, ADR-031)
 
-O passo de documentos exibe o texto vigente de Termos de Uso, Política de Privacidade e Regras de Convivência, entregue pelo backend em `content` (Markdown). `app/cadastro/page.tsx` renderiza cada texto no servidor com `LegalMarkdown` (`react-markdown`, ADR-029) e envia à ilha cliente só elementos prontos: o Markdown bruto e a biblioteca não entram no bundle do navegador. HTML embutido e imagens são descartados; apenas links `https:` (nova aba, com `rel="noopener noreferrer"`) e `mailto:` ficam ativos. Aceites ficam só em memória. “Não aceito” mostra o aviso, “Rever documentos” devolve o foco ao primeiro texto sem aceite e “Sair do cadastro” limpa o rascunho local e volta a `/`, sem chamar o backend.
+Os aceites ficam na tela da senha. O backend entrega o texto vigente de Termos de Uso, Política de Privacidade e Regras de Convivência em `content` (Markdown); `app/cadastro/page.tsx` renderiza cada texto no servidor com `LegalMarkdown` (`react-markdown`, ADR-029) e envia à ilha cliente só elementos prontos: o Markdown bruto e a biblioteca não entram no bundle do navegador. HTML embutido e imagens são descartados; apenas links `https:` (nova aba, com `rel="noopener noreferrer"`) e `mailto:` ficam ativos.
+
+`TermsConsent` mostra “Li e concordo com os **Termos de Uso**” (e as outras duas linhas), em que o nome do documento abre o texto num `<dialog>` nativo (`components/client/ui/dialog.tsx`) com **Aceitar** e **Recusar**. Aceitar marca a caixa; a caixa sozinha nunca marca (clicar nela abre o documento). Recusar abre o aviso “Sem os três aceites, sua conta não é ativada”, com **Rever documentos** e **Cancelar cadastro**. Versão e vigência não são exibidas. Os aceites ficam só em memória e são enviados na conclusão.
+
+“Cancelar cadastro” (cabeçalho e aviso de recusa) chama `DELETE /api/registration`, que o BFF encaminha ao backend para expirar o cadastro na hora (ADR-030); só depois o rascunho local é apagado e a pessoa volta a `/`. Se o backend estiver indisponível, a pessoa permanece na tela com um aviso e pode tentar de novo.

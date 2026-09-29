@@ -12,8 +12,6 @@ export type InterestOption = Readonly<{ id: string; label: string }>;
 type LegalDocumentMeta = Readonly<{
   id: string;
   kind: LegalDocumentKind;
-  version: string;
-  effectiveAt: string;
 }>;
 
 /** Server-only shape: carries the raw Markdown and never crosses into the client island (ADR-029). */
@@ -36,4 +34,11 @@ export const LEGAL_DOCUMENT_TITLES: Record<LegalDocumentKind, string> = {
   terms: 'Termos de Uso',
   privacy: 'Política de Privacidade',
   community_rules: 'Regras de Convivência',
+};
+
+/** “Li e concordo com <article> <title>”: the title is the link that opens the document (ADR-031). */
+export const LEGAL_DOCUMENT_CONSENT: Record<LegalDocumentKind, { article: string; title: string }> = {
+  terms: { article: 'os', title: LEGAL_DOCUMENT_TITLES.terms },
+  privacy: { article: 'a', title: LEGAL_DOCUMENT_TITLES.privacy },
+  community_rules: { article: 'as', title: LEGAL_DOCUMENT_TITLES.community_rules },
 };

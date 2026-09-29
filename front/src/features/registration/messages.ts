@@ -12,6 +12,8 @@ export const MESSAGES = {
   failed: 'Não conseguimos concluir agora. Verifique sua conexão e tente novamente.',
   invalid: 'Alguns dados não estão no formato esperado. Revise os campos destacados.',
   underage: 'O EventMatch é exclusivo para pessoas com 18 anos ou mais. Nenhum dado foi guardado.',
+  cancelFailed: 'Não conseguimos cancelar agora. Tente novamente em instantes.',
+  consentRequired: 'Aceite os três documentos para continuar.',
   documentsChanged: 'Os documentos foram atualizados. Leia as versões atuais e aceite novamente para continuar.',
   emailVerified: 'E-mail confirmado. Agora escolha sua senha.',
   linkFailed: 'Não foi possível confirmar por este link. Ele pode ter expirado ou já ter sido usado. Use o código enviado ou peça um novo.',

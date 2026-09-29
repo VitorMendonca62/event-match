@@ -8,7 +8,7 @@ import { BrandMark } from '@/components/server/ui/brand-mark';
 import { Button } from '@/components/server/ui/button';
 import { Notice } from '@/components/server/ui/notice';
 
-import { callRegistrationApi } from '../api-client';
+import { callRegistrationApi, cancelRegistration } from '../api-client';
 import { type FlowStage, type RequiredDataRequest, snapshotDataSchema, type VerificationWindow } from '../contracts';
 import { browserSessionStorage, clearDraft, type DraftPatch, readDraft, writeDraft } from '../draft-storage';
 import { nextLocalStep, previousStep, reconcileStep, type Step, stepForStage } from '../flow-machine';
@@ -18,7 +18,6 @@ import { ProgressRail } from './progress-rail';
 import { BirthStep } from './steps/birth-step';
 import { ContactStep } from './steps/contact-step';
 import { InterestsStep } from './steps/interests-step';
-import { LegalStep } from './steps/legal-step';
 import { OtpStep } from './steps/otp-step';
 import { PasswordStep } from './steps/password-step';
 import { RequiredDataStep } from './steps/required-data-step';
@@ -88,7 +87,7 @@ export function RegistrationFlow({ stage: initialStage, expiresAt, nextResendAt,
   useEffect(() => {
     if (initialStage === null) {
       clearDraft(browserSessionStorage());
-      if (notice === 'expired') void fetch('/api/registration', { method: 'DELETE' }).catch(() => undefined);
+      if (notice === 'expired') void cancelRegistration();
     }
     if (window.location.search) window.history.replaceState(null, '', '/cadastro');
   }, [initialStage, notice]);
@@ -154,22 +153,26 @@ export function RegistrationFlow({ stage: initialStage, expiresAt, nextResendAt,
     startRefresh(() => router.refresh());
   }
 
+  /** The backend runs the expiration first; only if it cannot be reached does the person stay (ADR-030). */
   async function cancel() {
-    await fetch('/api/registration', { method: 'DELETE' }).catch(() => undefined);
+    const result = await cancelRegistration();
+    if (result.kind !== 'ok' && result.kind !== 'expired') {
+      setConfirmingCancel(false);
+      setBanner({ tone: 'error', title: 'Não foi possível cancelar', text: MESSAGES.cancelFailed });
+      return;
+    }
     clearDraft(browserSessionStorage());
     router.push('/');
   }
 
   // A version published mid-flow: accepted ids that are no longer offered are dropped and the
-  // person returns to the documents. Adjusted during render because it follows a prop change.
+  // documents must be accepted again. Adjusted during render because it follows a prop change.
   if (documents.status === 'ready' && acceptedDocuments.some((id) => !documents.items.some((item) => item.id === id))) {
     setAcceptedDocuments([]);
-    setStep('legal');
     setBanner({ tone: 'warning', title: 'Documentos atualizados', text: MESSAGES.documentsChanged });
   }
 
   const base = { headingRef, onFailure };
-  const readyDocuments = documents.status === 'ready' ? documents.items : [];
   const readyInterests = interests.status === 'ready' ? interests.items : [];
 
   return (
@@ -187,8 +190,8 @@ export function RegistrationFlow({ stage: initialStage, expiresAt, nextResendAt,
         <div className="mb-8 space-y-4 rounded-2xl border-2 border-warning/60 bg-surface p-5">
           <p className="font-semibold">Cancelar o cadastro?</p>
           <p className="text-muted-foreground">
-            Apagamos o progresso guardado neste navegador e voltamos ao início. Etapas já confirmadas expiram
-            sozinhas.
+            Encerramos o cadastro, descartamos o e-mail e a senha informados e apagamos o progresso guardado neste
+            navegador. Para participar depois, é preciso começar de novo.
           </p>
           <div className="flex flex-wrap gap-3">
             <Button variant="secondary" onClick={cancel}>
@@ -232,11 +235,23 @@ export function RegistrationFlow({ stage: initialStage, expiresAt, nextResendAt,
             {...base}
             window={verification}
             onWindow={setVerification}
-            onVerified={() => advance('password', 'contact_verified')}
+            onVerified={() => {
+              advance('password', 'contact_verified');
+              refreshCatalogs();
+            }}
           />
         ) : null}
         {step === 'password' ? (
-          <PasswordStep {...base} onSaved={(data) => advance('required_data', data.stage)} />
+          <PasswordStep
+            {...base}
+            documents={documents}
+            accepted={acceptedDocuments}
+            onAcceptedChange={setAcceptedDocuments}
+            onCancel={cancel}
+            onRetry={refreshCatalogs}
+            retrying={refreshing}
+            onSaved={(data) => advance('required_data', data.stage)}
+          />
         ) : null}
         {step === 'required_data' ? (
           <RequiredDataStep
@@ -250,24 +265,9 @@ export function RegistrationFlow({ stage: initialStage, expiresAt, nextResendAt,
             onSaved={(data, saved) => {
               setProfile(saved);
               persist(saved);
-              advance('legal', data.stage);
+              advance('interests', data.stage);
               refreshCatalogs();
             }}
-          />
-        ) : null}
-        {step === 'legal' ? (
-          <LegalStep
-            headingRef={headingRef}
-            documents={documents}
-            accepted={acceptedDocuments}
-            onAcceptedChange={setAcceptedDocuments}
-            onContinue={() => goTo(nextLocalStep('legal') ?? 'interests')}
-            onExit={() => {
-              clearDraft(browserSessionStorage());
-              router.push('/');
-            }}
-            onRetry={refreshCatalogs}
-            retrying={refreshing}
           />
         ) : null}
         {step === 'interests' ? (
@@ -279,7 +279,6 @@ export function RegistrationFlow({ stage: initialStage, expiresAt, nextResendAt,
               setInterestIds(ids);
               persist({ interestIds: ids });
             }}
-            onBack={() => goTo(previousStep('interests') ?? 'legal')}
             onContinue={() => goTo(nextLocalStep('interests') ?? 'review')}
             onRetry={refreshCatalogs}
             retrying={refreshing}
@@ -290,7 +289,12 @@ export function RegistrationFlow({ stage: initialStage, expiresAt, nextResendAt,
             {...base}
             profile={profile}
             interests={readyInterests.filter((interest) => interestIds.includes(interest.id))}
-            documents={readyDocuments.filter((document) => acceptedDocuments.includes(document.id))}
+            documents={documents}
+            accepted={acceptedDocuments}
+            onAcceptedChange={setAcceptedDocuments}
+            onCancel={cancel}
+            onRetry={refreshCatalogs}
+            retrying={refreshing}
             onBack={() => goTo(previousStep('review') ?? 'interests')}
             onActivationRefused={refreshCatalogs}
             onActivated={() => {

@@ -24,13 +24,7 @@ function toDocumentViews(documents: Catalog<LegalDocumentSource>): Catalog<Legal
   if (documents.status !== 'ready') return documents;
   return {
     status: 'ready',
-    items: documents.items.map(({ id, kind, version, effectiveAt, content }) => ({
-      id,
-      kind,
-      version,
-      effectiveAt,
-      body: <LegalMarkdown source={content} />,
-    })),
+    items: documents.items.map(({ id, kind, content }) => ({ id, kind, body: <LegalMarkdown source={content} /> })),
   };
 }
 

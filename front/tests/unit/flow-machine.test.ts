@@ -10,7 +10,7 @@ describe('flow machine', () => {
       'otp',
       'password',
       'required_data',
-      'legal',
+      'interests',
       null,
     ]);
     expect(stepForStage(null)).toBe('birth');
@@ -24,16 +24,14 @@ describe('flow machine', () => {
   test('local substeps are kept only inside account_incomplete', () => {
     expect(reconcileStep('account_incomplete', 'interests')).toBe('interests');
     expect(reconcileStep('account_incomplete', 'review')).toBe('review');
-    expect(reconcileStep('account_incomplete', 'password')).toBe('legal');
+    expect(reconcileStep('account_incomplete', 'password')).toBe('interests');
   });
 
   test('back navigation never reverts a persisted transition', () => {
     expect(previousStep('review')).toBe('interests');
-    expect(previousStep('interests')).toBe('legal');
-    for (const step of ['birth', 'contact', 'otp', 'password', 'required_data', 'legal'] as const) {
+    for (const step of ['birth', 'contact', 'otp', 'password', 'required_data', 'interests'] as const) {
       expect(previousStep(step)).toBeNull();
     }
-    expect(nextLocalStep('legal')).toBe('interests');
     expect(nextLocalStep('interests')).toBe('review');
     expect(nextLocalStep('review')).toBeNull();
   });

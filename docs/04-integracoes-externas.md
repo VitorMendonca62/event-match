@@ -49,6 +49,7 @@ Prefixo `/api/v1` (ADR-020). Toda rota de `/api/v1/registration` exige `X-EventM
 | `PUT /api/v1/registration/password` | `{ password, passwordConfirmation }` | `200 { stage, expiresAt }`; rotaciona | Bearer, `Idempotency-Key`; `contact_verified` |
 | `PUT /api/v1/registration/required-data` | `{ displayName, region, usageIntents[] }` | `200 { stage, expiresAt }`; rotaciona | Bearer, `Idempotency-Key`; `registration_in_progress` |
 | `GET /api/v1/registration` | — | `200 { stage, expiresAt, nextResendAt? }` | Bearer atual (o anterior não serve) |
+| `DELETE /api/v1/registration` | — | `200 { cancelled: true }`: expira o cadastro provisório, anula dados retidos, revoga a continuação (ADR-030); `401` para token inválido, revogado ou rotacionado | continuação + credencial do BFF |
 | `GET /api/v1/registration/legal-documents?locale=pt-BR` | — | `200 { documents[] }` com `id`, `kind`, `version`, `locale`, `effectiveAt` e `content` (Markdown sem frontmatter); só a versão vigente `approved` de cada tipo (ADR-028); `Cache-Control: no-store` | apenas credencial do BFF |
 | `POST /api/v1/registration/complete` | `{ birthDate, documentIds[], interestIds[] }` | `200 { status: 'active' }`; revoga a sessão | Bearer, `Idempotency-Key`; `account_incomplete` |
 | `GET /api/v1/catalog/interests?locale=pt-BR` | — | `200 { interests[] }` ativos, ordem estável | pública |
@@ -74,7 +75,7 @@ O navegador conversa apenas com a mesma origem. Cada Route Handler delega a exat
 | `GET /api/registration/contact-verification/confirm-link?token=…` | `POST …/confirm-link` | `303` para `/cadastro?email-verificado=1|0`, `Referrer-Policy: no-referrer`; cookie só em sucesso; o token nunca volta ao navegador nem aos logs |
 | `PUT /api/registration/password` · `PUT /api/registration/required-data` | mesmas rotas | rotacionam o cookie |
 | `GET /api/registration` | `GET /api/v1/registration` | snapshot mínimo |
-| `DELETE /api/registration` | — | cancelamento local: expira o cookie (não há revogação server-side no contrato v1) |
+| `DELETE /api/registration` | `DELETE /api/v1/registration` | cancelamento: expira o cadastro no backend e o cookie (ADR-030) |
 | `GET /api/registration/legal-documents` | `GET …/legal-documents?locale=pt-BR` | — (propaga `content`; a página `/cadastro` renderiza o Markdown no servidor, ADR-029) |
 | `POST /api/registration/complete` | `POST …/complete` | expira o cookie em sucesso |
 | `GET /api/catalog/interests` | `GET /api/v1/catalog/interests?locale=pt-BR` | pública, sem credencial interna |

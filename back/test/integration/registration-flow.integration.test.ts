@@ -11,6 +11,7 @@ import { ProfilesModule } from '../../src/modules/profiles/profiles.module';
 import type { FlowCredentials } from '../../src/modules/registration/application/services/registration-flow-gate';
 import { CheckRegistrationEligibility } from '../../src/modules/registration/application/use-cases/check-registration-eligibility.use-case';
 import { ExpireStaleRegistrations } from '../../src/modules/registration/application/use-cases/expire-stale-registrations.use-case';
+import { CancelRegistration } from '../../src/modules/registration/application/use-cases/cancel-registration.use-case';
 import { ListCurrentLegalDocuments } from '../../src/modules/registration/application/use-cases/list-current-legal-documents.use-case';
 import { RegistrationFlow } from '../../src/modules/registration/application/use-cases/registration-flow.use-case';
 import { REGISTRATION_TELEMETRY_PORT } from '../../src/modules/registration/domain/ports/outbound/registration-telemetry.port';
@@ -60,6 +61,7 @@ async function createNode(clock: FakeClock, delivery: CapturingDelivery, telemet
     expireStale: module.get(ExpireStaleRegistrations),
     interests: module.get(ListActiveInterests),
     documents: module.get(ListCurrentLegalDocuments),
+    cancel: module.get(CancelRegistration),
   };
 }
 
@@ -180,6 +182,31 @@ describe('registration HTTP flow (PostgreSQL integration)', () => {
       }
       // Accepted documents are referenced forever; retiring them keeps later reads empty.
       await query(`update terms_document set status = 'retired' where id = any($1::uuid[])`, [DOCUMENT_IDS]);
+    });
+
+    test('cancelling after the password expires the registration and frees the contact (ADR-030)', async () => {
+      const contact = 'cancel@example.test';
+      const password = await nodeA.flow.choosePassword(as(await verified(nodeA, contact)), { password: PASSWORD });
+
+      // Another replica handles the cancellation: state lives only in PostgreSQL.
+      await nodeB.cancel.execute(password.continuation!);
+
+      const [registration] = await query<{ status: string; contact_hash: Buffer | null; password_hash: string | null }>(
+        `select r.status, r.contact_hash, r.password_hash from registration r
+         join registration_flow_session s on s.registration_id = r.id
+         where s.revoked_at is not null and s.stage = 'registration_in_progress'`,
+      );
+      expect(registration).toEqual({ status: 'expired', contact_hash: null, password_hash: null });
+      const [session] = await query<{ token_digest: Buffer | null; revoked_at: Date | null }>(
+        `select token_digest, revoked_at from registration_flow_session where stage = 'registration_in_progress' and revoked_at is not null`,
+      );
+      expect(session?.token_digest).toBeNull();
+      expect(session?.revoked_at).not.toBeNull();
+      await expect(nodeA.flow.snapshot(password.continuation!)).rejects.toMatchObject({ code: 'FLOW_UNAUTHORIZED' });
+
+      // The same e-mail can start over.
+      const again = await verified(nodeA, contact);
+      await expect(nodeA.flow.choosePassword(as(again), { password: PASSWORD })).resolves.toBeDefined();
     });
 
     test('concurrent replicas with the same key produce one registration', async () => {

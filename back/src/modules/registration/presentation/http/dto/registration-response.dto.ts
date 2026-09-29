@@ -71,6 +71,11 @@ export class ActivatedDto {
   readonly status!: 'active';
 }
 
+export class CancelledDto {
+  @ApiProperty({ example: true })
+  readonly cancelled!: true;
+}
+
 export class ErrorReasonDto {
   @ApiPropertyOptional({
     enum: [
@@ -106,6 +111,7 @@ export const LegalDocumentListResponseDto = apiEnvelope(
   'LegalDocumentListResponseDto',
   HttpStatus.OK,
 );
+export const CancelledResponseDto = apiEnvelope(CancelledDto, 'CancelledResponseDto', HttpStatus.OK);
 export const ActivatedResponseDto = apiEnvelope(ActivatedDto, 'ActivatedResponseDto', HttpStatus.OK);
 export const UnprocessableRegistrationResponseDto = apiEnvelope(
   ErrorReasonDto,

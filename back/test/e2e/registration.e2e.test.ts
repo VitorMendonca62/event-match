@@ -246,6 +246,36 @@ describe('Registration API v1 (e2e, container + fake Brevo)', () => {
     });
   });
 
+  test('cancelling after the password answers 200, revokes the continuation and frees the contact (ADR-030)', async () => {
+    const contact = unique('cancela');
+    let token = await eligible();
+    expect((await requestCode(token, contact)).status).toBe(202);
+    const confirmed = await call('POST', '/api/v1/registration/contact-verification/confirm', {
+      token,
+      key: key(),
+      body: { otp: await lastOtp(contact) },
+    });
+    const password = await call('PUT', '/api/v1/registration/password', {
+      token: confirmed.continuation!,
+      key: key(),
+      body: { password: PASSWORD, passwordConfirmation: PASSWORD },
+    });
+    token = password.continuation!;
+
+    const cancelled = await call('DELETE', '/api/v1/registration', { token });
+    expect(cancelled.status).toBe(200);
+    expect(cancelled.body).toEqual({ data: { cancelled: true }, message: 'Cadastro cancelado.', statusCode: 200 });
+    expect(cancelled.cacheControl).toBe('no-store');
+
+    expect((await call('GET', '/api/v1/registration', { token })).status).toBe(401);
+    expect((await call('DELETE', '/api/v1/registration', { token })).status).toBe(401);
+    expect((await call('DELETE', '/api/v1/registration', { token: null })).status).toBe(401);
+    const [row] = (await pool.query(
+      `select status, contact_hash is null as no_contact from registration order by last_updated_at desc limit 1`,
+    )).rows;
+    expect(row).toEqual({ status: 'expired', no_contact: true });
+  });
+
   test('a minor receives no continuation and no row is written', async () => {
     const [before] = (await pool.query(`select count(*)::int as count from registration_flow_session`)).rows;
     const reply = await call('POST', '/api/v1/registration/eligibility', { body: { birthDate: '2015-01-01' } });

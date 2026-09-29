@@ -7,6 +7,7 @@ import { VerificationDispatcher } from '../../src/modules/registration/applicati
 import { CheckRegistrationEligibility } from '../../src/modules/registration/application/use-cases/check-registration-eligibility.use-case';
 import { CompleteRegistration } from '../../src/modules/registration/application/use-cases/complete-registration.use-case';
 import { ExpireStaleRegistrations } from '../../src/modules/registration/application/use-cases/expire-stale-registrations.use-case';
+import { CancelRegistration } from '../../src/modules/registration/application/use-cases/cancel-registration.use-case';
 import { ListCurrentLegalDocuments } from '../../src/modules/registration/application/use-cases/list-current-legal-documents.use-case';
 import { RegistrationFlow } from '../../src/modules/registration/application/use-cases/registration-flow.use-case';
 import { RequestContactVerification } from '../../src/modules/registration/application/use-cases/request-contact-verification.use-case';
@@ -601,6 +602,7 @@ export function createRegistrationHarness() {
     start,
     saveRequiredData,
     complete,
+    cancel: new CancelRegistration(uow, sessions, tokens, registrations, accounts, profiles, clock, telemetry),
     expireStale: new ExpireStaleRegistrations(uow, registrations, accounts, profiles, sessions, clock, telemetry),
     eligibility: new CheckRegistrationEligibility(uow, sessions, tokens, ids, clock, telemetry),
     legalDocuments: new ListCurrentLegalDocuments(uow, terms, clock),

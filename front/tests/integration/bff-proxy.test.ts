@@ -117,6 +117,50 @@ describe('registration BFF proxy', () => {
     expect(completed.headers.get('set-cookie')).toContain('Max-Age=0');
   });
 
+  test('cancel is one DELETE to the backend with the continuation, then expires the cookie (ADR-030)', async () => {
+    const backend = fakeBackend(200, { cancelled: true });
+    const response = await proxyRegistration(
+      browserRequest('/api/registration', { method: 'DELETE', body: {}, cookie }),
+      OPS.cancel,
+      { env, fetchImpl: backend.fetchImpl, log: silent },
+    );
+
+    expect(response.status).toBe(200);
+    expect(backend.calls).toHaveLength(1);
+    const { url, init } = backend.calls[0]!;
+    expect(url).toBe('http://backend.test/api/v1/registration');
+    expect(init.method).toBe('DELETE');
+    expect(init.headers.get('authorization')).toBe(`Bearer ${TOKEN}`);
+    expect(init.headers.get('x-eventmatch-bff-token')).toBe(SECRET);
+    expect(response.headers.get('set-cookie')).toContain('Max-Age=0');
+    expect(await response.json()).toMatchObject({ data: { cancelled: true } });
+  });
+
+  test('cancel without a cookie or from a foreign origin never reaches the backend; an upstream 401 clears the cookie', async () => {
+    const backend = fakeBackend(200, { cancelled: true });
+    const noCookie = await proxyRegistration(
+      browserRequest('/api/registration', { method: 'DELETE', body: {} }),
+      OPS.cancel,
+      { env, fetchImpl: backend.fetchImpl, log: silent },
+    );
+    const foreign = await proxyRegistration(
+      browserRequest('/api/registration', { method: 'DELETE', body: {}, cookie, headers: { origin: 'https://evil.test' } }),
+      OPS.cancel,
+      { env, fetchImpl: backend.fetchImpl, log: silent },
+    );
+    expect(noCookie.status).toBe(401);
+    expect(foreign.status).toBe(403);
+    expect(backend.calls).toHaveLength(0);
+
+    const stale = await proxyRegistration(
+      browserRequest('/api/registration', { method: 'DELETE', body: {}, cookie }),
+      OPS.cancel,
+      { env, fetchImpl: fakeBackend(401).fetchImpl, log: silent },
+    );
+    expect(stale.status).toBe(401);
+    expect(stale.headers.get('set-cookie')).toContain('Max-Age=0');
+  });
+
   test('translates errors conservatively: public 422 reasons only, 5xx and timeouts become 503', async () => {
     const weak = await proxyRegistration(
       browserRequest('/api/registration/password', {
