@@ -1,6 +1,6 @@
 # ADR-032: E2E do frontend com Playwright executado pelo Bun
 
-- **Status:** proposed
+- **Status:** accepted
 - **Data:** 2026-09-29
 - **Decisores:** frontend, backend e qualidade
 - **Relacionado:** `specs/sdd-012-e2e-frontend-cadastro/tasks.md`, SDD-010 §7, SDD-011 §7, ADR-022, ADR-023, ADR-027

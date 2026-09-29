@@ -283,7 +283,7 @@ Frontend integração:
 - `registration-view` e BFF contra backend fake: `content` propagado, resposta inválida → `unavailable`.
 - `page.tsx` entrega `body` sem texto bruto.
 
-E2E full-stack (runner descartável):
+E2E full-stack (runner descartável) — **coberto pela SDD-012** em `front/tests/e2e/` (`bun run --cwd front test:e2e`):
 
 - Aceite total → `/cadastro/concluido`.
 - Recusa → aviso → cancelar cadastro (ADR-030).

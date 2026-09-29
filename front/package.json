@@ -9,7 +9,8 @@
     "start": "bun run validate:env && next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "bun test"
+    "test": "bun test",
+    "test:e2e": "../scripts/test-front-e2e.sh"
   },
   "dependencies": {
     "@tanstack/react-query": "5.103.2",
@@ -20,6 +21,8 @@
     "zod": "4.6.5"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.63.0",
     "@tailwindcss/postcss": "4.3.3",
     "@types/bun": "1.4.2",
     "@types/node": "26.6.2",

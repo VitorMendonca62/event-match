@@ -12,6 +12,8 @@ Conteúdo dos documentos legais e aceite ou recusa no cadastro (SDD-011; ADR-028
 - Testes: unidade (`LegalDocumentText`, caso de uso, controller, renderização do Markdown, estados de aceite e recusa), integração PostgreSQL (bytes, digest, `CHECK`s, trigger, vigência) e E2E (lista, recusa sem documento vigente, troca de versão).
 - `baseUrl` do cliente Brevo reativado em `brevo-verification-delivery.adapter.ts`: o E2E volta a receber o OTP e o link pelo Brevo falso e passa integralmente.
 - `react-markdown` fixado em `10.1.0` e `LegalMarkdown` restrito à lista de elementos e ao `urlTransform` da ADR-029.
+- Acessibilidade: novo token `--primary-foreground` (`#ffffff`, 4,7:1 sobre `--primary`; o `#fafafa` dava exatamente 4,5:1 e o axe no Firefox o reprovava) para o texto do botão primário (`DESIGN.md`, `.impeccable/design.json`). O `Dialog` ganhou `returnFocus`: ao fechar um documento reaberto por “Rever documentos”, o foco volta ao link do documento em vez de se perder.
+- E2E full-stack do cadastro no navegador (SDD-012; ADR-032), só ferramentas de desenvolvimento e testes: `@playwright/test` `1.63.0` e `@axe-core/playwright` `4.13.0`; `bun run --cwd front test:e2e` (`scripts/test-front-e2e.sh`) em Chromium desktop e móvel e Firefox, mais o projeto `destructive`; `FRONTEND_PUBLIC_URL` parametrizável em `docker-compose.back.test.yml`; roteiro manual de leitor de tela em `specs/sdd-012-e2e-frontend-cadastro/leitor-de-tela.md`.
 
 ## 0.10.0 — 2026-09-27
 

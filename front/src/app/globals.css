@@ -11,6 +11,8 @@
   --primary-hover: #fb3c5a;
   --primary-active: #be123c;
   --primary-muted: rgba(225, 29, 72, 0.15);
+  /* Text on solid primary surfaces: #fafafa is exactly 4.5:1 on --primary, #ffffff is 4.7:1. */
+  --primary-foreground: #ffffff;
 
   --foreground: #fafafa;
   --muted-foreground: #a1a1aa;
@@ -39,6 +41,7 @@
   --color-primary-hover: var(--primary-hover);
   --color-primary-active: var(--primary-active);
   --color-primary-muted: var(--primary-muted);
+  --color-primary-foreground: var(--primary-foreground);
   --color-foreground: var(--foreground);
   --color-muted-foreground: var(--muted-foreground);
   --color-disabled: var(--disabled);

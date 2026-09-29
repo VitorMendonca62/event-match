@@ -38,6 +38,7 @@ Ainda não existem manifests. Estes são os comandos-alvo e devem ser confirmado
 | `bun run --cwd front test` | Testes do frontend. | Durante a implementação e antes de PR. |
 | `bun run --cwd back test` | Testes unitários do backend. | Durante a implementação e antes de PR. |
 | `bun run --cwd back test:e2e` | Testes E2E da API. | Antes de PR. |
+| `bun run --cwd front test:e2e` | E2E do cadastro em navegador real (Playwright; Docker, `back/.env.test.local` e `bunx playwright install chromium firefox`). | Antes de PR que altere o fluxo do frontend. |
 | `bun run --cwd front lint` | Lint do frontend. | Após alterações. |
 | `bun run --cwd back lint` | Lint do backend. | Após alterações. |
 | `bun run --cwd front typecheck` | Checagem TypeScript do frontend. | Após mudanças de contrato. |
@@ -259,7 +260,7 @@ Nunca exponha segredos. Cite arquivos e linhas. Preserve alterações do usuári
 ## 10. Proibições
 
 - Não versionar `.env`, tokens, credenciais, certificados ou dados sensíveis.
-- Não acessar PostgreSQL pelo frontend.
+- Não acessar PostgreSQL pelo frontend. Exceção única (ADR-032): o suporte de E2E em `front/tests/e2e/support/` pode acessar o PostgreSQL descartável criado pelo runner (`E2E_DATABASE_URL`); nunca `front/src/` nem outro banco.
 - Não colocar regras de domínio em controllers, DTOs, ORM entities ou Route Handlers.
 - Não introduzir npm/pnpm/yarn sem ADR.
 - Não commitar código sem testes nem ignorar lint/typecheck sem justificativa.

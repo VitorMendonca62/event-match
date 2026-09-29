@@ -22,6 +22,11 @@ type TermsConsentProps = Readonly<{
   retrying: boolean;
 }>;
 
+/** DOM id of the link that opens a document; the dialog hands focus back to it when it closes. */
+function consentLinkId(documentId: string): string {
+  return `consent-link-${documentId}`;
+}
+
 /** True when the three documents exist with text, so the person can actually read and accept them. */
 export function documentsReady(documents: Catalog<LegalDocumentView>): boolean {
   return (
@@ -83,6 +88,7 @@ export function TermsConsent({ documents, accepted, onAcceptedChange, onCancel, 
           return (
             <ConsentRow
               key={kind}
+              documentId={document.id}
               kind={kind}
               checked={accepted.includes(document.id)}
               fixture={document.fixture}
@@ -122,12 +128,14 @@ export function TermsConsent({ documents, accepted, onAcceptedChange, onCancel, 
 }
 
 function ConsentRow({
+  documentId,
   kind,
   checked,
   fixture,
   onOpen,
   onUncheck,
 }: Readonly<{
+  documentId: string;
   kind: (typeof LEGAL_DOCUMENT_KINDS)[number];
   checked: boolean;
   fixture?: boolean;
@@ -166,6 +174,7 @@ function ConsentRow({
         Li e concordo com {article}{' '}
         <button
           type="button"
+          id={consentLinkId(documentId)}
           onClick={onOpen}
           className="rounded-sm font-bold text-foreground underline decoration-primary decoration-2 underline-offset-4 hover:text-primary-hover focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-warning"
         >
@@ -196,9 +205,15 @@ function DocumentDialog({
 }>) {
   const id = useId();
   const { title } = LEGAL_DOCUMENT_CONSENT[document.kind];
+  const documentId = document.id;
   if (!document.body) return null;
   return (
-    <Dialog open={open} onClose={onClose} labelledBy={`${id}-title`}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      labelledBy={`${id}-title`}
+      returnFocus={() => globalThis.document.getElementById(consentLinkId(documentId))}
+    >
       <header className="border-b-2 border-border px-5 py-4 sm:px-6">
         <h2 id={`${id}-title`} className="font-display text-xl font-bold">
           {title}

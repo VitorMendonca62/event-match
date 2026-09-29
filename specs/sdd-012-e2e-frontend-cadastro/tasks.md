@@ -3,7 +3,7 @@
 - **Slug:** e2e-frontend-cadastro
 - **Autor do plano:** Code-Planner (SDD)
 - **Data:** 2026-09-29
-- **Status:** draft
+- **Status:** ready
 - **Versão-alvo:** 0.11.0 (ainda não publicada; só testes e ferramentas de desenvolvimento)
 - **Tipo:** chore
 - **Impacto público:** none
@@ -68,7 +68,7 @@ scripts/test-front-e2e.sh
 
 | Decisão | ADR | Status | Razão |
 |---|---|---|---|
-| Playwright + axe como ferramental E2E, executado pelo Bun; Chromium e Firefox; Next no host com `NODE_ENV=test`; isolamento por `Bun.SQL` no banco descartável, com exceção explícita no AGENTS.md §10 | `docs/adrs/ADR-032-e2e-do-frontend-com-playwright-sob-bun.md` | proposed | Novas dependências e novo runner. |
+| Playwright + axe como ferramental E2E, executado pelo Bun; Chromium e Firefox; Next no host com `NODE_ENV=test`; isolamento por `Bun.SQL` no banco descartável, com exceção explícita no AGENTS.md §10 | `docs/adrs/ADR-032-e2e-do-frontend-com-playwright-sob-bun.md` | accepted | Novas dependências e novo runner. |
 
 Todo ADR necessário deve estar `accepted` antes da implementação.
 
@@ -174,16 +174,16 @@ Rollout: só desenvolvimento. Rollback: remover dependências, configuração, s
 
 ## 9. Perguntas em Aberto (bloqueantes)
 
-- [ ] Aceitar a ADR-032 (Playwright + axe, Chromium e Firefox, Next no host, `Bun.SQL` no suporte com exceção no AGENTS.md §10)?
+- [x] Aceitar a ADR-032 (Playwright + axe, Chromium e Firefox, Next no host, `Bun.SQL` no suporte com exceção no AGENTS.md §10)? **Aceita em 2026-09-29.**
 - [x] Manter o cenário 11 (documentos ausentes) no projeto `destructive` ou deixá-lo só na integração do BFF? **Decidido em 2026-09-29: manter no projeto `destructive`, que roda por último.**
 
 ## 10. Checklist de Conformidade
 
 - [x] Decisões citam `docs/` e ADRs.
-- [x] Um ADR `proposed` foi criado para cada decisão material (ADR-032).
+- [x] Um ADR foi criado para cada decisão material (ADR-032, `accepted` em 2026-09-29).
 - [x] Nenhum código de produção foi escrito.
 - [x] Contratos front/back, OpenAPI e PostgreSQL estão explícitos (sem mudança).
 - [x] Performance, segurança e observabilidade foram tratadas.
 - [x] `vercel-react-best-practices` e `nestjs-expert` foram aplicadas conforme o escopo (sem mudança de runtime).
 - [x] Testes, migration e rollback estão planejados (sem migration).
-- [ ] Perguntas em aberto foram exauridas.
+- [x] Perguntas em aberto foram exauridas.

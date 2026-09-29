@@ -44,7 +44,7 @@ Inclui:
 - Caminho **code-led** por decisão do usuário: sem geração de imagem nem navegador no ambiente na data da decisão, o comp `.impeccable/mocks/decision/cadastro-convite-civico.png` passou de contrato espacial a referência de crítica. A ilustração do hero é um slot vetorial geométrico substituível (`front/src/components/server/city-poster-art.tsx`) até existir asset aprovado. Brief e contrato de direção em `front/.impeccable/surfaces/front-src-app-cadastro-page-tsx.md`.
 - Estilos com Tailwind CSS v4 conforme ADR-027; elementos repetidos extraídos para `front/src/components/server/ui/` e `front/src/features/registration/components/`.
 - Verificação visual: uma rodada desktop 1440 / mobile 390 da jornada completa contra backend fake, uma rodada de correção e uma confirmação; capturas em `.impeccable/review/`. As etapas de interesses e revisão não são alcançáveis em execução enquanto o contrato não publicar conteúdo jurídico aprovado; ficam cobertas por testes de renderização.
-- Pendentes desta task: runner E2E full-stack do frontend (`front/tests/e2e/`) com PostgreSQL descartável e revisão com leitor de tela real. O E2E do backend (`bun run --cwd back test:e2e`) passa integralmente desde 2026-09-29, após reativar o `baseUrl` do cliente Brevo.
+- E2E full-stack do frontend: **resolvido** pela SDD-012 (`bun run --cwd front test:e2e`; Playwright em Chromium desktop e móvel e Firefox, PostgreSQL descartável e Brevo falso). **Pendente:** a revisão com leitor de tela real (Orca + Firefox); o roteiro está em `specs/sdd-012-e2e-frontend-cadastro/leitor-de-tela.md` e precisa ser executado por uma pessoa.
 
 ### 2.1 Direção visual confirmada — Convite Cívico
 

@@ -12,7 +12,7 @@ const BASE =
 
 const VARIANTS: Record<Variant, string> = {
   primary:
-    'bg-primary text-foreground hover:bg-primary-hover active:bg-primary-active active:scale-[0.99] disabled:bg-card disabled:text-disabled aria-disabled:bg-card aria-disabled:text-disabled',
+    'bg-primary text-primary-foreground hover:bg-primary-hover active:bg-primary-active active:scale-[0.99] disabled:bg-card disabled:text-disabled aria-disabled:bg-card aria-disabled:text-disabled',
   secondary:
     'border-2 border-border bg-transparent text-foreground hover:border-muted-foreground active:bg-card disabled:text-disabled disabled:hover:border-border',
   quiet:

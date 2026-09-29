@@ -11,6 +11,12 @@ type DialogProps = Readonly<{
   labelledBy: string;
   describedBy?: string;
   role?: 'dialog' | 'alertdialog';
+  /**
+   * Where focus goes once the dialog closes. The browser restores focus to the control that was
+   * focused at `showModal()`, which is wrong when another dialog reopens this one (SDD-012).
+   * An inert or missing target is a no-op, so a follow-up dialog keeps the focus it just took.
+   */
+  returnFocus?: () => HTMLElement | null;
   className?: string;
   children: ReactNode;
 }>;
@@ -20,7 +26,7 @@ type DialogProps = Readonly<{
  * Esc and restores focus to the control that opened it. The element is only synchronized with
  * `open`, so the parent stays the single source of truth.
  */
-export function Dialog({ open, onClose, labelledBy, describedBy, role = 'dialog', className, children }: DialogProps) {
+export function Dialog({ open, onClose, labelledBy, describedBy, role = 'dialog', returnFocus, className, children }: DialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -36,7 +42,10 @@ export function Dialog({ open, onClose, labelledBy, describedBy, role = 'dialog'
       role={role}
       aria-labelledby={labelledBy}
       aria-describedby={describedBy}
-      onClose={onClose}
+      onClose={() => {
+        onClose();
+        returnFocus?.()?.focus();
+      }}
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}

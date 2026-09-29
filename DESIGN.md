@@ -10,6 +10,7 @@ colors:
   primary-hover: "#fb3c5a"
   primary-active: "#be123c"
   primary-muted: "rgba(225, 29, 72, 0.15)"
+  primary-foreground: "#ffffff"
   foreground: "#fafafa"
   muted-foreground: "#a1a1aa"
   disabled: "#71717a"
@@ -80,17 +81,17 @@ spacing:
 components:
   button-primary:
     backgroundColor: "{colors.primary}"
-    textColor: "{colors.foreground}"
+    textColor: "{colors.primary-foreground}"
     typography: "{typography.title}"
     rounded: "{rounded.full}"
     padding: "0 20px 0 32px"
     height: "56px"
   button-primary-hover:
     backgroundColor: "{colors.primary-hover}"
-    textColor: "{colors.foreground}"
+    textColor: "{colors.primary-foreground}"
   button-primary-active:
     backgroundColor: "{colors.primary-active}"
-    textColor: "{colors.foreground}"
+    textColor: "{colors.primary-foreground}"
   button-primary-disabled:
     backgroundColor: "{colors.card}"
     textColor: "{colors.disabled}"
