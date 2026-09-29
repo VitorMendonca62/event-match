@@ -38,6 +38,7 @@ Ainda não existem manifests. Estes são os comandos-alvo e devem ser confirmado
 | `bun run --cwd front test` | Testes do frontend. | Durante a implementação e antes de PR. |
 | `bun run --cwd back test` | Testes unitários do backend. | Durante a implementação e antes de PR. |
 | `bun run --cwd back test:e2e` | Testes E2E da API. | Antes de PR. |
+| `bun run --cwd front test:e2e` | E2E do cadastro em navegador real (Playwright; Docker, `back/.env.test.local` e `bunx playwright install chromium firefox`). | Antes de PR que altere o fluxo do frontend. |
 | `bun run --cwd front lint` | Lint do frontend. | Após alterações. |
 | `bun run --cwd back lint` | Lint do backend. | Após alterações. |
 | `bun run --cwd front typecheck` | Checagem TypeScript do frontend. | Após mudanças de contrato. |
@@ -174,6 +175,10 @@ specs/
 ### Next.js obrigatório
 
 - Use [`vercel-react-best-practices`](/home/vitor/.agents/skills/vercel-react-best-practices/SKILL.md).
+- Use [`impeccable`](/home/vitor/.agents/skills/impeccable/SKILL.md) em todo planejamento, criação, alteração, revisão ou refinamento de interfaces do frontend.
+- Antes do primeiro trabalho visual da sessão, carregue o contexto pelo launcher da skill. Para uma superfície nova sem `PRODUCT.md`, execute o fluxo `init` e depois `new-work`; não edite UI antes de confirmar a direção visual e registrar o surface brief exigido pela skill.
+- Preserve as restrições funcionais, de acessibilidade e a paleta obrigatória deste arquivo ao aplicar o Impeccable. Mudança durável do sistema visual deve terminar documentada em `DESIGN.md` e `.impeccable/design.json` conforme a skill.
+- Valide interfaces em passes visuais limitados, com capturas desktop e mobile, detector aplicável e finish review do Impeccable; não faça ciclos abertos de polimento.
 - Priorize regras `async-*`, `bundle-*` e `server-*`; cite IDs aplicáveis no plano/revisão.
 - Route Handlers não duplicam a API NestJS nem acessam PostgreSQL. Quando existirem, autenticam/autorizam e delegam ao backend.
 - Não mantenha estado mutável de requisição em módulos e minimize dados serializados para Client Components.
@@ -193,6 +198,8 @@ Toda interface do EventMatch deve utilizar os tokens abaixo como paleta padrão.
   --primary-hover: #fb3c5a;
   --primary-active: #be123c;
   --primary-muted: rgba(225, 29, 72, 0.15);
+  /* Texto sobre --primary sólido: 4,7:1 (o #fafafa dá 4,5:1 exato e o axe reprova no Firefox). */
+  --primary-foreground: #ffffff;
 
   --foreground: #fafafa;
   --muted-foreground: #a1a1aa;
@@ -234,8 +241,8 @@ Nunca exponha segredos. Cite arquivos e linhas. Preserve alterações do usuári
 1. Registre a demanda em `specs/tasks.txt`.
 2. Use `code-planner` e crie ADRs `proposed` para cada decisão material.
 3. Resolva perguntas e aceite ADRs; só então marque o plano `ready`.
-4. Use `code-implementer`, carregando `nestjs-expert` para backend e `vercel-react-best-practices` para frontend.
-5. Use `code-reviewer`; valide arquitetura hexagonal, contratos front/back, Bun, lint, tipos, testes e builds.
+4. Use `code-implementer`, carregando `nestjs-expert` para backend e `vercel-react-best-practices` + `impeccable` para frontend com interface.
+5. Use `code-reviewer`; valide arquitetura hexagonal, contratos front/back, Bun, lint, tipos, testes, builds e, no frontend visual, os artefatos e o finish review do Impeccable.
 6. Use `open-pull-request` somente quando explicitamente solicitado.
 
 ## 9. Skills
@@ -248,13 +255,14 @@ Nunca exponha segredos. Cite arquivos e linhas. Preserve alterações do usuári
 | `nextjs-architecture` | Arquitetura do frontend/BFF. |
 | `nestjs-hexagonal-architecture` | Camadas, portas e adapters do backend. |
 | `vercel-react-best-practices` | Trabalho em React/Next.js. |
+| `impeccable` | Todo trabalho de UX/UI, design, acessibilidade, responsividade ou refinamento visual no frontend. |
 | `nestjs-expert` | Trabalho em NestJS. |
 | `open-pull-request` | Somente por pedido explícito. |
 
 ## 10. Proibições
 
 - Não versionar `.env`, tokens, credenciais, certificados ou dados sensíveis.
-- Não acessar PostgreSQL pelo frontend.
+- Não acessar PostgreSQL pelo frontend. Exceção única (ADR-032): o suporte de E2E em `front/tests/e2e/support/` pode acessar o PostgreSQL descartável criado pelo runner (`E2E_DATABASE_URL`); nunca `front/src/` nem outro banco.
 - Não colocar regras de domínio em controllers, DTOs, ORM entities ou Route Handlers.
 - Não introduzir npm/pnpm/yarn sem ADR.
 - Não commitar código sem testes nem ignorar lint/typecheck sem justificativa.

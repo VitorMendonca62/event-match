@@ -1,5 +1,38 @@
 # Changelog
 
+## 0.11.0 — 2026-09-28
+
+Conteúdo dos documentos legais e aceite ou recusa no cadastro (SDD-011; ADR-028, ADR-029). Mudança aditiva: o backend passa a `0.10.0` e o frontend a `0.11.0`. Rollout: aplicar a migration `0005` antes do backend `0.10.0` e depois publicar o frontend.
+
+- O jurídico autorizou os documentos v1.0.0 e o registro de aceites em 2026-09-28 (registrado em `docs/legal/README.md` e na ADR-028). A ativação real da conta fica habilitada com os três documentos vigentes.
+- Migration `0005_legal_document_content`: coluna `terms_document.content` com o texto integral dos três arquivos de `docs/legal/pt-BR/`, `CHECK` de `sha256(content) = content_digest`, `CHECK` de texto obrigatório em linhas `approved`, trigger de imutabilidade e índice de vigência. A `0004` não foi alterada.
+- `GET /api/v1/registration/legal-documents` devolve o Markdown sem frontmatter em `content`, apenas a versão vigente de cada tipo, com `Cache-Control: no-store`; exemplo de `version` corrigido para `1.0.0`. `TermsRepositoryPort.listApproved/findApproved` foram substituídos por `listCurrent/findCurrent`; `CompleteRegistration` rejeita ids inexistentes, não aprovados, futuros ou de versão superada.
+- Frontend: `LegalMarkdown` (Server Component, `react-markdown`) renderiza o texto no servidor. Os aceites saíram do passo “Documentos” (removido; agora sete etapas) e foram para a tela da senha (ADR-031): “Li e concordo com os Termos de Uso…”, em que o nome do documento é um link que abre o texto num diálogo com Aceitar e Recusar; a recusa abre um aviso com “Rever documentos” e “Cancelar cadastro”. Versão e vigência não são mais exibidas (a linha de versão do texto é ocultada só na exibição). Título “Regras de Convivência”. Uma nova versão durante o fluxo recarrega os documentos e descarta os aceites.
+- Cancelar o cadastro executa a expiração no backend (ADR-030): novo `DELETE /api/v1/registration` (e `DELETE /api/registration` no BFF) anula o e-mail e a senha retidos, expira a conta incompleta, libera o contato e revoga a continuação. “Cancelar cadastro” (cabeçalho e aviso de recusa) usa essa chamada; com o backend indisponível a pessoa permanece na tela com um aviso.
+- Testes: unidade (`LegalDocumentText`, caso de uso, controller, renderização do Markdown, estados de aceite e recusa), integração PostgreSQL (bytes, digest, `CHECK`s, trigger, vigência) e E2E (lista, recusa sem documento vigente, troca de versão).
+- `baseUrl` do cliente Brevo reativado em `brevo-verification-delivery.adapter.ts`: o E2E volta a receber o OTP e o link pelo Brevo falso e passa integralmente.
+- `react-markdown` fixado em `10.1.0` e `LegalMarkdown` restrito à lista de elementos e ao `urlTransform` da ADR-029.
+- Acessibilidade: novo token `--primary-foreground` (`#ffffff`, 4,7:1 sobre `--primary`; o `#fafafa` dava exatamente 4,5:1 e o axe no Firefox o reprovava) para o texto do botão primário (`DESIGN.md`, `.impeccable/design.json`). O `Dialog` ganhou `returnFocus`: ao fechar um documento reaberto por “Rever documentos”, o foco volta ao link do documento em vez de se perder.
+- E2E full-stack do cadastro no navegador (SDD-012; ADR-032), só ferramentas de desenvolvimento e testes: `@playwright/test` `1.63.0` e `@axe-core/playwright` `4.13.0`; `bun run --cwd front test:e2e` (`scripts/test-front-e2e.sh`) em Chromium desktop e móvel e Firefox, mais o projeto `destructive`; `FRONTEND_PUBLIC_URL` parametrizável em `docker-compose.back.test.yml`. A revisão manual com leitor de tela real foi retirada do escopo da SDD-012 (2026-09-29).
+- Snapshot do Drizzle `0005_snapshot.json` adicionado e schema de `terms_document` alinhado à migration `0005` (`CHECK` de digest e índice `terms_document_current_idx`): `db:generate` não gera mais uma migration que tentava recriar `content`. Sem mudança de banco.
+- “Sim, cancelar” fica desabilitado, com indicação “Cancelando…”, enquanto o cancelamento está pendente; “Continuar cadastro” também.
+- Paleta obrigatória do `AGENTS.md` §5 inclui `--primary-foreground`.
+
+## 0.10.0 — 2026-09-27
+
+Jornada de cadastro no Next.js e BFF do navegador (SDD-010; ADR-011, ADR-012, ADR-019 a ADR-027). Mudança aditiva; o contrato do backend não muda (permanece em `0.9.0`).
+
+- `/` passa a ser a apresentação “Convite Cívico”: amizade, companhia e descoberta da cidade, 18+, “Não é app de namoro” e a única ação “Começar meu cadastro”, antes de qualquer dado.
+- `/cadastro` (RSC + ilha cliente) conduz nascimento → e-mail (WhatsApp desabilitado “Em breve”) → código de 6 dígitos com prazo e reenvio → senha → dados obrigatórios → documentos → interesses (mínimo 3) → revisão com novo nascimento; `/cadastro/concluido` confirma sem exibir dados da conta. Máquina de etapas explícita com estágio remoto autoritativo, ressincronização única em `409` e reinício em `401`; foco no título a cada etapa e no resumo de erro.
+- Documentos sem conteúdo aprovado bloqueiam a ativação (o contrato v1 publica só metadados); nenhum placeholder jurídico é exibido fora de fixtures de teste.
+- Seed jurídico `0004_seed_legal_documents`: Termos de Uso, Política de Privacidade e Regras de Convivência `pt-BR` v1.0.0 foram publicados como documentos aprovados, com UUIDs estáveis e SHA-256 dos artefatos em `docs/legal/`.
+- Progresso mínimo em `sessionStorage` (schema v1, allowlist, TTL deslizante de 30 min); contato, código, senha, nascimento, aceites, tokens e chaves de idempotência nunca são gravados.
+- BFF em `front/src/app/api/registration/**` e `front/src/app/api/catalog/interests`: origem/`Content-Type`/idempotência validados antes do backend, cookie `__Host-` `HttpOnly`, credencial interna, fingerprint de origem Vercel via HMAC, timeout sem retry implícito, tradução conservadora de erros, callback do link com `303` para URL limpa e logs sem PII.
+- Tailwind CSS v4 (`tailwindcss`, `@tailwindcss/postcss`, `postcss`) com a paleta padrão desativada e os tokens do `AGENTS.md` expostos como utilitários (ADR-027). Primitives reutilizáveis: `Button`/`ButtonLink`, `TextField`, `Choice`, `Notice`, `BrandMark`, ícones autorais, `StepFrame`, `ProgressRail` e `PosterHeadline`. Fontes Archivo e Figtree auto-hospedadas por `next/font`.
+- `bun run --cwd front build` não executa mais `validate:env`: a configuração do BFF é validada em `dev`/`start` e no início do container de produção, e a base continua validada pelo `next.config.ts`.
+- Testes: contratos, máquina de etapas, storage, countdown, cliente HTTP, renderização (copy não romântica, WhatsApp desabilitado, progresso textual, bloqueio de documentos, contador de interesses) e integração do BFF contra backend fake (origem, idempotência, cookie, 401/completo, 422/5xx/timeout, fingerprint, callback, configuração e carregamento paralelo do RSC).
+- **Ação necessária:** configure `BACKEND_INTERNAL_URL`, `FRONTEND_PUBLIC_URL`, `BFF_INTERNAL_TOKEN` (igual ao do backend), `ORIGIN_FINGERPRINT_KEY` (base64, 32+ bytes) e `EDGE_PROVIDER` no `front/.env` (veja `front/.env.example`) e só então ligue `REGISTRATION_HTTP_ENABLED` no backend.
+
 ## 0.9.0 — 2026-09-26
 
 Primeira fatia HTTP pública do cadastro (SDD-009; ADR-019 a ADR-026). Mudança aditiva.

@@ -1,6 +1,8 @@
+/** @format */
+
 import 'reflect-metadata';
 
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -25,9 +27,13 @@ export function configureApplication(app: INestApplication): void {
     const swaggerConfig = new DocumentBuilder()
       .setTitle('EventMatch API')
       .setDescription('Technical API contract for EventMatch.')
-      .setVersion('0.9.0')
+      .setVersion('0.10.0')
       .addBearerAuth(
-        { type: 'http', scheme: 'bearer', description: 'Registration continuation token (ADR-021).' },
+        {
+          type: 'http',
+          scheme: 'bearer',
+          description: 'Registration continuation token (ADR-021).',
+        },
         'registration-continuation',
       )
       .build();
@@ -50,15 +56,21 @@ async function bootstrap(): Promise<void> {
   const app = await createApplication();
   const configService = app.get(ConfigService<BackendEnv, true>);
 
-  await app.listen(
-    configService.getOrThrow<number>('PORT'),
-    configService.getOrThrow<string>('HOSTNAME'),
-  );
+  const port = configService.getOrThrow<number>('PORT');
+  const host = configService.getOrThrow<string>('HOSTNAME');
+  await app.listen(port, host);
+
+  const logger = new Logger('Bootstrap');
+
+  logger.debug(`Listing on ${host}:${port} `);
 }
 
 if (require.main === module) {
   void bootstrap().catch((error: unknown) => {
-    if (error instanceof Error && error.message.startsWith('Invalid environment configuration.')) {
+    if (
+      error instanceof Error &&
+      error.message.startsWith('Invalid environment configuration.')
+    ) {
       console.error(error.message);
     } else {
       console.error('Application failed to start.');

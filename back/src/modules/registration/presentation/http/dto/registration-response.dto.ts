@@ -48,7 +48,7 @@ export class LegalDocumentDto {
   @ApiProperty({ enum: REQUIRED_TERMS_KINDS })
   readonly kind!: TermsDocumentKind;
 
-  @ApiProperty({ example: '2026-10-01' })
+  @ApiProperty({ example: '1.0.0' })
   readonly version!: string;
 
   @ApiProperty({ example: 'pt-BR' })
@@ -56,6 +56,9 @@ export class LegalDocumentDto {
 
   @ApiProperty({ format: 'date-time' })
   readonly effectiveAt!: string;
+
+  @ApiProperty({ description: 'Markdown sem frontmatter' })
+  readonly content!: string;
 }
 
 export class LegalDocumentListDto {
@@ -66,6 +69,11 @@ export class LegalDocumentListDto {
 export class ActivatedDto {
   @ApiProperty({ enum: ['active'] })
   readonly status!: 'active';
+}
+
+export class CancelledDto {
+  @ApiProperty({ example: true })
+  readonly cancelled!: true;
 }
 
 export class ErrorReasonDto {
@@ -103,6 +111,7 @@ export const LegalDocumentListResponseDto = apiEnvelope(
   'LegalDocumentListResponseDto',
   HttpStatus.OK,
 );
+export const CancelledResponseDto = apiEnvelope(CancelledDto, 'CancelledResponseDto', HttpStatus.OK);
 export const ActivatedResponseDto = apiEnvelope(ActivatedDto, 'ActivatedResponseDto', HttpStatus.OK);
 export const UnprocessableRegistrationResponseDto = apiEnvelope(
   ErrorReasonDto,

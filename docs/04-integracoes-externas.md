@@ -34,7 +34,7 @@ Enquanto os grupos de produto não forem implementados, o backend expõe somente
 
 Toda resposta HTTP com corpo segue o envelope público `data` (objeto), `message` (string) e `statusCode` (número serializado de `HttpStatus`). A camada de apresentação converte erros conhecidos e inesperados nesse formato sem retornar stack trace, erro bruto de validação ou detalhe de infraestrutura. O OpenAPI do NestJS fica disponível no caminho configurado pelo ambiente e pode ser desabilitado sem alterar `/health`.
 
-### Contrato v1 do cadastro (SDD-009, versão 0.9.0)
+### Contrato v1 do cadastro (SDD-009, versão 0.9.0; SDD-011 acrescenta `content` na listagem de documentos, versão 0.10.0)
 
 Prefixo `/api/v1` (ADR-020). Toda rota de `/api/v1/registration` exige `X-EventMatch-BFF-Token` (comparado em tempo constante com `BFF_INTERNAL_TOKEN`; ausente ou inválido → `401`), responde `Cache-Control: no-store` inclusive em erros e fica atrás da flag `REGISTRATION_HTTP_ENABLED` (desligada → `404`) até a TASK 07 publicar o BFF. Nenhuma rota aceita `verificationId`, `registrationId` ou `accountId` do navegador; `forbidNonWhitelisted` rejeita esses campos com `400`.
 
@@ -49,7 +49,8 @@ Prefixo `/api/v1` (ADR-020). Toda rota de `/api/v1/registration` exige `X-EventM
 | `PUT /api/v1/registration/password` | `{ password, passwordConfirmation }` | `200 { stage, expiresAt }`; rotaciona | Bearer, `Idempotency-Key`; `contact_verified` |
 | `PUT /api/v1/registration/required-data` | `{ displayName, region, usageIntents[] }` | `200 { stage, expiresAt }`; rotaciona | Bearer, `Idempotency-Key`; `registration_in_progress` |
 | `GET /api/v1/registration` | — | `200 { stage, expiresAt, nextResendAt? }` | Bearer atual (o anterior não serve) |
-| `GET /api/v1/registration/legal-documents?locale=pt-BR` | — | `200 { documents[] }` só `approved` (hoje vazio) | apenas credencial do BFF |
+| `DELETE /api/v1/registration` | — | `200 { cancelled: true }`: expira o cadastro provisório, anula dados retidos, revoga a continuação (ADR-030); `401` para token inválido, revogado ou rotacionado | continuação + credencial do BFF |
+| `GET /api/v1/registration/legal-documents?locale=pt-BR` | — | `200 { documents[] }` com `id`, `kind`, `version`, `locale`, `effectiveAt` e `content` (Markdown sem frontmatter); só a versão vigente `approved` de cada tipo (ADR-028); `Cache-Control: no-store` | apenas credencial do BFF |
 | `POST /api/v1/registration/complete` | `{ birthDate, documentIds[], interestIds[] }` | `200 { status: 'active' }`; revoga a sessão | Bearer, `Idempotency-Key`; `account_incomplete` |
 | `GET /api/v1/catalog/interests?locale=pt-BR` | — | `200 { interests[] }` ativos, ordem estável | pública |
 
@@ -59,7 +60,32 @@ O smoke `email-delivery-test` usa o mesmo adapter e template de verificação da
 
 Erros: `400` forma/DTO (sem ecoar valores), `401` credencial do BFF ou continuação ausente/inválida/expirada, `409` estágio incompatível, chave em uso ou chave repetida com payload diferente, `422` regra semântica com `data.reason` ∈ {`invalid_contact`, `invalid_password`, `weak_password`, `invalid_birth_date`, `invalid_display_name`, `invalid_region`, `invalid_usage_intents`, `activation_unavailable`}; motivos que dependam de terceiros não existem. Pedido e reenvio de contato respondem `202` idênticos mesmo quando limitados, com contato retido ou falha de entrega.
 
-Continuação e idempotência (ADR-021): a mesma chave com o mesmo payload devolve o resultado armazenado sem repetir efeito nem mensagem; se o comando original rotacionou a continuação, a repetição emite outra. O token anterior vale 60 s exclusivamente para essa repetição. O fingerprint do payload exclui senha e nascimento. Após a conclusão, os digests são anulados e qualquer repetição recebe `401`; o BFF deve tratá-lo como cadastro encerrado. O callback do link de e-mail é `GET {FRONTEND_PUBLIC_URL}/api/registration/contact-verification/confirm-link?token=…`, a ser implementado pelo BFF na TASK 07.
+Continuação e idempotência (ADR-021): a mesma chave com o mesmo payload devolve o resultado armazenado sem repetir efeito nem mensagem; se o comando original rotacionou a continuação, a repetição emite outra. O token anterior vale 60 s exclusivamente para essa repetição. O fingerprint do payload exclui senha e nascimento. Após a conclusão, os digests são anulados e qualquer repetição recebe `401`; o BFF deve tratá-lo como cadastro encerrado. O callback do link de e-mail é `GET {FRONTEND_PUBLIC_URL}/api/registration/contact-verification/confirm-link?token=…`, implementado pelo BFF da SDD-010 (abaixo).
+
+### BFF do cadastro no Next.js (SDD-010, versão 0.10.0)
+
+O navegador conversa apenas com a mesma origem. Cada Route Handler delega a exatamente uma rota v1 acima, sem retry implícito, com timeout (`BACKEND_TIMEOUT_MS`, padrão 8 s) e `Cache-Control: no-store`; respostas preservam o envelope `data`/`message`/`statusCode`.
+
+| Navegador → BFF | NestJS | Observações |
+|---|---|---|
+| `POST /api/registration/eligibility` | `POST …/eligibility` | grava o cookie só quando a continuação vem na resposta |
+| `POST /api/registration/contact-verification` | `POST …/contact-verification` | adiciona `X-EventMatch-Origin-Fingerprint` |
+| `POST /api/registration/contact-verification/resend` | `POST …/resend` | corpo `{}` |
+| `POST /api/registration/contact-verification/confirm` | `POST …/confirm` | rotaciona o cookie se `verified: true` |
+| `GET /api/registration/contact-verification/confirm-link?token=…` | `POST …/confirm-link` | `303` para `/cadastro?email-verificado=1|0`, `Referrer-Policy: no-referrer`; cookie só em sucesso; o token nunca volta ao navegador nem aos logs |
+| `PUT /api/registration/password` · `PUT /api/registration/required-data` | mesmas rotas | rotacionam o cookie |
+| `GET /api/registration` | `GET /api/v1/registration` | snapshot mínimo |
+| `DELETE /api/registration` | `DELETE /api/v1/registration` | cancelamento: expira o cadastro no backend e o cookie (ADR-030) |
+| `GET /api/registration/legal-documents` | `GET …/legal-documents?locale=pt-BR` | — (propaga `content`; a página `/cadastro` renderiza o Markdown no servidor, ADR-029) |
+| `POST /api/registration/complete` | `POST …/complete` | expira o cookie em sucesso |
+| `GET /api/catalog/interests` | `GET /api/v1/catalog/interests?locale=pt-BR` | pública, sem credencial interna |
+
+- Mutações exigem exatamente um `Origin` igual a `FRONTEND_PUBLIC_URL`, `Sec-Fetch-Site` ausente ou `same-origin` e `Content-Type: application/json`; caso contrário `403` sem chamada ao backend. CORS não é habilitado. Corpo acima de 8 KiB, propriedades fora do contrato ou `Idempotency-Key` malformada → `400`.
+- Cookie `__Host-eventmatch_registration` (`HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`, sem `Domain`), `Max-Age` limitado ao `expiresAt` recebido ou, quando a resposta não o traz (elegibilidade e confirmação), a 1 h; fora de produção o nome é `eventmatch_registration` sem `Secure`. `401` do backend ou continuação ausente expira o cookie.
+- Tradução: sucesso só com `data` validado pelo schema esperado (senão `502`); `422` preserva apenas `reason` pública; `400/401/404/409` viram envelopes genéricos; `5xx`, timeout e falha de rede → `503`.
+- Fingerprint: com `EDGE_PROVIDER=vercel`, somente um `x-vercel-forwarded-for` singular e IP válido gera `base64url(HMAC-SHA-256(ORIGIN_FINGERPRINT_KEY, ip))`; `X-Forwarded-For`/`X-Real-IP` são ignorados. `fixture` é aceito apenas fora de produção.
+- Logs do BFF: somente `operation`, `status`, `durationMs` e `correlationId` gerado.
+- Configuração server-only (`front/src/shared/config/bff-env.server.ts`): `BACKEND_INTERNAL_URL`, `FRONTEND_PUBLIC_URL`, `BFF_INTERNAL_TOKEN`, `ORIGIN_FINGERPRINT_KEY`, `EDGE_PROVIDER` e `BACKEND_TIMEOUT_MS`. Produção exige HTTPS público, `vercel` e segredos base64 de 32+ bytes; valores nunca são impressos.
 
 ## 3. Exposição por audiência
 

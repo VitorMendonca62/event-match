@@ -10,3 +10,6 @@ coverage/
 !.env.example
 .agents/*
 .claude/*
+front/test-results/
+front/playwright-report/
+front/blob-report/

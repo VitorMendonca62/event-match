@@ -17,10 +17,11 @@ import { CheckRegistrationEligibility } from './application/use-cases/check-regi
 import { CompleteRegistration } from './application/use-cases/complete-registration.use-case';
 import { ExpireStaleRegistrations } from './application/use-cases/expire-stale-registrations.use-case';
 import { RequestContactVerification } from './application/use-cases/request-contact-verification.use-case';
-import { ListApprovedLegalDocuments } from './application/use-cases/list-approved-legal-documents.use-case';
+import { ListCurrentLegalDocuments } from './application/use-cases/list-current-legal-documents.use-case';
 import { RegistrationFlow } from './application/use-cases/registration-flow.use-case';
 import { ResendContactVerification } from './application/use-cases/resend-contact-verification.use-case';
 import { SaveRequiredData } from './application/use-cases/save-required-data.use-case';
+import { CancelRegistration } from './application/use-cases/cancel-registration.use-case';
 import { SendEmailDeliveryTest } from './application/use-cases/send-email-delivery-test.use-case';
 import { StartRegistration } from './application/use-cases/start-registration.use-case';
 import { VerifyContact } from './application/use-cases/verify-contact.use-case';
@@ -178,6 +179,16 @@ const useCases = [
     CLOCK_PORT,
     REGISTRATION_TELEMETRY_PORT,
   ]),
+  useCaseProvider(CancelRegistration, [
+    UNIT_OF_WORK_PORT,
+    REGISTRATION_FLOW_SESSION_REPOSITORY_PORT,
+    REGISTRATION_FLOW_TOKEN_PORT,
+    REGISTRATION_REPOSITORY_PORT,
+    ACCOUNT_REPOSITORY_PORT,
+    PROFILE_WRITER_PORT,
+    CLOCK_PORT,
+    REGISTRATION_TELEMETRY_PORT,
+  ]),
   useCaseProvider(VerifyContactByLink, [
     UNIT_OF_WORK_PORT,
     VERIFICATION_REPOSITORY_PORT,
@@ -193,7 +204,7 @@ const useCases = [
     CLOCK_PORT,
     REGISTRATION_TELEMETRY_PORT,
   ]),
-  useCaseProvider(ListApprovedLegalDocuments, [UNIT_OF_WORK_PORT, TERMS_REPOSITORY_PORT]),
+  useCaseProvider(ListCurrentLegalDocuments, [UNIT_OF_WORK_PORT, TERMS_REPOSITORY_PORT, CLOCK_PORT]),
   useCaseProvider(SendEmailDeliveryTest, [CONTACT_PROTECTOR_PORT, VERIFICATION_DELIVERY_PORT, ID_GENERATOR_PORT]),
   useCaseProvider(RegistrationFlow, [
     RegistrationFlowGate,
@@ -233,6 +244,7 @@ const useCases = [
     ExpireStaleRegistrations,
     CheckRegistrationEligibility,
     RegistrationFlow,
+    CancelRegistration,
   ],
 })
 export class RegistrationModule implements NestModule {

@@ -101,14 +101,14 @@ describe('migration 0002 over pre-0002 data', () => {
   test('approved documents read during activation cannot be retired until commit', async () => {
     const documentId = '10000000-0000-7000-8000-000000000009';
     await database.pool.query(
-      `insert into terms_document (id, kind, version, locale, effective_at, content_digest, status)
-       values ($1, 'terms', 'lock-test', 'pt-BR', now(), '\\x00', 'approved')`,
+      `insert into terms_document (id, kind, version, locale, effective_at, content_digest, content, status)
+       values ($1, 'terms', 'lock-test', 'pt-BR', now() - interval '1 hour', sha256(convert_to('# lock', 'UTF8')), '# lock', 'approved')`,
       [documentId],
     );
     const repository = new DrizzleTermsRepository();
 
     await drizzle({ client: database.pool }).transaction(async (transaction) => {
-      await expect(repository.findApproved(transaction, [documentId])).resolves.toHaveLength(1);
+      await expect(repository.findCurrent(transaction, [documentId], new Date())).resolves.toHaveLength(1);
 
       const other = await database.pool.connect();
       try {

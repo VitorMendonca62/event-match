@@ -145,6 +145,18 @@ export class RegistrationFlowSession implements RegistrationFlowSessionProps {
     });
   }
 
+  /** Terminal cancellation (ADR-030): digests are nulled like on completion, the stage stays as evidence. */
+  cancel(now: Date): RegistrationFlowSession {
+    if (this.stage === 'completed') throw new RegistrationError('FLOW_STAGE_CONFLICT');
+    return this.with({
+      tokenDigest: null,
+      previousTokenDigest: null,
+      previousValidUntil: null,
+      revokedAt: now,
+      updatedAt: now,
+    });
+  }
+
   /** Privilege change: the old token survives briefly, only to replay the same idempotent request. */
   rotate(tokenDigest: Buffer, now: Date, policy: RegistrationPolicy): RegistrationFlowSession {
     if (this.tokenDigest === null) throw new RegistrationError('FLOW_UNAUTHORIZED');

@@ -53,7 +53,7 @@ services:
       BREVO_API_KEY: xkeysib-fake-e2e-only
       BREVO_BASE_URL: http://fake-brevo:4010/v3
       EMAIL_FROM: EventMatch <nao-responda@example.test>
-      FRONTEND_PUBLIC_URL: http://localhost:3000
+      FRONTEND_PUBLIC_URL: ${FRONTEND_PUBLIC_URL:-http://localhost:3000}
     depends_on:
       postgres:
         condition: service_healthy

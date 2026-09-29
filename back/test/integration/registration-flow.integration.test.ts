@@ -11,7 +11,8 @@ import { ProfilesModule } from '../../src/modules/profiles/profiles.module';
 import type { FlowCredentials } from '../../src/modules/registration/application/services/registration-flow-gate';
 import { CheckRegistrationEligibility } from '../../src/modules/registration/application/use-cases/check-registration-eligibility.use-case';
 import { ExpireStaleRegistrations } from '../../src/modules/registration/application/use-cases/expire-stale-registrations.use-case';
-import { ListApprovedLegalDocuments } from '../../src/modules/registration/application/use-cases/list-approved-legal-documents.use-case';
+import { CancelRegistration } from '../../src/modules/registration/application/use-cases/cancel-registration.use-case';
+import { ListCurrentLegalDocuments } from '../../src/modules/registration/application/use-cases/list-current-legal-documents.use-case';
 import { RegistrationFlow } from '../../src/modules/registration/application/use-cases/registration-flow.use-case';
 import { REGISTRATION_TELEMETRY_PORT } from '../../src/modules/registration/domain/ports/outbound/registration-telemetry.port';
 import { CLOCK_PORT } from '../../src/modules/registration/domain/ports/outbound/runtime.ports';
@@ -59,7 +60,8 @@ async function createNode(clock: FakeClock, delivery: CapturingDelivery, telemet
     flow: module.get(RegistrationFlow),
     expireStale: module.get(ExpireStaleRegistrations),
     interests: module.get(ListActiveInterests),
-    documents: module.get(ListApprovedLegalDocuments),
+    documents: module.get(ListCurrentLegalDocuments),
+    cancel: module.get(CancelRegistration),
   };
 }
 
@@ -148,8 +150,8 @@ describe('registration HTTP flow (PostgreSQL integration)', () => {
     test('activates end to end and leaves no token, birth date or contact outside the account', async () => {
       for (const [index, kind] of ['terms', 'privacy', 'community_rules'].entries()) {
         await query(
-          `insert into terms_document (id, kind, version, locale, effective_at, content_digest, status)
-           values ($1, $2, 'flow-test', 'pt-BR', now(), '\\x00', 'approved')`,
+          `insert into terms_document (id, kind, version, locale, effective_at, content_digest, content, status)
+           values ($1, $2, 'flow-test', 'pt-BR', now() - interval '1 hour', sha256(convert_to('# fixture', 'UTF8')), '# fixture', 'approved')`,
           [DOCUMENT_IDS[index], kind],
         );
       }
@@ -180,6 +182,31 @@ describe('registration HTTP flow (PostgreSQL integration)', () => {
       }
       // Accepted documents are referenced forever; retiring them keeps later reads empty.
       await query(`update terms_document set status = 'retired' where id = any($1::uuid[])`, [DOCUMENT_IDS]);
+    });
+
+    test('cancelling after the password expires the registration and frees the contact (ADR-030)', async () => {
+      const contact = 'cancel@example.test';
+      const password = await nodeA.flow.choosePassword(as(await verified(nodeA, contact)), { password: PASSWORD });
+
+      // Another replica handles the cancellation: state lives only in PostgreSQL.
+      await nodeB.cancel.execute(password.continuation!);
+
+      const [registration] = await query<{ status: string; contact_hash: Buffer | null; password_hash: string | null }>(
+        `select r.status, r.contact_hash, r.password_hash from registration r
+         join registration_flow_session s on s.registration_id = r.id
+         where s.revoked_at is not null and s.stage = 'registration_in_progress'`,
+      );
+      expect(registration).toEqual({ status: 'expired', contact_hash: null, password_hash: null });
+      const [session] = await query<{ token_digest: Buffer | null; revoked_at: Date | null }>(
+        `select token_digest, revoked_at from registration_flow_session where stage = 'registration_in_progress' and revoked_at is not null`,
+      );
+      expect(session?.token_digest).toBeNull();
+      expect(session?.revoked_at).not.toBeNull();
+      await expect(nodeA.flow.snapshot(password.continuation!)).rejects.toMatchObject({ code: 'FLOW_UNAUTHORIZED' });
+
+      // The same e-mail can start over.
+      const again = await verified(nodeA, contact);
+      await expect(nodeA.flow.choosePassword(as(again), { password: PASSWORD })).resolves.toBeDefined();
     });
 
     test('concurrent replicas with the same key produce one registration', async () => {
@@ -276,11 +303,14 @@ describe('registration HTTP flow (PostgreSQL integration)', () => {
       expect(interests[0]).toEqual({ id: INTEREST_IDS[0], slug: 'cafe-e-gastronomia', label: 'Café e gastronomia' });
 
       await query(
-        `insert into terms_document (id, kind, version, locale, effective_at, content_digest, status) values
-         (gen_random_uuid(), 'terms', 'placeholder-v1', 'pt-BR', now(), '\\x00', 'placeholder'),
-         (gen_random_uuid(), 'privacy', 'retired-v1', 'pt-BR', now(), '\\x00', 'retired')`,
+        `insert into terms_document (id, kind, version, locale, effective_at, content_digest, content, status) values
+         (gen_random_uuid(), 'terms', 'placeholder-v1', 'pt-BR', now(), '\\x00', null, 'placeholder'),
+         (gen_random_uuid(), 'privacy', 'retired-v1', 'pt-BR', now(), '\\x00', null, 'retired')`,
       );
-      await expect(nodeA.documents.execute({ locale: 'pt-BR' })).resolves.toEqual([]);
+      const documents = await nodeA.documents.execute({ locale: 'pt-BR' });
+      // Only the three seeded approved versions are offered, without frontmatter (ADR-028).
+      expect(documents.map((document) => document.kind)).toEqual(['community_rules', 'privacy', 'terms']);
+      expect(documents.every((document) => document.version === '1.0.0' && !document.body.startsWith('---'))).toBe(true);
     });
   });
 

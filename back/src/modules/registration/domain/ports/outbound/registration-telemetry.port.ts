@@ -11,6 +11,7 @@ export type RegistrationEventName =
   | 'registration.required_data_saved'
   | 'account.activation'
   | 'registration.stale_expired'
+  | 'registration.cancelled'
   | 'registration.eligibility'
   | 'registration.flow';
 

@@ -92,19 +92,21 @@ export interface TermsAcceptance {
   readonly documentId: string;
 }
 
-/** Public metadata of an approved document; content and digests stay internal. */
-export interface ApprovedTermsMetadata {
+/** Currently effective approved document; `content` is the complete published artifact (ADR-028). */
+export interface CurrentTermsDocument {
   readonly id: string;
   readonly kind: TermsDocumentKind;
   readonly version: string;
   readonly locale: string;
   readonly effectiveAt: Date;
+  readonly content: string;
 }
 
 export interface TermsRepositoryPort {
-  /** Approved documents for the locale, in stable kind/version order. */
-  listApproved(context: TransactionContext, locale: string): Promise<ApprovedTermsMetadata[]>;
-  findApproved(context: TransactionContext, documentIds: string[]): Promise<ApprovedTermsDocument[]>;
+  /** One effective approved version per kind: `effective_at <= now`, newest first (ADR-028). */
+  listCurrent(context: TransactionContext, locale: string, now: Date): Promise<CurrentTermsDocument[]>;
+  /** Only ids that are approved and currently the effective version of their kind; others are omitted. */
+  findCurrent(context: TransactionContext, documentIds: string[], now: Date): Promise<ApprovedTermsDocument[]>;
   recordAcceptances(
     context: TransactionContext,
     accountId: string,

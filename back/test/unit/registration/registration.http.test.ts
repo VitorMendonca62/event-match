@@ -8,7 +8,7 @@ import { ListActiveInterests } from '../../../src/modules/catalog/application/us
 import { CatalogModule } from '../../../src/modules/catalog/catalog.module';
 import { ProfilesModule } from '../../../src/modules/profiles/profiles.module';
 import { CheckRegistrationEligibility } from '../../../src/modules/registration/application/use-cases/check-registration-eligibility.use-case';
-import { ListApprovedLegalDocuments } from '../../../src/modules/registration/application/use-cases/list-approved-legal-documents.use-case';
+import { ListCurrentLegalDocuments } from '../../../src/modules/registration/application/use-cases/list-current-legal-documents.use-case';
 import { RegistrationFlow } from '../../../src/modules/registration/application/use-cases/registration-flow.use-case';
 import { SendEmailDeliveryTest } from '../../../src/modules/registration/application/use-cases/send-email-delivery-test.use-case';
 import { RegistrationError } from '../../../src/modules/registration/domain/errors/registration.error';
@@ -63,8 +63,8 @@ async function createApp(overrides: Record<string, string> = {}): Promise<INestA
     .useValue(eligibility)
     .overrideProvider(SendEmailDeliveryTest)
     .useValue(emailDeliveryTest)
-    .overrideProvider(ListApprovedLegalDocuments)
-    .useValue({ execute: async () => [] })
+    .overrideProvider(ListCurrentLegalDocuments)
+    .useValue({ execute: async () => legalDocuments })
     .overrideProvider(ListActiveInterests)
     .useValue({ execute: async () => [{ id: '00000000-0000-7000-8000-000000000001', slug: 'cinema', label: 'Cinema' }] })
     .compile();
@@ -73,6 +73,8 @@ async function createApp(overrides: Record<string, string> = {}): Promise<INestA
   await app.init();
   return app;
 }
+
+const legalDocuments: unknown[] = [];
 
 describe('registration HTTP contract v1', () => {
   let app: INestApplication;
@@ -282,7 +284,35 @@ describe('registration HTTP contract v1', () => {
     test('legal documents answer an empty list while nothing is approved', async () => {
       const response = await http().get(`${BASE}/legal-documents?locale=pt-BR`).set(BFF).expect(200);
       expect(response.body.data).toEqual({ documents: [] });
+      expect(response.headers['cache-control']).toBe('no-store');
       await http().get(`${BASE}/legal-documents?locale=en-US`).set(BFF).expect(400);
+    });
+
+    test('legal documents carry the Markdown body as `content`, never cached', async () => {
+      legalDocuments.push({
+        id: '019c0000-0000-7000-8000-000000000001',
+        kind: 'terms',
+        version: '1.0.0',
+        locale: 'pt-BR',
+        effectiveAt: new Date('2026-09-28T00:00:00.000Z'),
+        body: '# Termos\n',
+      });
+      try {
+        const response = await http().get(`${BASE}/legal-documents?locale=pt-BR`).set(BFF).expect(200);
+        expect(response.headers['cache-control']).toBe('no-store');
+        expect(response.body.data.documents).toEqual([
+          {
+            id: '019c0000-0000-7000-8000-000000000001',
+            kind: 'terms',
+            version: '1.0.0',
+            locale: 'pt-BR',
+            effectiveAt: '2026-09-28T00:00:00.000Z',
+            content: '# Termos\n',
+          },
+        ]);
+      } finally {
+        legalDocuments.length = 0;
+      }
     });
 
     test('the interest catalog is public', async () => {
@@ -313,7 +343,7 @@ describe('registration HTTP contract v1', () => {
       paths: Record<string, Record<string, { parameters?: { name: string; in: string; required?: boolean }[] }>>;
     };
 
-    expect(document.info.version).toBe('0.9.0');
+    expect(document.info.version).toBe('0.10.0');
     const contract = Object.fromEntries(
       Object.entries(document.paths)
         .filter(([path]) => path.startsWith('/api/v1/'))

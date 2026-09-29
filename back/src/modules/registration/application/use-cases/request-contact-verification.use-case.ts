@@ -109,7 +109,7 @@ export class RequestContactVerification {
       withinTransaction,
     );
     this.record(outcome.kind, contact.channel, outcome.kind === 'issued' ? outcome.verification.id : undefined);
-
+    
     if (outcome.kind === 'issued') {
       const { verification, otp, linkToken } = outcome;
       await this.dispatcher.dispatch({

@@ -7,7 +7,8 @@ import { VerificationDispatcher } from '../../src/modules/registration/applicati
 import { CheckRegistrationEligibility } from '../../src/modules/registration/application/use-cases/check-registration-eligibility.use-case';
 import { CompleteRegistration } from '../../src/modules/registration/application/use-cases/complete-registration.use-case';
 import { ExpireStaleRegistrations } from '../../src/modules/registration/application/use-cases/expire-stale-registrations.use-case';
-import { ListApprovedLegalDocuments } from '../../src/modules/registration/application/use-cases/list-approved-legal-documents.use-case';
+import { CancelRegistration } from '../../src/modules/registration/application/use-cases/cancel-registration.use-case';
+import { ListCurrentLegalDocuments } from '../../src/modules/registration/application/use-cases/list-current-legal-documents.use-case';
 import { RegistrationFlow } from '../../src/modules/registration/application/use-cases/registration-flow.use-case';
 import { RequestContactVerification } from '../../src/modules/registration/application/use-cases/request-contact-verification.use-case';
 import { ResendContactVerification } from '../../src/modules/registration/application/use-cases/resend-contact-verification.use-case';
@@ -32,7 +33,7 @@ import { RegistrationError } from '../../src/modules/registration/domain/errors/
 import type {
   AccountRepositoryPort,
   ApprovedTermsDocument,
-  ApprovedTermsMetadata,
+  CurrentTermsDocument,
   NewIncompleteAccount,
   RateLimitKind,
   RateLimitRepositoryPort,
@@ -71,7 +72,7 @@ interface State {
   accountContacts: Map<string, AccountContactRecord>;
   credentials: Map<string, string | null>;
   rateWindows: Map<string, { request: number; resend: number }>;
-  termsDocuments: Map<string, { kind: TermsDocumentKind; status: 'placeholder' | 'approved' }>;
+  termsDocuments: Map<string, FakeTermsDocument>;
   acceptances: Map<string, { accountId: string; documentId: string }>;
   profiles: Map<string, { displayName: string | null; region: string | null }>;
   usageIntents: Map<string, string[]>;
@@ -293,26 +294,48 @@ class InMemoryRateLimitRepository implements RateLimitRepositoryPort {
   }
 }
 
+export interface FakeTermsDocument {
+  kind: TermsDocumentKind;
+  status: 'placeholder' | 'approved' | 'retired';
+  version?: string;
+  effectiveAt?: Date;
+  content?: string;
+}
+
 class InMemoryTermsRepository implements TermsRepositoryPort {
   failOnRecord = false;
   constructor(private readonly database: InMemoryDatabase) {}
-  async listApproved(_: TransactionContext, locale: string): Promise<ApprovedTermsMetadata[]> {
-    if (locale !== 'pt-BR') return [];
-    return [...this.database.state.termsDocuments]
-      .filter(([, document]) => document.status === 'approved')
-      .map(([id, document]) => ({
-        id,
-        kind: document.kind,
-        version: 'test',
-        locale,
-        effectiveAt: new Date('2026-01-01T00:00:00.000Z'),
-      }));
+  async listCurrent(_: TransactionContext, locale: string, now: Date): Promise<CurrentTermsDocument[]> {
+    return this.currentDocuments(locale, now).map(([id, document]) => ({
+      id,
+      kind: document.kind,
+      version: document.version ?? 'test',
+      locale,
+      effectiveAt: document.effectiveAt ?? new Date('2026-01-01T00:00:00.000Z'),
+      content: document.content ?? '# Documento de teste\n',
+    }));
   }
-  async findApproved(_: TransactionContext, documentIds: string[]): Promise<ApprovedTermsDocument[]> {
+  async findCurrent(_: TransactionContext, documentIds: string[], now: Date): Promise<ApprovedTermsDocument[]> {
+    const current = new Set(this.currentDocuments('pt-BR', now).map(([id]) => id));
     return documentIds.flatMap((id) => {
       const document = this.database.state.termsDocuments.get(id);
-      return document?.status === 'approved' ? [{ id, kind: document.kind }] : [];
+      return document && current.has(id) ? [{ id, kind: document.kind }] : [];
     });
+  }
+  /** One effective approved version per kind, newest first (ADR-028). */
+  private currentDocuments(locale: string, now: Date): [string, FakeTermsDocument][] {
+    if (locale !== 'pt-BR') return [];
+    const newest = new Map<TermsDocumentKind, [string, FakeTermsDocument]>();
+    for (const entry of this.database.state.termsDocuments) {
+      const [, document] = entry;
+      if (document.status !== 'approved') continue;
+      if ((document.effectiveAt ?? new Date(0)).getTime() > now.getTime()) continue;
+      const known = newest.get(document.kind);
+      if (!known || (document.effectiveAt ?? new Date(0)) > (known[1].effectiveAt ?? new Date(0))) {
+        newest.set(document.kind, entry);
+      }
+    }
+    return [...newest.values()];
   }
   async recordAcceptances(_: TransactionContext, accountId: string, acceptances: TermsAcceptance[]) {
     if (this.failOnRecord) throw new Error('simulated persistence failure');
@@ -579,9 +602,10 @@ export function createRegistrationHarness() {
     start,
     saveRequiredData,
     complete,
+    cancel: new CancelRegistration(uow, sessions, tokens, registrations, accounts, profiles, clock, telemetry),
     expireStale: new ExpireStaleRegistrations(uow, registrations, accounts, profiles, sessions, clock, telemetry),
     eligibility: new CheckRegistrationEligibility(uow, sessions, tokens, ids, clock, telemetry),
-    legalDocuments: new ListApprovedLegalDocuments(uow, terms),
+    legalDocuments: new ListCurrentLegalDocuments(uow, terms, clock),
     flow: new RegistrationFlow(gate, uow, sessions, tokens, clock, request, resend, verify, verifyByLink, start, saveRequiredData, complete),
   };
 }

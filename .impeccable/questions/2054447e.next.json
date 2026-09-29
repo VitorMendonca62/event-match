@@ -1,0 +1,131 @@
+{
+  "title": "Escolha o mundo visual do cadastro",
+  "question": "Qual direção transforma o cadastro do EventMatch em uma entrada confiável para uma vida social local?",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "Mural Comunitário Noturno",
+      "kicker": "THE ROLL",
+      "lineage": "murais de centros culturais e agendas de bairro após o anoitecer",
+      "thesis": "Entrar no EventMatch parece encontrar um convite real para participar da vida do bairro.",
+      "palette": ["#09090b", "#18181b", "#e11d48", "#fafafa", "#f59e0b"],
+      "materials": ["feltro grafite", "cartazes serigrafados", "pinos esmaltados"],
+      "viewport": "Em retrato, um mural escuro mostra convites de atividades locais no topo e uma mensagem acolhedora com a ação Começar meu cadastro na base, antes de qualquer dado pessoal.",
+      "risk": "Pode parecer scrapbook ou juvenil se os cartazes perderem contenção e hierarquia adulta.",
+      "raised": [
+        {"from": "Cyclorama Dawn", "raise": "Cada mudança de etapa recebe um estado nomeado e perceptível sem depender apenas da cor."},
+        {"from": "Tensegrity Column", "raise": "A interface explicita por que cada dado é pedido e o que ele libera no fluxo."},
+        {"from": "Teletext Service", "raise": "Prazos, progresso e mensagens de sistema obedecem a uma hierarquia rígida e escaneável."},
+        {"from": "One-bit Desktop", "raise": "Controles deixam foco, seleção, espera, erro e bloqueio inequivocamente distintos."}
+      ],
+      "comp": ".impeccable/mocks/decision/cadastro-mural.webp"
+    },
+    {
+      "id": "model-pick",
+      "label": "Guia de Bolso da Cidade",
+      "kicker": "IMPECCABLE’S PICK",
+      "lineage": "guias urbanos dobráveis, índices de atividades e mapas de bairro",
+      "thesis": "O cadastro é o primeiro capítulo de um guia pessoal para viver melhor a cidade.",
+      "palette": ["#09090b", "#111113", "#e11d48", "#fafafa", "#a1a1aa"],
+      "materials": ["papel dobrado escuro", "abas de índice", "anotações cartográficas"],
+      "viewport": "Uma capa editorial curta abre para uma página de boas-vindas com índice das etapas e uma ação primária clara, sem exibir o formulário ainda.",
+      "risk": "É a direção mais familiar e pode ficar editorial demais para um fluxo operacional longo.",
+      "comp": ".impeccable/mocks/decision/cadastro-guia.webp"
+    },
+    {
+      "id": "challenger-wpa",
+      "label": "Convite Cívico",
+      "verdict": "competitive",
+      "lineage": "cartazes públicos serigrafados que convocam pessoas a ocupar a cidade",
+      "thesis": "A primeira tela é um chamado adulto e direto para sair de casa e encontrar atividades compartilhadas.",
+      "palette": ["#09090b", "#e11d48", "#f59e0b", "#fafafa"],
+      "materials": ["tinta plana", "retícula", "papel de cartaz"],
+      "viewport": "Planos urbanos abstratos ocupam o alto da tela; abaixo, uma frase factual sobre amizade e atividades locais conduz a um único botão de início.",
+      "case": "Identifica fortemente vida fora de casa, mas explica pior um cadastro longo do que o mural.",
+      "risk": "Pode soar como campanha ou turismo e competir com a clareza dos formulários.",
+      "comp": ".impeccable/mocks/decision/cadastro-convite-civico.png",
+      "hero": ".impeccable/references/wpa-hero.webp",
+      "board": ".impeccable/references/wpa-board.webp"
+    },
+    {
+      "id": "challenger-transit",
+      "label": "Linhas de Conexão",
+      "verdict": "competitive",
+      "lineage": "mapas metropolitanos esmaltados e sistemas de orientação urbana",
+      "thesis": "Cada etapa é uma estação clara num caminho seguro até descobrir atividades locais.",
+      "palette": ["#09090b", "#111113", "#e11d48", "#fafafa", "#22c55e"],
+      "materials": ["esmalte azul-noite", "linhas de rota", "marcadores de estação"],
+      "viewport": "Uma rota vertical simples atravessa a tela, ligando proposta, segurança, interesses e conclusão ao redor de uma mensagem inicial e sua ação.",
+      "case": "Ganha em progresso e orientação, mas a metáfora de transporte identifica menos a vida social que o mural.",
+      "risk": "Pode parecer um aplicativo de mobilidade e transformar pessoas em pontos de uma rede impessoal.",
+      "comp": ".impeccable/mocks/decision/cadastro-linhas.webp",
+      "hero": ".impeccable/references/transit-hero.webp",
+      "board": ".impeccable/references/transit-board.webp"
+    },
+    {
+      "id": "challenger-cyclorama",
+      "label": "Horizonte de Luz",
+      "verdict": "declined",
+      "lineage": "cicloramas teatrais que passam da noite ao amanhecer",
+      "thesis": "A confiança cresce por fases de luz enquanto o cadastro avança.",
+      "palette": ["#09090b", "#111113", "#e11d48", "#fafafa"],
+      "materials": ["luz de palco", "faixas de horizonte"],
+      "viewport": "Faixas escuras abrem espaço para o conteúdo conforme a pessoa progride.",
+      "case": "A transformação emocional é forte, mas não identifica interesses, cidade ou vida social.",
+      "kept": "Estados nomeados e progressão perceptível além da cor.",
+      "risk": "Atmosfera abstrata demais para gerar confiança operacional."
+    },
+    {
+      "id": "challenger-tensegrity",
+      "label": "Rede em Equilíbrio",
+      "verdict": "declined",
+      "lineage": "estruturas de tensegridade em barras e cabos",
+      "thesis": "Cada informação sustenta uma parte verificável do cadastro.",
+      "palette": ["#09090b", "#18181b", "#e11d48", "#fafafa"],
+      "materials": ["barras de carbono", "cordões tensionados"],
+      "viewport": "Uma rede estrutural relaciona requisitos e etapas ao formulário.",
+      "case": "Torna dependências legíveis, mas parece engenharia e não convivência social.",
+      "kept": "Explicar por que cada dado é necessário e qual etapa ele libera.",
+      "risk": "Frio, técnico e abstrato para um público amplo."
+    },
+    {
+      "id": "challenger-teletext",
+      "label": "Serviço Comunitário",
+      "verdict": "declined",
+      "lineage": "revistas de teletexto e serviços públicos numerados",
+      "thesis": "O fluxo organiza cada estado como uma página inequívoca de serviço.",
+      "palette": ["#09090b", "#fafafa", "#e11d48", "#f59e0b"],
+      "materials": ["grade de caracteres", "mosaicos de blocos"],
+      "viewport": "Um índice rígido apresenta proposta, etapas e estado atual.",
+      "case": "A hierarquia é excelente, mas a nostalgia e a grade rígida excluem parte do público.",
+      "kept": "Hierarquia rigorosa para progresso, prazos e mensagens de sistema.",
+      "risk": "Pode virar novidade retrô em vez de interface inclusiva."
+    },
+    {
+      "id": "challenger-one-bit",
+      "label": "Desktop de Uma Cor",
+      "verdict": "declined",
+      "lineage": "interfaces gráficas iniciais de um bit",
+      "thesis": "Cada controle declara seu estado com contraste e comportamento inequívocos.",
+      "palette": ["#09090b", "#fafafa", "#e11d48"],
+      "materials": ["pixels", "retículas monocromáticas"],
+      "viewport": "Uma janela compacta apresenta a proposta e o primeiro comando.",
+      "case": "Tem estados claros, mas a nostalgia tecnológica não representa construir vida social.",
+      "kept": "Foco, seleção, espera, erro e bloqueio visualmente inequívocos.",
+      "risk": "Pode parecer brinquedo retrô ou ferramenta técnica."
+    }
+  ],
+  "reroll": {"registers": ["safer", "bolder"]},
+  "buildPath": {"value": "comp", "toggle": true},
+  "canon": true,
+  "canonCard": {
+    "label": "Onboarding contemporâneo",
+    "thesis": "Um cadastro escuro, simples e familiar, executado com alto acabamento.",
+    "palette": ["#09090b", "#18181b", "#e11d48", "#fafafa"],
+    "materials": ["grade limpa", "cartão de formulário", "stepper linear"],
+    "viewport": "Marca, título acolhedor, lista curta de benefícios e botão primário acima de um stepper discreto.",
+    "risk": "Confiável, mas indistinguível de outros produtos digitais.",
+    "comp": ".impeccable/mocks/decision/cadastro-canon.png"
+  },
+  "steer": true
+}

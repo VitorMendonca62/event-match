@@ -13,6 +13,7 @@ if (!baseUrl || !brevoUrl || !databaseUrl || !bffToken) {
 const ADULT = '1990-05-10';
 const PASSWORD = 'uma senha longa e rara';
 const DOCUMENT_IDS = [randomUUID(), randomUUID(), randomUUID()];
+const NEW_TERMS_ID = randomUUID();
 const INTEREST_IDS = [1, 2, 3].map((n) => `00000000-0000-7000-8000-${String(n).padStart(12, '0')}`);
 
 interface Reply {
@@ -120,7 +121,31 @@ describe('Registration API v1 (e2e, container + fake Brevo)', () => {
     await pool.end();
   });
 
-  describe('without approved legal documents', () => {
+  describe('seeded legal documents (ADR-028)', () => {
+    const SEEDED_IDS = [1, 2, 3].map((n) => `019c0000-0000-7000-8000-00000000000${n}`);
+
+    test('the list carries the Markdown text without frontmatter and is never cached', async () => {
+      const response = await fetch(new URL('/api/v1/registration/legal-documents?locale=pt-BR', baseUrl), {
+        headers: { 'x-eventmatch-bff-token': bffToken! },
+      });
+      const body = (await response.json()) as { data: { documents: Record<string, string>[] } };
+
+      expect(response.headers.get('cache-control')).toBe('no-store');
+      expect(body.data.documents.map((document) => document.kind)).toEqual(['community_rules', 'privacy', 'terms']);
+      for (const document of body.data.documents) {
+        expect(SEEDED_IDS).toContain(document.id);
+        expect(document.version).toBe('1.0.0');
+        expect(document.content.startsWith('# ')).toBe(true);
+        expect(document.content).not.toContain('document_id:');
+      }
+    });
+  });
+
+  describe('without a current legal document', () => {
+    beforeAll(async () => {
+      await pool.query(`update terms_document set status = 'retired' where status = 'approved'`);
+    });
+
     test('activation is refused with a safe 422 and the document list is empty', async () => {
       const documents = await call('GET', '/api/v1/registration/legal-documents?locale=pt-BR');
       expect(documents.body.data).toEqual({ documents: [] });
@@ -140,8 +165,8 @@ describe('Registration API v1 (e2e, container + fake Brevo)', () => {
     beforeAll(async () => {
       for (const [index, kind] of ['terms', 'privacy', 'community_rules'].entries()) {
         await pool.query(
-          `insert into terms_document (id, kind, version, locale, effective_at, content_digest, status)
-           values ($1, $2, 'e2e-fixture', 'pt-BR', now(), '\\x00', 'approved')`,
+          `insert into terms_document (id, kind, version, locale, effective_at, content_digest, content, status)
+           values ($1, $2, 'e2e-fixture', 'pt-BR', now() - interval '1 hour', sha256(convert_to('# fixture', 'UTF8')), '# fixture', 'approved')`,
           [DOCUMENT_IDS[index], kind],
         );
       }
@@ -167,6 +192,42 @@ describe('Registration API v1 (e2e, container + fake Brevo)', () => {
       expect((await call('GET', '/api/v1/registration', { token })).status).toBe(401);
     });
 
+    test('a version published during the flow makes the accepted ids stale until they are reloaded', async () => {
+      const token = await incompleteAccount(unique('troca'));
+      const listed = async () =>
+        ((await call('GET', '/api/v1/registration/legal-documents?locale=pt-BR')).body.data.documents as { id: string }[]).map(
+          (document) => document.id,
+        );
+      const before = await listed();
+      expect(before.sort()).toEqual([...DOCUMENT_IDS].sort());
+      const interests = await fetch(new URL('/api/v1/catalog/interests?locale=pt-BR', baseUrl)).then((response) => response.json());
+      const interestIds = (interests.data.interests as { id: string }[]).slice(0, 3).map((interest) => interest.id);
+
+      await pool.query(
+        `insert into terms_document (id, kind, version, locale, effective_at, content_digest, content, status)
+         values ($1, 'terms', 'e2e-fixture-2', 'pt-BR', now(), sha256(convert_to('# novo', 'UTF8')), '# novo', 'approved')`,
+        [NEW_TERMS_ID],
+      );
+
+      const stale = await call('POST', '/api/v1/registration/complete', {
+        token,
+        key: key(),
+        body: { birthDate: ADULT, documentIds: before, interestIds },
+      });
+      expect(stale.status).toBe(422);
+      expect(stale.body.data).toEqual({ reason: 'activation_unavailable' });
+
+      const reloaded = await listed();
+      expect(reloaded).toContain(NEW_TERMS_ID);
+      expect(reloaded).not.toContain(DOCUMENT_IDS[0]!);
+      const fresh = await call('POST', '/api/v1/registration/complete', {
+        token,
+        key: key(),
+        body: { birthDate: ADULT, documentIds: reloaded, interestIds },
+      });
+      expect(fresh.status).toBe(200);
+    });
+
     test('the e-mail link confirms once and hands over a new continuation', async () => {
       const contact = unique('link');
       const token = await eligible();
@@ -183,6 +244,36 @@ describe('Registration API v1 (e2e, container + fake Brevo)', () => {
       expect(second.body.data).toEqual({ verified: false });
       expect(second.continuation).toBeNull();
     });
+  });
+
+  test('cancelling after the password answers 200, revokes the continuation and frees the contact (ADR-030)', async () => {
+    const contact = unique('cancela');
+    let token = await eligible();
+    expect((await requestCode(token, contact)).status).toBe(202);
+    const confirmed = await call('POST', '/api/v1/registration/contact-verification/confirm', {
+      token,
+      key: key(),
+      body: { otp: await lastOtp(contact) },
+    });
+    const password = await call('PUT', '/api/v1/registration/password', {
+      token: confirmed.continuation!,
+      key: key(),
+      body: { password: PASSWORD, passwordConfirmation: PASSWORD },
+    });
+    token = password.continuation!;
+
+    const cancelled = await call('DELETE', '/api/v1/registration', { token });
+    expect(cancelled.status).toBe(200);
+    expect(cancelled.body).toEqual({ data: { cancelled: true }, message: 'Cadastro cancelado.', statusCode: 200 });
+    expect(cancelled.cacheControl).toBe('no-store');
+
+    expect((await call('GET', '/api/v1/registration', { token })).status).toBe(401);
+    expect((await call('DELETE', '/api/v1/registration', { token })).status).toBe(401);
+    expect((await call('DELETE', '/api/v1/registration', { token: null })).status).toBe(401);
+    const [row] = (await pool.query(
+      `select status, contact_hash is null as no_contact from registration order by last_updated_at desc limit 1`,
+    )).rows;
+    expect(row).toEqual({ status: 'expired', no_contact: true });
   });
 
   test('a minor receives no continuation and no row is written', async () => {
@@ -289,7 +380,7 @@ describe('Registration API v1 (e2e, container + fake Brevo)', () => {
 
   test('the published OpenAPI document describes the registration contract', async () => {
     const document = await fetch(new URL('/docs-json', baseUrl)).then((response) => response.json());
-    expect(document.info.version).toBe('0.9.0');
+    expect(document.info.version).toBe('0.10.0');
     expect(Object.keys(document.paths)).toEqual(
       expect.arrayContaining([
         '/api/v1/registration/eligibility',

@@ -3,5 +3,5 @@ import nextVitals from 'eslint-config-next/core-web-vitals';
 
 export default defineConfig([
   ...nextVitals,
-  globalIgnores(['.next/**', 'coverage/**']),
+  globalIgnores(['.next/**', 'coverage/**', 'playwright-report/**', 'test-results/**', 'blob-report/**']),
 ]);

@@ -24,6 +24,7 @@ const STATUS: Record<RegistrationErrorCode, HttpStatus> = {
   VERIFICATION_UNAVAILABLE: HttpStatus.CONFLICT,
   REGISTRATION_UNAVAILABLE: HttpStatus.CONFLICT,
   CONTACT_UNAVAILABLE: HttpStatus.CONFLICT,
+  INVALID_LEGAL_DOCUMENT: HttpStatus.INTERNAL_SERVER_ERROR,
 };
 
 const MESSAGES: Partial<Record<HttpStatus, string>> = {
@@ -31,6 +32,7 @@ const MESSAGES: Partial<Record<HttpStatus, string>> = {
   [HttpStatus.UNAUTHORIZED]: 'Authentication is required.',
   [HttpStatus.CONFLICT]: 'The request conflicts with the current resource state.',
   [HttpStatus.UNPROCESSABLE_ENTITY]: 'The request could not be processed.',
+  [HttpStatus.INTERNAL_SERVER_ERROR]: 'The request could not be completed.',
 };
 
 /** The client-facing reason for 422s, limited to codes that disclose nothing about other people. */

@@ -139,11 +139,21 @@ export const termsDocument = pgTable('terms_document', {
   locale: text('locale').notNull(),
   effectiveAt: timestamp('effective_at', { withTimezone: true }).notNull(),
   contentDigest: bytea('content_digest').notNull(),
+  content: text('content'),
   status: text('status').notNull().default('placeholder'),
 }, (table) => [
   check('terms_document_kind_check', sql`${table.kind} in ('terms', 'privacy', 'community_rules')`),
+  check('terms_document_approved_content_check', sql`${table.status} <> 'approved' or ${table.content} is not null`),
+  check(
+    'terms_document_content_digest_check',
+    sql`${table.content} is null or sha256(convert_to(${table.content}, 'UTF8')) = ${table.contentDigest}`,
+  ),
   check('terms_document_status_check', sql`${table.status} in ('placeholder', 'approved', 'retired')`),
   unique('terms_document_kind_version_locale_unique').on(table.kind, table.version, table.locale),
+  // Current version per kind (ADR-028). The immutability trigger lives only in migration 0005.
+  index('terms_document_current_idx')
+    .on(table.locale, table.kind, table.effectiveAt.desc().nullsFirst())
+    .where(sql`${table.status} = 'approved'`),
 ]);
 
 export const termsAcceptance = pgTable('terms_acceptance', {
