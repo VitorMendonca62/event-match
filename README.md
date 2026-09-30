@@ -2,6 +2,25 @@
 
 O EventMatch conecta adultos por interesses e atividades locais para amizade e descoberta da cidade. O projeto é um monorepo Bun com frontend Next.js em `front/` e backend NestJS hexagonal em `back/`; PostgreSQL é acessado exclusivamente pelo backend.
 
+## Docker com Make
+
+O `Makefile` reúne os ambientes Docker já existentes. Use `make help` para listar todos os alvos.
+
+```bash
+make back-dev-up      # backend e PostgreSQL com hot reload
+make back-dev-down    # para e preserva o banco de desenvolvimento
+make back-prod-up     # imagem de produção do backend
+make back-prod-down
+make back-test-up     # PostgreSQL, Brevo falso e backend de teste
+make back-test-down   # para e remove volumes descartáveis
+make front-dev-up     # Next.js com hot reload
+make front-dev-down
+make front-prod-up    # imagem de produção do frontend
+make front-prod-down
+```
+
+Antes de usar `back-test-up`, crie `back/.env.test.local` conforme a documentação do backend. Os ambientes de desenvolvimento e produção usam as variáveis já exportadas no shell ou nos arquivos de ambiente locais; nenhum segredo é declarado pelo Makefile.
+
 ## Documentação e Spec-Driven Development (SDD)
 
 | Documento | Consulte quando... |

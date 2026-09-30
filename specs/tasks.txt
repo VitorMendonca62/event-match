@@ -1,3 +1,23 @@
+TASK 12 — Operação Docker local com Makefile
+
+Objetivo:
+Oferecer comandos `make` memoráveis para subir e descer os ambientes Docker existentes de backend e frontend, sem duplicar Compose, scripts Bun ou configuração de ambiente.
+
+Escopo:
+- Backend: desenvolvimento, produção e teste (`back-dev-*`, `back-prod-*`, `back-test-*`).
+- Frontend: desenvolvimento e produção (`front-dev-*`, `front-prod-*`).
+- Ambiente de teste usa obrigatoriamente `back/.env.test.local` e remove volumes ao descer.
+
+Fora de escopo:
+- Novos containers, CI/CD, deploy, variáveis, migrations, jobs e execução automática de testes.
+
+Critérios de aceite:
+- `make help` lista todos os alvos.
+- Alvos reutilizam apenas os Compose existentes; `*-up` faz build e `*-down` remove órfãos.
+- Somente `back-test-down` remove volumes.
+
+---
+
 TASK 11 — Autenticação, sessão e primeiro acesso após o cadastro
 
 Objetivo:
