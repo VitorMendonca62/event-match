@@ -243,7 +243,7 @@ describe('identity-access (PostgreSQL integration)', () => {
       `insert into authentication_attempt (id, scope, subject_hash, attempted_at)
        select gen_random_uuid(), case when value % 2 = 0 then 'contact' else 'origin' end,
               decode(lpad(to_hex(value), 64, '0'), 'hex'), $1
-       from generate_series(1, 101) as value`,
+       from generate_series(1, 101) as values_to_insert(value)`,
       [staleAt],
     );
     await query(

@@ -71,7 +71,7 @@ export class DrizzleAuthenticationAttemptRepository implements AuthenticationAtt
       .select({ id: attempt.id })
       .from(attempt)
       .where(lte(attempt.attemptedAt, windowStart))
-      .orderBy(asc(attempt.attemptedAt))
+      .orderBy(asc(attempt.attemptedAt), asc(attempt.id))
       .limit(PRUNE_BATCH)
       .for('update', { skipLocked: true });
     if (stale.length === 0) return;
