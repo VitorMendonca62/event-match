@@ -1,7 +1,7 @@
 import { Injectable, type NestMiddleware } from '@nestjs/common';
 import type { NextFunction, Request, Response } from 'express';
 
-/** Every registration response, success or error, is private and never cached (ADR-020). */
+/** Every internal BFF response, success or error, is private and never cached (ADR-020, ADR-034). */
 @Injectable()
 export class NoStoreMiddleware implements NestMiddleware {
   use(_: Request, response: Response, next: NextFunction): void {

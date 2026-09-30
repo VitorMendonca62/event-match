@@ -43,6 +43,13 @@
       "when": 1790713600000,
       "tag": "0005_legal_document_content",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790714035312,
+      "tag": "0006_authenticated_session",
+      "breakpoints": true
     }
   ]
 }

@@ -48,6 +48,34 @@ export async function expireLatestVerification(): Promise<void> {
      WHERE id = (SELECT id FROM contact_verification WHERE status = 'open' ORDER BY created_at DESC LIMIT 1)`;
 }
 
+/** SDD-013: login buckets share the fixture origin, so each scenario starts with empty windows. */
+export async function resetLoginAttempts(): Promise<void> {
+  await sql()`DELETE FROM authentication_attempt`;
+}
+
+/** Moves the newest session's activity 31 minutes back, past the 30-minute idle deadline. */
+export async function idleNewestSession(): Promise<void> {
+  await sql()`
+    UPDATE authenticated_session
+       SET last_seen_at = now() - interval '31 minutes'
+     WHERE id = (SELECT id FROM authenticated_session ORDER BY created_at DESC LIMIT 1)`;
+}
+
+/** Makes the newest remembered session due for its 24-hour rotation without touching deadlines. */
+export async function makeNewestSessionDueForRotation(): Promise<void> {
+  await sql()`
+    UPDATE authenticated_session
+       SET rotated_at = now() - interval '25 hours'
+     WHERE id = (SELECT id FROM authenticated_session ORDER BY created_at DESC LIMIT 1)`;
+}
+
+/** The contact is protected, so the newest activated account is the one the test just created. */
+export async function setNewestAccountStatus(status: 'active' | 'suspended'): Promise<void> {
+  await sql()`
+    UPDATE account SET status = ${status}
+     WHERE id = (SELECT id FROM account WHERE activated_at IS NOT NULL ORDER BY activated_at DESC LIMIT 1)`;
+}
+
 export async function closeDatabase(): Promise<void> {
   await connection?.close();
   connection = undefined;

@@ -61,6 +61,93 @@ const databaseUrlTlsParameters = new Set([
   'require_ssl',
 ]);
 
+/**
+ * Production floors of the session and login policy (ADR-033, ADR-035). Test environments may use
+ * shorter values to exercise expiry; production never loosens the limits nor shortens the windows
+ * below these documented minimums.
+ */
+export const AUTH_PRODUCTION_MINIMUMS = {
+  AUTH_SESSION_ABSOLUTE_TTL_SECONDS: 3_600,
+  AUTH_SESSION_IDLE_TTL_SECONDS: 300,
+  AUTH_REMEMBERED_ABSOLUTE_TTL_SECONDS: 86_400,
+  AUTH_REMEMBERED_IDLE_TTL_SECONDS: 3_600,
+  AUTH_SESSION_ACTIVITY_WRITE_INTERVAL_SECONDS: 60,
+  AUTH_SESSION_RENEWAL_INTERVAL_SECONDS: 3_600,
+  AUTH_SESSION_PREVIOUS_TOKEN_GRACE_SECONDS: 10,
+  AUTH_LOGIN_WINDOW_SECONDS: 900,
+} as const;
+const AUTH_PRODUCTION_MAXIMUMS = {
+  AUTH_SESSION_PREVIOUS_TOKEN_GRACE_SECONDS: 300,
+  AUTH_LOGIN_CONTACT_LIMIT: 5,
+  AUTH_LOGIN_ORIGIN_LIMIT: 30,
+} as const;
+
+type AuthenticationEnvironment = Record<keyof typeof AUTH_PRODUCTION_MINIMUMS, number> &
+  Record<'AUTH_MAX_SESSIONS_PER_ACCOUNT' | 'AUTH_LOGIN_CONTACT_LIMIT' | 'AUTH_LOGIN_ORIGIN_LIMIT', number> & {
+    AUTH_HTTP_ENABLED: boolean;
+    AUTH_SESSION_SECRET?: string;
+    REGISTRATION_FLOW_SECRET: string;
+  };
+
+/** Relations between the session deadlines are checked here so the policy can never be incoherent. */
+function validateAuthentication(
+  environment: AuthenticationEnvironment,
+  production: boolean,
+  issue: (path: string, message: string) => void,
+): void {
+  if ((environment.AUTH_HTTP_ENABLED || production) && !environment.AUTH_SESSION_SECRET) {
+    issue('AUTH_SESSION_SECRET', 'is required when AUTH_HTTP_ENABLED is true or NODE_ENV is production');
+  }
+  if (environment.AUTH_SESSION_SECRET && environment.AUTH_SESSION_SECRET === environment.REGISTRATION_FLOW_SECRET) {
+    issue('AUTH_SESSION_SECRET', 'must differ from REGISTRATION_FLOW_SECRET');
+  }
+  const relations: readonly [boolean, string, string][] = [
+    [
+      environment.AUTH_SESSION_IDLE_TTL_SECONDS <= environment.AUTH_SESSION_ABSOLUTE_TTL_SECONDS,
+      'AUTH_SESSION_IDLE_TTL_SECONDS',
+      'must not exceed AUTH_SESSION_ABSOLUTE_TTL_SECONDS',
+    ],
+    [
+      environment.AUTH_REMEMBERED_IDLE_TTL_SECONDS <= environment.AUTH_REMEMBERED_ABSOLUTE_TTL_SECONDS,
+      'AUTH_REMEMBERED_IDLE_TTL_SECONDS',
+      'must not exceed AUTH_REMEMBERED_ABSOLUTE_TTL_SECONDS',
+    ],
+    [
+      environment.AUTH_SESSION_ABSOLUTE_TTL_SECONDS <= environment.AUTH_REMEMBERED_ABSOLUTE_TTL_SECONDS,
+      'AUTH_SESSION_ABSOLUTE_TTL_SECONDS',
+      'must not exceed AUTH_REMEMBERED_ABSOLUTE_TTL_SECONDS',
+    ],
+    [
+      environment.AUTH_SESSION_ACTIVITY_WRITE_INTERVAL_SECONDS < environment.AUTH_SESSION_IDLE_TTL_SECONDS,
+      'AUTH_SESSION_ACTIVITY_WRITE_INTERVAL_SECONDS',
+      'must be shorter than AUTH_SESSION_IDLE_TTL_SECONDS',
+    ],
+    [
+      environment.AUTH_SESSION_RENEWAL_INTERVAL_SECONDS < environment.AUTH_REMEMBERED_ABSOLUTE_TTL_SECONDS,
+      'AUTH_SESSION_RENEWAL_INTERVAL_SECONDS',
+      'must be shorter than AUTH_REMEMBERED_ABSOLUTE_TTL_SECONDS',
+    ],
+    [
+      environment.AUTH_SESSION_PREVIOUS_TOKEN_GRACE_SECONDS < environment.AUTH_SESSION_RENEWAL_INTERVAL_SECONDS,
+      'AUTH_SESSION_PREVIOUS_TOKEN_GRACE_SECONDS',
+      'must be shorter than AUTH_SESSION_RENEWAL_INTERVAL_SECONDS',
+    ],
+  ];
+  for (const [valid, path, message] of relations) if (!valid) issue(path, message);
+
+  if (!production) return;
+  for (const [name, minimum] of Object.entries(AUTH_PRODUCTION_MINIMUMS)) {
+    if (environment[name as keyof typeof AUTH_PRODUCTION_MINIMUMS] < minimum) {
+      issue(name, `must be at least ${minimum} when NODE_ENV is production`);
+    }
+  }
+  for (const [name, maximum] of Object.entries(AUTH_PRODUCTION_MAXIMUMS)) {
+    if (environment[name as keyof typeof AUTH_PRODUCTION_MAXIMUMS] > maximum) {
+      issue(name, `must be at most ${maximum} when NODE_ENV is production`);
+    }
+  }
+}
+
 const rawEnvSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -89,6 +176,22 @@ const rawEnvSchema = z
     BREVO_BASE_URL: httpUrlSchema.default('https://api.brevo.com/v3'),
     EMAIL_FROM: optionalEnvironmentValue(z.string().trim().min(3).max(320)),
     FRONTEND_PUBLIC_URL: optionalEnvironmentValue(httpUrlSchema),
+    // SDD-013 (ADR-033..036): `/api/v1/auth` answers 404 until the rollout enables it.
+    AUTH_HTTP_ENABLED: booleanSchema.default(false),
+    // ADR-033: HMAC key of session tokens; independent of REGISTRATION_FLOW_SECRET.
+    AUTH_SESSION_SECRET: optionalEnvironmentValue(base64SecretSchema({ min: 32 })),
+    AUTH_SESSION_ABSOLUTE_TTL_SECONDS: positiveIntSchema.default(43_200),
+    AUTH_SESSION_IDLE_TTL_SECONDS: positiveIntSchema.default(1_800),
+    AUTH_REMEMBERED_ABSOLUTE_TTL_SECONDS: positiveIntSchema.default(2_592_000),
+    AUTH_REMEMBERED_IDLE_TTL_SECONDS: positiveIntSchema.default(604_800),
+    AUTH_SESSION_ACTIVITY_WRITE_INTERVAL_SECONDS: positiveIntSchema.default(300),
+    AUTH_SESSION_RENEWAL_INTERVAL_SECONDS: positiveIntSchema.default(86_400),
+    AUTH_SESSION_PREVIOUS_TOKEN_GRACE_SECONDS: positiveIntSchema.default(60),
+    AUTH_MAX_SESSIONS_PER_ACCOUNT: z.coerce.number().int().min(1).max(20).default(5),
+    // ADR-035: sliding window shared by both buckets.
+    AUTH_LOGIN_WINDOW_SECONDS: positiveIntSchema.default(900),
+    AUTH_LOGIN_CONTACT_LIMIT: positiveIntSchema.default(5),
+    AUTH_LOGIN_ORIGIN_LIMIT: positiveIntSchema.default(30),
   })
   .superRefine((environment, context) => {
     const databaseUrl = parseUrl(environment.DATABASE_URL);
@@ -121,6 +224,8 @@ const rawEnvSchema = z
         if (value && !hasProtocol(value, ['https:'])) issue(name, 'must use https:// when NODE_ENV is production');
       }
     }
+
+    validateAuthentication(environment, production, issue);
 
     if (
       production &&

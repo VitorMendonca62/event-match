@@ -6,6 +6,11 @@ type BackendEnv = Pick<BffEnv, 'BACKEND_INTERNAL_URL' | 'BFF_INTERNAL_TOKEN' | '
 export const BFF_TOKEN_HEADER = 'x-eventmatch-bff-token';
 export const ORIGIN_FINGERPRINT_HEADER = 'x-eventmatch-origin-fingerprint';
 export const CONTINUATION_RESPONSE_HEADER = 'x-registration-continuation';
+/** New or rotated session token (ADR-034); read here and never copied to the browser. */
+export const SESSION_RESPONSE_HEADER = 'x-eventmatch-session';
+
+/** Opaque 32-byte tokens in base64url: continuation and session share the same shape. */
+const OPAQUE_TOKEN = /^[A-Za-z0-9_-]{43}$/;
 
 export type BackendRequest = Readonly<{
   method: 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -13,6 +18,8 @@ export type BackendRequest = Readonly<{
   path: string;
   body?: unknown;
   continuation?: string;
+  /** Authenticated session token (ADR-033); mutually exclusive with `continuation`. */
+  session?: string;
   idempotencyKey?: string;
   originFingerprint?: string;
   /** Registration routes require the internal BFF credential; the public catalog does not. */
@@ -24,6 +31,7 @@ export type BackendResponse = Readonly<{
   status: number;
   body: unknown;
   continuation?: string;
+  session?: string;
 }>;
 
 export type CurlDebugOptions = Readonly<{
@@ -51,6 +59,9 @@ export function buildBackendCurl(
   }
   if (request.continuation) {
     headers.push(`Authorization: Bearer ${reveal ? request.continuation : '<REGISTRATION_CONTINUATION>'}`);
+  }
+  if (request.session) {
+    headers.push(`Authorization: Bearer ${reveal ? request.session : '<AUTHENTICATED_SESSION>'}`);
   }
   if (request.idempotencyKey) headers.push(`Idempotency-Key: ${request.idempotencyKey}`);
   if (request.originFingerprint) {
@@ -80,6 +91,7 @@ export async function callBackend(
   const headers = new Headers({ accept: 'application/json' });
   if (request.internal) headers.set(BFF_TOKEN_HEADER, env.BFF_INTERNAL_TOKEN);
   if (request.continuation) headers.set('authorization', `Bearer ${request.continuation}`);
+  if (request.session) headers.set('authorization', `Bearer ${request.session}`);
   if (request.idempotencyKey) headers.set('idempotency-key', request.idempotencyKey);
   if (request.originFingerprint) headers.set(ORIGIN_FINGERPRINT_HEADER, request.originFingerprint);
   if (request.body !== undefined) headers.set('content-type', 'application/json');
@@ -95,10 +107,12 @@ export async function callBackend(
     });
     const body: unknown = await response.json().catch(() => undefined);
     const continuation = response.headers.get(CONTINUATION_RESPONSE_HEADER);
+    const session = response.headers.get(SESSION_RESPONSE_HEADER);
     return {
       status: response.status,
       body,
       ...(isContinuationToken(continuation) ? { continuation } : {}),
+      ...(session && OPAQUE_TOKEN.test(session) ? { session } : {}),
     };
   } catch {
     return { status: 0, body: undefined };

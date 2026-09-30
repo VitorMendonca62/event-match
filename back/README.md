@@ -45,6 +45,16 @@ A API responde em `http://localhost:3001`. O Swagger fica disponível em `http:/
 | `EMAIL_FROM` | — | Obrigatório em `brevo`, por exemplo `EventMatch <remetente-verificado@example.com>`. Para o MVP sem domínio, verifique esse remetente individual na Brevo. |
 | `FRONTEND_PUBLIC_URL` | — | Obrigatória em `brevo`; base do link de confirmação (`/api/registration/contact-verification/confirm-link`). `https` em produção. |
 | `BREVO_BASE_URL` | `https://api.brevo.com/v3` | Só muda em testes contratuais/E2E com servidor fake; `https` em produção. |
+| `AUTH_HTTP_ENABLED` | `false` | Liga `/api/v1/auth` (SDD-013); desligadas respondem `404`. Ligue só depois da migration `0006`. |
+| `AUTH_SESSION_SECRET` | — | Base64 padrão com 32+ bytes, diferente de `REGISTRATION_FLOW_SECRET`; HMAC dos tokens de sessão (ADR-033). Obrigatório com `AUTH_HTTP_ENABLED=true` e sempre em produção. |
+| `AUTH_SESSION_ABSOLUTE_TTL_SECONDS` / `AUTH_SESSION_IDLE_TTL_SECONDS` | `43200` / `1800` | Sessão padrão: 12 h absolutas, 30 min de inatividade. |
+| `AUTH_REMEMBERED_ABSOLUTE_TTL_SECONDS` / `AUTH_REMEMBERED_IDLE_TTL_SECONDS` | `2592000` / `604800` | “Manter conectado”: 30 dias absolutos, 7 dias de inatividade. |
+| `AUTH_SESSION_ACTIVITY_WRITE_INTERVAL_SECONDS` | `300` | Escrita máxima de `last_seen_at`. |
+| `AUTH_SESSION_RENEWAL_INTERVAL_SECONDS` / `AUTH_SESSION_PREVIOUS_TOKEN_GRACE_SECONDS` | `86400` / `60` | Rotação do modo lembrado e graça do token anterior. |
+| `AUTH_MAX_SESSIONS_PER_ACCOUNT` | `5` | A sessão excedente menos recentemente usada é removida. |
+| `AUTH_LOGIN_WINDOW_SECONDS` / `AUTH_LOGIN_CONTACT_LIMIT` / `AUTH_LOGIN_ORIGIN_LIMIT` | `900` / `5` / `30` | Janela deslizante e limites de falhas de login (ADR-035). |
+
+As relações entre prazos são validadas (inatividade ≤ absoluto, escrita < inatividade, graça < renovação…). Em teste os prazos podem ser encurtados; em produção o preflight recusa valores abaixo dos mínimos documentados em `AUTH_PRODUCTION_MINIMUMS` (`src/shared/infrastructure/config/env.ts`) e limites de login acima de 5/30.
 
 Gere cada chave com `openssl rand -base64 32`. Valores vazios, placeholders ou base64 inválido fazem o preflight falhar. Perder `CONTACT_ENCRYPTION_KEY` torna os contatos cifrados ilegíveis; trocar `CONTACT_HASH_KEY` invalida a unicidade dos contatos existentes. Mantenha as chaves em cofre e não as rotacione sem migration de reprocessamento.
 
@@ -67,6 +77,8 @@ O preflight Zod roda antes de iniciar o processo. Em falha, o processo encerra s
 Todas as respostas HTTP com corpo usam `data` (objeto), `message` (string) e `statusCode` (valor numérico de `HttpStatus`). Drizzle ORM e `pg` ficam restritos à infraestrutura.
 
 O contrato v1 do cadastro (`/api/v1/registration/*` e `GET /api/v1/catalog/interests`) está descrito em `docs/04-integracoes-externas.md` e no OpenAPI (`/docs`). As rotas de cadastro são internas ao BFF: exigem `X-EventMatch-BFF-Token` e ficam desligadas até `REGISTRATION_HTTP_ENABLED=true`. No MVP gratuito, verifique um remetente individual na Brevo e use-o em `EMAIL_FROM`; sem domínio autenticado, a Brevo pode reescrever o remetente para um endereço técnico próprio. Antes de um lançamento comercial, configure um domínio com SPF/DKIM.
+
+O contrato v1 de autenticação (`POST /api/v1/auth/login`, `GET /api/v1/auth/session`, `POST /api/v1/auth/logout`; SDD-013) também é interno ao BFF e fica desligado até `AUTH_HTTP_ENABLED=true`. O token de sessão só sai no header interno `X-EventMatch-Session`; o BFF o transforma em cookie `HttpOnly`. Ordem de rollout: aplicar a `0006`, configurar `AUTH_SESSION_SECRET`, publicar o backend com a flag desligada, validar e só então ligar `AUTH_HTTP_ENABLED` e, no frontend, `AUTH_UI_ENABLED`. Em incidente, desligue as flags na ordem inversa e revogue as sessões (`DELETE FROM authenticated_session`) antes de reativar.
 
 Para o smoke operacional da Brevo, `POST /api/v1/registration/email-delivery-test` aceita `{ "contact": "destino@example.com" }` com `X-EventMatch-BFF-Token` e `Idempotency-Key`. A rota existe somente fora de produção quando `VERIFICATION_DELIVERY_MODE=brevo`, não grava contato nem cria desafio e envia um código ilustrativo `000000`. Remova-a após validar o ambiente.
 

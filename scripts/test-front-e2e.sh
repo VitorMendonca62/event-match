@@ -59,10 +59,13 @@ random_secret() { bun -e 'process.stdout.write(require("node:crypto").randomByte
 REGISTRATION_FLOW_SECRET="$(random_secret)"
 BFF_INTERNAL_TOKEN="$(random_secret)"
 ORIGIN_FINGERPRINT_KEY="$(random_secret)"
+AUTH_SESSION_SECRET="$(random_secret)"
 FRONTEND_PUBLIC_URL="http://localhost:${FRONT_PORT}"
 export POSTGRES_DB POSTGRES_USER POSTGRES_PORT BACK_PORT POSTGRES_PASSWORD
 export CONTACT_HASH_KEY CONTACT_ENCRYPTION_KEY VERIFICATION_SECRET_KEY
-export REGISTRATION_FLOW_SECRET BFF_INTERNAL_TOKEN FRONTEND_PUBLIC_URL
+export REGISTRATION_FLOW_SECRET BFF_INTERNAL_TOKEN FRONTEND_PUBLIC_URL AUTH_SESSION_SECRET
+# Every fixture login shares one origin fingerprint (EDGE_PROVIDER=fixture); the per-contact limit stays 5.
+export AUTH_LOGIN_ORIGIN_LIMIT=1000
 url_encode() { bun -e 'process.stdout.write(encodeURIComponent(process.argv[1]))' "$1"; }
 encoded_user="$(url_encode "${POSTGRES_USER}")"
 encoded_password="$(url_encode "${POSTGRES_PASSWORD}")"
@@ -91,7 +94,7 @@ if ! curl --fail --silent --output /dev/null "http://127.0.0.1:${back_port}/heal
 fi
 
 mkdir -p "${LOG_DIR}"
-export NODE_ENV=test EDGE_PROVIDER=fixture PORT="${FRONT_PORT}" HOSTNAME=127.0.0.1
+export NODE_ENV=test EDGE_PROVIDER=fixture PORT="${FRONT_PORT}" HOSTNAME=127.0.0.1 AUTH_UI_ENABLED=true
 export BACKEND_INTERNAL_URL="http://127.0.0.1:${back_port}"
 export ORIGIN_FINGERPRINT_KEY
 

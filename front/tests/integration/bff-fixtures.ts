@@ -14,6 +14,7 @@ export function testEnv(overrides: Partial<BffEnv> = {}): BffEnv {
     ORIGIN_FINGERPRINT_KEY: Buffer.alloc(32, 9).toString('base64'),
     EDGE_PROVIDER: 'fixture',
     BACKEND_TIMEOUT_MS: 1000,
+    AUTH_UI_ENABLED: true,
     ...overrides,
   };
 }

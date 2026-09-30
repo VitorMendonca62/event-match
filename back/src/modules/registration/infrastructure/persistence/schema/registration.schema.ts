@@ -102,7 +102,11 @@ export const account = pgTable('account', {
   activatedAt: timestamp('activated_at', { withTimezone: true }),
   expiredAt: timestamp('expired_at', { withTimezone: true }),
 }, (table) => [
-  check('account_status_check', sql`${table.status} in ('account_incomplete', 'active', 'expired')`),
+  // ADR-036: every canonical state is recognized; registration still produces only the first three.
+  check(
+    'account_status_check',
+    sql`${table.status} in ('account_incomplete', 'active', 'expired', 'age_verification', 'recovery_restricted', 'deactivation_pending', 'deactivated', 'deletion_pending', 'deleted', 'suspended')`,
+  ),
   check('account_active_data_check', sql`${table.status} <> 'active' or (${table.birthDate} is not null and ${table.activatedAt} is not null)`),
   index('account_status_updated_at_index').on(table.status, table.lastUpdatedAt),
 ]);

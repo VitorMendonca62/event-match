@@ -1,181 +1,58 @@
-
-TASK 06 — API HTTP e entrega de verificação do fluxo de cadastro
+TASK 11 — Autenticação, sessão e primeiro acesso após o cadastro
 
 Objetivo:
-Planejar e implementar a fatia HTTP pública do cadastro no NestJS, expondo com segurança os casos de uso construídos na SDD-007 e substituindo o adapter de entrega `noop` pela Brevo no canal de e-mail. WhatsApp fica adiado e indisponível no contrato publicado. A API deve permitir que o futuro frontend execute o fluxo de elegibilidade por nascimento, contato, verificação, senha, dados obrigatórios, aceites e interesses sem acessar o PostgreSQL nem conhecer tipos do Drizzle.
+Permitir que uma pessoa com conta ativa entre no EventMatch com e-mail e senha, mantenha uma sessão autenticada segura, encerre essa sessão e chegue a uma primeira experiência autenticada com próximos passos claros. Hoje a conclusão do cadastro revoga a continuação de registro e encaminha para `/cadastro/concluido`, mas login, sessão geral da conta e área autenticada ainda não existem.
 
-Dependências e fontes de verdade:
-- Executar somente após a implementação e revisão da `specs/sdd-007-persistencia-postgresql-cadastro/tasks.md`.
-- Consultar `docs/DER-EventMatch-MVP.md` v1.3, especialmente RF001–RF007, RN001–RN016, RN147–RN149 e RNF002–RNF004.
-- Aplicar `AGENTS.md`, ADR-008 a ADR-017 e os contratos reais dos casos de uso em `back/src/modules/registration/application/use-cases/`.
-- Aplicar obrigatoriamente `nestjs-expert` e `nestjs-hexagonal-architecture` durante planejamento, implementação e revisão.
+Valor para a pessoa usuária:
+Como pessoa que concluiu o cadastro, quero entrar com minhas credenciais e acessar o EventMatch, para continuar minha experiência, completar meu perfil quando desejar e futuramente descobrir encontros.
+
+Requisitos de origem e dependências:
+- Consultar `docs/DER-EventMatch-MVP.md` v1.3 (RF001, autenticação por contato, estados da conta, privacidade e RNF004), `docs/02-regras-de-negocio.md`, `docs/03-modelos-de-dominio.md` e `docs/04-integracoes-externas.md`.
+- Partir da conta `active`, do contato confirmado e do hash de senha produzidos pelo cadastro da TASK 06/TASK 07, incluindo as decisões de segurança das ADRs aceitas. Conta incompleta, expirada, desativada, em exclusão ou submetida a restrição não pode receber privilégios além dos permitidos por seu estado.
+- TASK 08 deve estar aplicada para que novas contas possam ser ativadas com documentos reais. A infraestrutura de navegador da TASK 10 pode ser reutilizada no E2E, sem bloquear o planejamento desta tarefa.
+- Aplicar `nestjs-expert` e `nestjs-hexagonal-architecture` no backend; `nextjs-architecture`, `vercel-react-best-practices` e `impeccable` no frontend.
 
 Escopo:
-- Planejar, documentar em OpenAPI e implementar endpoints versionados para:
-  - validar nascimento e maioridade antes da coleta de contato, sem persistir a data nessa etapa;
-  - solicitar desafio de verificação por e-mail; rejeitar WhatsApp sem efeitos enquanto o canal estiver adiado;
-  - reenviar o desafio respeitando cooldown e limites;
-  - confirmar OTP e, no e-mail, consumir link de verificação com token opaco;
-  - informar a senha e iniciar o `Registration` provisório;
-  - salvar nome de exibição, cidade/região e intenções de uso, criando a `Account` incompleta;
-  - listar interesses ativos em ordem estável;
-  - consultar somente documentos jurídicos aprovados e suas versões vigentes;
-  - reenviar e revalidar nascimento, documentos aceitos e no mínimo três interesses para concluir o cadastro;
-  - consultar apenas o estado mínimo necessário para retomar o cadastro, sem devolver contato, senha, OTP, nascimento ou sinais de existência de outra conta.
-- Criar controllers e DTOs em `presentation/http`, com `class-validator`, transformação explícita, Swagger (`@ApiTags`, `@ApiOperation` e respostas tipadas) e DI por construtor.
-- Manter regras nos casos de uso e domínio; controllers apenas validam, traduzem contratos e invocam portas inbound/casos de uso.
-- Definir um contrato público consistente para envelopes, datas ISO-8601, ids opacos, idempotência, status HTTP e erros seguros. Mapear `RegistrationError` sem vazar SQL, stack, contato, estado de conta ou razão que permita enumeração.
-- Projetar e implementar uma credencial de continuação do cadastro: IDs públicos isoladamente não podem autorizar leitura ou mutação. Definir expiração, rotação, revogação, armazenamento no navegador/cookie, CSRF, CORS e vínculo com os estados do cadastro em ADR próprio.
-- Decidir em ADR se o browser chamará o NestJS diretamente ou se usará Route Handlers do Next.js como BFF. Se houver BFF, ele apenas autentica/autoriza e delega, sem duplicar regras nem acessar PostgreSQL.
-- Definir a origem confiável da requisição (proxy, cabeçalho e política de confiança) e então ativar o limite de dez desafios por origem/hora previsto na ADR-009; não confiar cegamente em `X-Forwarded-For`.
-- Usar Vercel como deploy inicial do frontend/BFF de testes, diretamente e sem proxy adicional; isolar a resolução de origem para permitir migração futura à Cloudflare por nova ADR, sem alterar o NestJS ou o PostgreSQL.
-- Implementar adapter substituível para Brevo conforme ADR-026: SDK oficial confinado à infraestrutura, timeout de cinco segundos, até duas novas tentativas apenas para falhas transitórias, idempotência, template versionado em código e logs sem PII. A integração WhatsApp fica fora desta task.
-- Validar configuração e segredo da Brevo via `ConfigModule`/Zod; produção deve falhar cedo se o adapter real estiver habilitado sem configuração. O adapter `noop` pode permanecer somente em testes ou configuração explicitamente local e nunca habilita WhatsApp no contrato publicado.
-- Manter respostas neutras para contato existente, rate limit, desafio inexistente/expirado/bloqueado e recuperação no mesmo canal.
-- Atualizar `docs/04-integracoes-externas.md`, documentação de contratos/modelos, `.env.example`, README, `CHANGELOG.md` e versões aplicáveis.
+- Planejar e implementar autenticação por e-mail e senha para contas ativas, com respostas neutras que não revelem se o contato existe, o estado privado da conta ou qual credencial falhou.
+- Implementar no backend o caso de uso de autenticação, a verificação segura do hash existente e as portas/adapters necessários, mantendo domínio e aplicação independentes de HTTP, NestJS e persistência concreta.
+- Definir e implementar sessão autenticada separada da continuação de cadastro, com rotação contra fixation, expiração, revogação no logout e armazenamento que permita aplicar os estados e restrições da conta. Nunca reutilizar a continuação do cadastro como sessão geral.
+- Implementar BFF/proxy no Next.js somente quando necessário para manter credenciais e sessão fora do JavaScript do navegador; Route Handlers não acessam PostgreSQL nem duplicam regras do backend.
+- Criar a tela de login responsiva e acessível, com e-mail, senha, estado de envio, prevenção de duplo clique, mensagens neutras, foco no erro e suporte integral a teclado, leitor de tela e zoom de 200%.
+- Criar logout e proteção das rotas autenticadas, impedindo cache ou exposição de conteúdo privado para visitante, sessão expirada ou sessão revogada.
+- Criar uma primeira página autenticada mínima que confirme a entrada sem expor dados privados e ofereça próximos passos claros para completar o perfil e acessar futuras funcionalidades. Descoberta real de eventos não faz parte desta tarefa.
+- Após concluir o cadastro, atualizar a tela de conclusão para oferecer o caminho de login. O cadastro continua sem autenticação automática, salvo decisão arquitetural e de segurança explicitamente aprovada em ADR própria.
+- Incluir observabilidade segura para sucesso/falha de autenticação, expiração e logout, sem registrar e-mail, senha, cookie, token, hash, corpo da requisição ou motivo que permita enumeração.
+- Atualizar OpenAPI, documentação arquitetural, regras operacionais, `.env.example`, README, `CHANGELOG.md` e versões afetadas.
 
 Decisões obrigatórias no planejamento:
-- Criar ADRs `proposed` separados para o contrato HTTP, a credencial segura de continuação, o limite de origem confiável e a topologia browser/BFF/NestJS; todos devem ser aceitos por mim antes da implementação.
-- Confirmar URLs, métodos, DTOs, códigos HTTP, estratégia de idempotência e compatibilidade/versionamento.
-- Confirmar os pré-requisitos operacionais da Brevo antes do smoke/deploy: conta, remetente individual verificado, API key, cota vigente e URL pública. A implementação usa fake HTTP e não simula entrega em produção. WhatsApp é uma integração futura conforme ADR-025.
-- Definir como o link de e-mail será construído, expira, é consumido uma única vez e redireciona sem colocar segredo em logs ou analytics.
-- Definir comportamento quando não houver documentos jurídicos aprovados: a API pode permitir testes isolados com fixtures, mas nunca ativar conta real com placeholder lorem ipsum.
+- Modelo da sessão autenticada: estado no servidor, identificador opaco, duração absoluta e por inatividade, rotação, revogação e política para múltiplos dispositivos. Registrar a decisão em ADR `proposed` e aceitá-la antes da implementação.
+- Transporte e proteção no navegador: cookie `HttpOnly`, `Secure`, `SameSite`, escopo, CSRF, CORS, BFF e comportamento em desenvolvimento local.
+- Política contra força bruta e credential stuffing: limites, janelas, respostas, telemetria e recuperação, sem inventar bloqueio permanente nem revelar a existência da conta.
+- Estados de conta autorizados a entrar e capacidades limitadas durante desativação, exclusão pendente ou restrição. Lacunas do DER devem ficar como `Pendente de definição` no plano.
+- Contrato da primeira área autenticada, rota de destino e comportamento de voltar, atualizar, expirar ou abrir múltiplas abas.
 
 Fora de escopo:
-- Telas e componentes Next.js.
-- Login após cadastro, sessão geral da conta, recuperação completa de senha, alteração de contato e onboarding de campos opcionais.
-- Conteúdo jurídico definitivo, painel administrativo, job agendado de expiração e SMS.
-- Acesso direto do frontend ao PostgreSQL ou regras de negócio em controllers/BFF.
+- Recuperação ou redefinição de senha, autenticação Google/Apple, MFA, login por celular/WhatsApp e gestão detalhada de dispositivos.
+- Edição completa ou prévia do perfil, alteração de contato, correção de nascimento, desativação/exclusão e exportação de dados.
+- Listagem/recomendação de eventos, criação de evento, participação, conversa, notificações e painel administrativo.
+- Autenticar automaticamente uma pessoa apenas porque ela terminou o cadastro, sem ADR aceita e análise explícita dos riscos.
 
 Critérios de aceite:
-- OpenAPI cobre todos os endpoints, DTOs, respostas e erros públicos; alterações de contrato possuem testes de snapshot/contrato, documentação, changelog e versionamento.
-- `ValidationPipe` global rejeita propriedades desconhecidas; limites de tamanho e formato existem para todos os campos.
-- Testes unitários cobrem controllers, tradução de erros e adapters; testes contratuais cobrem Brevo com servidor fake; E2E com PostgreSQL descartável cobre o fluxo por e-mail, rejeição sem efeitos de WhatsApp, OTP, reenvio, expiração, bloqueio, antienumeração, idempotência e ativação.
-- Testes garantem que contato, OTP, senha, token de link, credenciais, nascimento e SQL nunca aparecem em logs ou respostas indevidas.
-- Falhas transitórias/definitivas da Brevo respeitam timeout, retry e idempotência sem manter transação PostgreSQL aberta durante I/O externo.
-- `bun run --cwd back lint`, `typecheck`, `test`, `test:integration`, `test:e2e` e `build` passam; testes com banco usam o runner descartável da TASK 05.
+- Dado um e-mail e uma senha válidos de uma conta ativa, quando a pessoa envia o login, então recebe uma sessão autenticada rotacionável e é encaminhada à primeira página autenticada.
+- Dado um contato inexistente, senha incorreta ou conta sem permissão para sessão comum, quando a pessoa tenta entrar, então recebe resposta observavelmente equivalente, sem enumeração e sem sessão.
+- Dada uma sessão válida, quando a pessoa atualiza a página ou abre diretamente uma rota protegida, então permanece autenticada sem expor o segredo ao JavaScript; visitante, sessão expirada ou revogada é encaminhado ao login sem conteúdo privado em cache.
+- Dada uma sessão válida, quando a pessoa executa logout, então a sessão é revogada no servidor, o cookie é expirado e seu reuso não autoriza novas requisições.
+- A continuação do cadastro nunca autoriza rotas da conta, e a sessão autenticada nunca autoriza operações internas do fluxo de cadastro.
+- A tela de conclusão oferece acesso claro ao login, e a primeira área autenticada apresenta próximos passos sem prometer funcionalidades ainda indisponíveis.
+- Testes unitários cobrem credenciais, estados da conta, rotação, expiração, revogação e mapeamento seguro de erros; testes de integração cobrem persistência/concorrência da sessão e contrato HTTP; E2E cobre login, falha neutra, refresh, rota protegida, expiração e logout.
+- Auditoria verifica cookies, CSRF, CORS, fixation, enumeração, rate limit, cache privado, logs, teclado, foco, leitor de tela, contraste, responsividade e zoom de 200%.
+- `bun run --cwd back lint`, `typecheck`, `test`, `test:integration`, `test:e2e` e `build` passam; `bun run --cwd front lint`, `typecheck`, `test` e `build` passam, além do E2E full-stack aplicável.
 
-TASK 07 — Frontend Next.js do fluxo de cadastro
+Dúvidas e bloqueios para o planejamento:
+- Pendente de definição: duração absoluta e por inatividade da sessão, quantidade de sessões simultâneas e política de revogação entre dispositivos.
+- Pendente de definição: comportamento de contas desativadas, em exclusão pendente ou sob restrição no momento do login.
+- Pendente de definição: conteúdo e rota definitiva da primeira página autenticada enquanto descoberta de eventos estiver fora do escopo.
 
-Objetivo:
-Planejar e implementar no Next.js App Router a experiência responsiva e acessível de cadastro do EventMatch, consumindo exclusivamente o contrato público aprovado na TASK 06. O fluxo deve conduzir a pessoa por elegibilidade por nascimento, contato, OTP, senha, dados obrigatórios, aceites, escolha de interesses e conclusão, preservando somente o progresso local não sensível autorizado.
-
-Dependências e fontes de verdade:
-- Executar após a TASK 06 possuir SDD `ready`, ADRs aceitas e contrato OpenAPI estável; a implementação E2E depende dos endpoints disponíveis.
-- Consultar `specs/sdd-006-modelagem-conceitual-cadastro/tasks.md`, ADR-008 a ADR-012, contrato OpenAPI da TASK 06 e `docs/DER-EventMatch-MVP.md` v1.3.
-- Aplicar `AGENTS.md`, `vercel-react-best-practices` e `nextjs-architecture` durante planejamento, implementação e revisão.
-
-Escopo:
-- Criar rota de cadastro no App Router com Server Components por padrão e Client Components pequenos apenas onde houver formulário, temporizador, rolagem, seleção ou acesso a `sessionStorage`.
-- Implementar as etapas:
-  - nascimento e validação de maioridade como primeira informação após a apresentação, sem persistência local ou remota da data nessa etapa;
-  - e-mail como canal selecionável; WhatsApp visível, desabilitado e acompanhado do texto acessível “Em breve”, sem solicitar telefone ou consentimento;
-  - OTP de seis dígitos, feedback neutro, expiração de 15 minutos, reenvio liberado após 60 segundos e estados de bloqueio/limite sem enumeração;
-  - criação e confirmação de senha, requisitos claros e tratamento de senha comum sem ecoar o valor;
-  - nome de exibição, cidade/região e uma ou mais intenções de uso;
-  - apresentação dos três documentos vigentes e confirmação acessível, com novo envio da data de nascimento somente para revalidação final no backend;
-  - seleção de pelo menos três interesses ativos;
-  - conclusão e limpeza segura do progresso local.
-- Implementar retorno por link de verificação de e-mail sem expor token em UI, logs, analytics, histórico adicional ou mensagens de erro; remover/invalidar o segredo após o consumo conforme o contrato aprovado.
-- Usar a credencial de continuação definida na TASK 06; não tratar `verificationId`, `registrationId` ou `accountId` isolados como autorização e não persisti-los em armazenamento acessível a JavaScript se o ADR definir cookie `HttpOnly`.
-- Aplicar ADR-011: `sessionStorage` versionado com TTL deslizante máximo de 30 minutos apenas para etapa, nome de exibição, cidade/região, intenção, interesses e campos opcionais autorizados. Nunca persistir contato, OTP, senha, confirmação, nascimento, token, aceite autenticado ou resposta sensível do backend. Limpar em conclusão, cancelamento, expiração e incompatibilidade de schema.
-- Aplicar ADR-012: lorem ipsum somente em testes de interface. Exigir rolagem completa no cenário visual testado, com alternativa acessível para teclado/leitor de tela, mas nunca apresentar o placeholder como documento jurídico nem permitir ativação real com ele.
-- Buscar interesses e documentos no servidor/BFF conforme o ADR da TASK 06, evitando waterfalls (`async-parallel`, `server-parallel-fetching`) e enviando aos Client Components apenas os campos necessários (`server-serialization`).
-- Usar TanStack Query somente para estado remoto que se beneficie de cache/deduplicação; não duplicar no cache dados que pertencem ao formulário ou ao backend.
-- Centralizar a paleta obrigatória de `AGENTS.md` em `globals.css`, substituir o tema claro atual, usar variáveis semânticas e não espalhar hexadecimais pelos componentes.
-- Implementar layout mobile-first, estados de carregamento/erro/sucesso, prevenção de envio duplo e navegação segura entre etapas.
-- Garantir acessibilidade por teclado, foco após mudança de etapa/erro, labels e instruções associadas, regiões `aria-live`, contraste, zoom de 200%, alvos de toque adequados e feedback que não dependa apenas de cor.
-- Atualizar `.env.example`, README, documentação da jornada, `CHANGELOG.md` e versão do frontend.
-
-Decisões obrigatórias no planejamento:
-- Reutilizar a ADR aprovada da TASK 06 para BFF/chamada direta e credencial de continuação; qualquer mudança exige nova ADR, sem editar silenciosamente a anterior.
-- Definir mapa de rotas, comportamento de atualizar/voltar/fechar a aba, experiência após TTL local e recuperação quando o backend indicar cadastro expirado.
-- Definir biblioteca/estratégia de formulários e validação compartilhada. Nova dependência exige justificativa e ADR quando material; não duplicar regras de domínio como fonte de verdade no frontend.
-- Definir visual e conteúdo textual dos estados neutros sem afirmar que um contato existe ou não.
-- Manter o plano bloqueado enquanto o contrato OpenAPI, a credencial de continuação ou a política BFF/CORS/CSRF não estiverem aceitos.
-
-Fora de escopo:
-- Login, recuperação completa de senha, perfil público, eventos, recomendações e painel administrativo.
-- Campos opcionais do onboarding posterior à ativação, salvo uma tela neutra de encaminhamento; sua persistência exige tarefa própria.
-- Conteúdo jurídico definitivo e ativação real enquanto não existirem três documentos aprovados.
-- Acesso ao PostgreSQL, regras de cadastro em Route Handlers ou armazenamento de segredos no navegador.
-
-Critérios de aceite:
-- O fluxo completo funciona por e-mail contra a API da TASK 06; WhatsApp aparece desabilitado como “Em breve” e não dispara chamada. Em ambiente sem documentos aprovados, a interface bloqueia a ativação real de forma clara e segura.
-- Testes unitários cobrem validação visual, máquina de etapas, TTL/schema do `sessionStorage`, limpeza, countdown e acessibilidade básica; testes de integração cobrem cliente/BFF e contratos de erro.
-- E2E cobre caminho feliz por e-mail, WhatsApp desabilitado sem requisição, OTP inválido/expirado, reenvio, bloqueio, retorno por link, atualização da página, expiração local, falha da Brevo, menor de idade, menos de três interesses e ausência de documentos aprovados.
-- Auditoria automatizada e manual cobre teclado, leitor de tela, foco, contraste e zoom; nenhum teste/snapshot contém PII ou segredo real.
-- Aplicar e citar no plano/revisão, quando pertinentes: `async-parallel`, `async-defer-await`, `server-no-shared-module-state`, `server-serialization`, `server-parallel-fetching`, `client-localstorage-schema`, `rerender-derived-state-no-effect` e `rerender-move-effect-to-event`.
-- `bun run --cwd front lint`, `typecheck`, `test` e `build` passam, além do E2E full-stack pelo runner descartável.
-
-TASK 08 — Publicar o conteúdo dos documentos legais no banco e apresentá-los no cadastro para aceite ou recusa
-
-Objetivo:
-Persistir no PostgreSQL o texto integral dos três documentos legais aprovados em `docs/legal/pt-BR/` (Termos de Uso, Política de Privacidade e Regras de Convivência, v1.0.0), entregá-lo pela API do backend e exibi-lo no passo de documentos do cadastro do Next.js, para que a pessoa leia cada documento e aceite ou recuse de forma explícita. Hoje o seed `back/drizzle/0004_seed_legal_documents.sql` grava apenas metadados e SHA-256 em `terms_document`, o caso de uso `ListApprovedLegalDocuments` devolve só metadados e `LegalDocumentView.content` no frontend nunca é preenchido, então `legal-step.tsx` permanece bloqueado como "em aprovação".
-
-Dependências e fontes de verdade:
-- Partir do estado da branch `feat/sdd-009` (TASK 06 e TASK 07 implementadas): `docs/legal/README.md`, `back/drizzle/0004_seed_legal_documents.sql`, tabelas `terms_document` e `terms_acceptance`, `back/src/modules/registration/application/use-cases/list-approved-legal-documents.use-case.ts`, `front/src/app/api/registration/legal-documents/route.ts` e `front/src/features/registration/components/steps/legal-step.tsx`.
-- Consultar `docs/DER-EventMatch-MVP.md` v1.3 (RF005, aceites e versionamento de documentos), `docs/02-regras-de-negocio.md` §2, `docs/03-modelos-de-dominio.md`, `docs/04-integracoes-externas.md`, ADR-012 (placeholders/lorem ipsum só em teste) e ADR-020 a ADR-027.
-- Aplicar `nestjs-expert` e `nestjs-hexagonal-architecture` no backend; `vercel-react-best-practices` e `impeccable` no frontend, respeitando `DESIGN.md`, `PRODUCT.md` e a paleta obrigatória.
-
-Escopo:
-- Definir onde o texto vive no banco (coluna `content` em `terms_document` ou tabela própria), migration versionada `0005_*` aditiva e reversível, sem editar a `0004` já aplicada. O backfill deve carregar exatamente os bytes dos arquivos Markdown e uma verificação (teste ou constraint) deve garantir que `sha256(content)` seja igual a `content_digest`, preservando a imutabilidade da versão publicada.
-- Estender a porta `TermsRepositoryPort`, o caso de uso e o adapter PostgreSQL para retornar id, tipo, versão, idioma, vigência e conteúdo dos documentos `approved`, sem expor `placeholder` ou `retired`. Atualizar DTO, OpenAPI/Swagger e o mapper do BFF, sem regra de negócio em controller ou Route Handler.
-- Frontend: renderizar o Markdown de forma segura (sem HTML bruto, sem `dangerouslySetInnerHTML` sobre conteúdo não sanitizado), com título, versão, vigência e área rolável acessível por teclado e leitor de tela, buscando os documentos no servidor em paralelo e serializando apenas o necessário (`async-parallel`, `server-parallel-fetching`, `server-serialization`).
-- Aceite: um controle explícito e não pré-marcado por documento, com "Li e aceito" para cada um e um caminho claro de recusa ("Não aceito"), que explique que sem os três aceites a conta não é ativada, permita voltar ou encerrar o cadastro e não registre aceite parcial. O aceite deve continuar persistido em `terms_acceptance` com id, versão e data do documento na conclusão do cadastro, e deve ser rejeitado no backend se o id não for de um documento aprovado e vigente.
-- Definir o comportamento quando uma nova versão for publicada durante o cadastro em andamento e como o conteúdo antigo deixa de ser oferecido, sem alterar a linha já aceita.
-- Remover o estado permanentemente bloqueado do passo de documentos quando os três documentos existirem, mantendo o bloqueio seguro se algum estiver ausente. Conteúdo de teste continua marcado como fixture, sem efeito de ativação.
-- Atualizar `docs/legal/README.md`, `docs/03-*`, `docs/04-*`, `front/README.md`, `CHANGELOG.md` e versões. Criar ADR `proposed` para a decisão de armazenamento e entrega do conteúdo (coluna x tabela, embutir o texto na listagem x endpoint por documento, política de cache), e outro se a renderização de Markdown exigir nova dependência.
-
-Decisões obrigatórias no planejamento:
-- Modelo de armazenamento do conteúdo e mecanismo que garanta a coincidência com o digest, além do processo de publicar uma nova versão (novo arquivo, novo identificador, nova migration/seed).
-- Contrato da API: lista com conteúdo ou metadados mais endpoint por documento; cabeçalhos de cache e ETag por versão imutável, conforme a regra de cache do `AGENTS.md`.
-- Biblioteca e estratégia de renderização de Markdown; se o pacote for novo, justificar e registrar ADR.
-- Semântica da recusa: encerra o fluxo, volta ao passo anterior ou mantém o rascunho; o que é limpo do `sessionStorage` e do backend.
-- Validação jurídica: o jurídico autorizou os documentos v1.0.0 e o registro de aceites em 2026-09-28; registrar a autorização no plano, na ADR e em `docs/legal/README.md`.
-
-Fora de escopo:
-- Redação ou revisão jurídica do conteúdo dos documentos.
-- Login, reaceite de novas versões por contas já ativas, painel administrativo para publicar documentos e outros idiomas além de `pt-BR`.
-- Alterar o restante do fluxo de cadastro, exceto o passo de documentos.
-
-Critérios de aceite:
-- Após `db:migrate`, os três documentos `approved` estão no banco com o texto integral idêntico a `docs/legal/pt-BR/*.md` e `sha256(content)` igual a `content_digest`.
-- `GET` dos documentos aprovados devolve o conteúdo, sem expor `placeholder`/`retired`, e o OpenAPI reflete o contrato.
-- No cadastro, a pessoa lê os três documentos, aceita cada um e conclui a ativação; ao recusar qualquer um, a conta não é ativada, nenhum aceite parcial é gravado e a interface mostra uma saída clara.
-- O backend rejeita aceites de ids inexistentes, não aprovados ou de versão não vigente.
-- Testes unitários cobrem caso de uso, mapper, renderização do Markdown e estados de aceite/recusa; testes de integração com o runner descartável cobrem migration, digest e persistência de `terms_acceptance`; E2E cobre aceite total, recusa, documento ausente e troca de versão durante o fluxo.
-- Auditoria de acessibilidade e capturas desktop e mobile cobrem teclado, leitor de tela, foco, contraste e zoom de 200%, seguidas do finish review do Impeccable.
-- `bun run --cwd back lint`, `typecheck`, `test`, `test:integration`, `test:e2e` e `build` passam; `bun run --cwd front lint`, `typecheck`, `test` e `build` passam.
-
-TASK 09 (backlog) — Buscar documentos e interesses no RSC só nas etapas que os usam
-
-Objetivo:
-Evitar chamadas desnecessárias ao backend a cada carregamento de `/cadastro`. Hoje `loadRegistrationView` (`front/src/shared/server/registration-view.ts`) inicia, com qualquer continuação válida, a busca dos documentos legais (~20 KB) e do catálogo de interesses em paralelo ao snapshot, e descarta o resultado (`void catalogsPromise`) quando a etapa não os usa (por exemplo, `age_eligible`, `verification_pending` e `registration_in_progress`).
-
-Origem: revisão da SDD-010/SDD-011 em 2026-09-29.
-
-Escopo a planejar:
-- Comparar a latência atual (snapshot e catálogos em paralelo) com buscar os catálogos só depois do snapshot, conforme a etapa (`contact_verified` → documentos; `account_incomplete` → documentos e interesses), ou com cache entre requisições (exige ADR, conforme ADR-028 e a regra de cache do `AGENTS.md`).
-- Manter `async-parallel`/`server-parallel-fetching` onde houver ganho real, `async-defer-await` e `server-serialization`.
-- Atualizar o teste de carregamento paralelo do RSC em `front/tests/integration/`.
-
-Critérios de aceite:
-- Nenhuma chamada a `legal-documents` ou `catalog/interests` nas etapas que não os exibem.
-- O tempo até o conteúdo nas etapas que os usam não piora de forma mensurável.
-
-TASK 10 — E2E full-stack do cadastro no navegador e revisão com leitor de tela
-
-Objetivo:
-Fechar as pendências da SDD-010 §2.0 e da SDD-011 §7: um runner E2E que abre um navegador real contra Next.js + NestJS + PostgreSQL descartável + Brevo falso e percorre o cadastro como uma pessoa usaria, e um roteiro de revisão manual com leitor de tela real.
-
-Origem: revisão da SDD-010/SDD-011 em 2026-09-29.
-
-Escopo:
-- Escolher a ferramenta de navegador (nova dependência → ADR), o modo de subir o frontend no runner e o isolamento entre cenários.
-- Cobrir os cenários E2E listados na SDD-010 §7 e na SDD-011 §7, incluindo teclado, foco, acessibilidade automatizada, viewport móvel e zoom de 200%.
-- Roteiro manual com Orca + Firefox (e, se houver acesso, NVDA ou VoiceOver) e registro do resultado.
-
-Critérios de aceite:
-- `bun run --cwd front test:e2e` sobe o ambiente descartável, roda os cenários e o derruba, sem PII ou segredo real em fixtures, traces ou capturas.
-- Lint, typecheck, testes, builds e o E2E do backend continuam verdes.
+Estimativa inicial:
+- Complexidade Fibonacci: 13. Dividir no plano SDD em entregas verticais menores para contrato/sessão, login/logout e primeira experiência autenticada antes de levar para execução.
+- Risco de deploy: alto, por introduzir uma nova fronteira de autenticação, persistência de sessão, cookies, autorização e proteção contra abuso.

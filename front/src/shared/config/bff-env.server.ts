@@ -26,6 +26,11 @@ export const bffEnvSchema = z
     ORIGIN_FINGERPRINT_KEY: secretSchema,
     EDGE_PROVIDER: z.enum(['vercel', 'fixture']),
     BACKEND_TIMEOUT_MS: z.coerce.number().int().min(100).max(30_000).default(8_000),
+    // SDD-013 rollout (ADR-034): `/entrar`, `/inicio` and `/api/auth/**` stay hidden until enabled.
+    AUTH_UI_ENABLED: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((value) => value === 'true'),
   })
   .superRefine((env, context) => {
     if (env.NODE_ENV !== 'production') return;

@@ -66,7 +66,7 @@ import { VerificationSecretAdapter } from './infrastructure/security/verificatio
 import { BffInternalGuard } from './presentation/http/bff-internal.guard';
 import { ContinuationGuard } from './presentation/http/continuation.guard';
 import { EmailDeliveryTestGuard } from './presentation/http/email-delivery-test.guard';
-import { NoStoreMiddleware } from './presentation/http/no-store.middleware';
+import { NoStoreMiddleware } from '../../shared/presentation/http/no-store.middleware';
 import { RegistrationController } from './presentation/http/controllers/registration.controller';
 
 const adapters = [
