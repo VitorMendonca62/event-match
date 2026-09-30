@@ -31,4 +31,3 @@ export class LoggedOutDto {
 export const LoginResponseDto = apiEnvelope(SessionDeadlinesDto, 'LoginResponseDto', HttpStatus.OK);
 export const SessionResponseDto = apiEnvelope(SessionStateDto, 'SessionResponseDto', HttpStatus.OK);
 export const LogoutResponseDto = apiEnvelope(LoggedOutDto, 'LogoutResponseDto', HttpStatus.OK);
-
