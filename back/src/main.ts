@@ -27,7 +27,7 @@ export function configureApplication(app: INestApplication): void {
     const swaggerConfig = new DocumentBuilder()
       .setTitle('EventMatch API')
       .setDescription('Technical API contract for EventMatch.')
-      .setVersion('0.10.0')
+      .setVersion('0.11.0')
       .addBearerAuth(
         {
           type: 'http',
@@ -35,6 +35,14 @@ export function configureApplication(app: INestApplication): void {
           description: 'Registration continuation token (ADR-021).',
         },
         'registration-continuation',
+      )
+      .addBearerAuth(
+        {
+          type: 'http',
+          scheme: 'bearer',
+          description: 'Opaque authenticated session token, forwarded only by the BFF (ADR-033, ADR-034).',
+        },
+        'authenticated-session',
       )
       .build();
     const document = SwaggerModule.createDocument(app, swaggerConfig);

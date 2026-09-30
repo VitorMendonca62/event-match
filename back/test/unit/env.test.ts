@@ -8,6 +8,7 @@ const secrets = {
   VERIFICATION_SECRET_KEY: Buffer.alloc(32, 3).toString('base64'),
   REGISTRATION_FLOW_SECRET: Buffer.alloc(32, 4).toString('base64'),
   BFF_INTERNAL_TOKEN: Buffer.alloc(32, 5).toString('base64'),
+  AUTH_SESSION_SECRET: Buffer.alloc(32, 6).toString('base64'),
   VERIFICATION_DELIVERY_MODE: 'noop' as const,
 };
 const brevoDelivery = {
@@ -15,6 +16,21 @@ const brevoDelivery = {
   BREVO_API_KEY: 'xkeysib-fictitious-test-key',
   EMAIL_FROM: 'EventMatch <nao-responda@example.test>',
   FRONTEND_PUBLIC_URL: 'https://app.example.test',
+};
+
+const AUTH_DEFAULTS = {
+  AUTH_HTTP_ENABLED: false,
+  AUTH_SESSION_ABSOLUTE_TTL_SECONDS: 43_200,
+  AUTH_SESSION_IDLE_TTL_SECONDS: 1_800,
+  AUTH_REMEMBERED_ABSOLUTE_TTL_SECONDS: 2_592_000,
+  AUTH_REMEMBERED_IDLE_TTL_SECONDS: 604_800,
+  AUTH_SESSION_ACTIVITY_WRITE_INTERVAL_SECONDS: 300,
+  AUTH_SESSION_RENEWAL_INTERVAL_SECONDS: 86_400,
+  AUTH_SESSION_PREVIOUS_TOKEN_GRACE_SECONDS: 60,
+  AUTH_MAX_SESSIONS_PER_ACCOUNT: 5,
+  AUTH_LOGIN_WINDOW_SECONDS: 900,
+  AUTH_LOGIN_CONTACT_LIMIT: 5,
+  AUTH_LOGIN_ORIGIN_LIMIT: 30,
 };
 
 describe('validateEnv', () => {
@@ -36,6 +52,7 @@ describe('validateEnv', () => {
       DATABASE_SSL_MODE: 'disable',
       REGISTRATION_HTTP_ENABLED: false,
       BREVO_BASE_URL: 'https://api.brevo.com/v3',
+      ...AUTH_DEFAULTS,
       ...secrets,
     });
   });
@@ -154,5 +171,51 @@ describe('validateEnv', () => {
     test('keeps the registration routes disabled by default', () => {
       expect(validateEnv(base).REGISTRATION_HTTP_ENABLED).toBe(false);
     });
+  });
+});
+
+describe('authentication policy (SDD-013 §4.2)', () => {
+  const { AUTH_SESSION_SECRET: sessionSecret, ...withoutSessionSecret } = secrets;
+  const base = { ...withoutSessionSecret, DATABASE_URL: 'postgresql://eventmatch:eventmatch@localhost:5432/eventmatch' };
+  const production = {
+    ...base,
+    ...brevoDelivery,
+    NODE_ENV: 'production',
+    DATABASE_SSL_MODE: 'require',
+    AUTH_SESSION_SECRET: sessionSecret,
+  };
+
+  test('requires the session secret when the routes are enabled or in production, without echoing it', () => {
+    expect(() => validateEnv({ ...base, AUTH_HTTP_ENABLED: 'true' })).toThrow('AUTH_SESSION_SECRET');
+    expect(() => validateEnv({ ...production, AUTH_SESSION_SECRET: '' })).toThrow('AUTH_SESSION_SECRET');
+    expect(validateEnv({ ...base, AUTH_HTTP_ENABLED: 'true', AUTH_SESSION_SECRET: sessionSecret }).AUTH_HTTP_ENABLED).toBe(true);
+    const short = Buffer.alloc(16, 6).toString('base64');
+    expect(() => validateEnv({ ...base, AUTH_SESSION_SECRET: short })).toThrow('AUTH_SESSION_SECRET');
+    expect(() => validateEnv({ ...base, AUTH_SESSION_SECRET: short })).not.toThrow(short);
+  });
+
+  test('keeps the session secret independent from the registration secret', () => {
+    expect(() => validateEnv({ ...base, AUTH_SESSION_SECRET: secrets.REGISTRATION_FLOW_SECRET })).toThrow(
+      'must differ from REGISTRATION_FLOW_SECRET',
+    );
+  });
+
+  test.each([
+    ['AUTH_SESSION_IDLE_TTL_SECONDS', { AUTH_SESSION_IDLE_TTL_SECONDS: '50000' }],
+    ['AUTH_REMEMBERED_IDLE_TTL_SECONDS', { AUTH_REMEMBERED_IDLE_TTL_SECONDS: '3000000' }],
+    ['AUTH_SESSION_ACTIVITY_WRITE_INTERVAL_SECONDS', { AUTH_SESSION_ACTIVITY_WRITE_INTERVAL_SECONDS: '1800' }],
+    ['AUTH_SESSION_PREVIOUS_TOKEN_GRACE_SECONDS', { AUTH_SESSION_PREVIOUS_TOKEN_GRACE_SECONDS: '86400' }],
+    ['AUTH_MAX_SESSIONS_PER_ACCOUNT', { AUTH_MAX_SESSIONS_PER_ACCOUNT: '0' }],
+  ])('refuses an incoherent %s', (name, override) => {
+    expect(() => validateEnv({ ...base, ...override })).toThrow(name);
+  });
+
+  test('tests may shorten deadlines, production refuses values below the documented floors', () => {
+    const short = { AUTH_SESSION_IDLE_TTL_SECONDS: '20', AUTH_SESSION_ACTIVITY_WRITE_INTERVAL_SECONDS: '5' };
+    expect(validateEnv({ ...base, NODE_ENV: 'test', ...short }).AUTH_SESSION_IDLE_TTL_SECONDS).toBe(20);
+    expect(() => validateEnv({ ...production, ...short })).toThrow('AUTH_SESSION_IDLE_TTL_SECONDS');
+    expect(() => validateEnv({ ...production, AUTH_LOGIN_CONTACT_LIMIT: '6' })).toThrow('AUTH_LOGIN_CONTACT_LIMIT');
+    expect(() => validateEnv({ ...production, AUTH_LOGIN_WINDOW_SECONDS: '60' })).toThrow('AUTH_LOGIN_WINDOW_SECONDS');
+    expect(validateEnv(production).AUTH_LOGIN_ORIGIN_LIMIT).toBe(30);
   });
 });

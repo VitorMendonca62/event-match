@@ -54,6 +54,13 @@ services:
       BREVO_BASE_URL: http://fake-brevo:4010/v3
       EMAIL_FROM: EventMatch <nao-responda@example.test>
       FRONTEND_PUBLIC_URL: ${FRONTEND_PUBLIC_URL:-http://localhost:3000}
+      # SDD-013: the runners generate a disposable session secret; policies default to production values.
+      AUTH_HTTP_ENABLED: "true"
+      AUTH_SESSION_SECRET: ${AUTH_SESSION_SECRET:-}
+      AUTH_LOGIN_WINDOW_SECONDS: ${AUTH_LOGIN_WINDOW_SECONDS:-900}
+      AUTH_LOGIN_ORIGIN_LIMIT: ${AUTH_LOGIN_ORIGIN_LIMIT:-30}
+      AUTH_SESSION_RENEWAL_INTERVAL_SECONDS: ${AUTH_SESSION_RENEWAL_INTERVAL_SECONDS:-86400}
+      AUTH_SESSION_PREVIOUS_TOKEN_GRACE_SECONDS: ${AUTH_SESSION_PREVIOUS_TOKEN_GRACE_SECONDS:-60}
     depends_on:
       postgres:
         condition: service_healthy

@@ -380,7 +380,7 @@ describe('Registration API v1 (e2e, container + fake Brevo)', () => {
 
   test('the published OpenAPI document describes the registration contract', async () => {
     const document = await fetch(new URL('/docs-json', baseUrl)).then((response) => response.json());
-    expect(document.info.version).toBe('0.10.0');
+    expect(document.info.version).toBe('0.11.0');
     expect(Object.keys(document.paths)).toEqual(
       expect.arrayContaining([
         '/api/v1/registration/eligibility',

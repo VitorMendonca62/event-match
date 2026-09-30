@@ -1,13 +1,13 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test as base } from '@playwright/test';
 
-import { resetOriginWindow } from './db';
+import { resetLoginAttempts, resetOriginWindow } from './db';
 
 /** Every scenario starts with a clean origin window (the fixture edge gives all browsers one origin). */
 export const test = base.extend<{ freshOrigin: void }>({
   freshOrigin: [
     async ({}, use) => {
-      await resetOriginWindow();
+      await Promise.all([resetOriginWindow(), resetLoginAttempts()]);
       await use();
     },
     { auto: true },

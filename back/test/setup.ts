@@ -14,6 +14,8 @@ process.env.REGISTRATION_FLOW_SECRET = Buffer.alloc(32, 4).toString('base64');
 process.env.BFF_INTERNAL_TOKEN = Buffer.alloc(32, 5).toString('base64');
 process.env.VERIFICATION_DELIVERY_MODE = 'noop';
 process.env.REGISTRATION_HTTP_ENABLED = 'true';
+process.env.AUTH_SESSION_SECRET = Buffer.alloc(32, 6).toString('base64');
+process.env.AUTH_HTTP_ENABLED = 'true';
 // Never inherit real provider settings: contract tests point the adapter at a local fake server.
 process.env.BREVO_API_KEY = '';
 process.env.BREVO_BASE_URL = 'https://api.brevo.com/v3';

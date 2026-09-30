@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
 import { HealthModule } from './modules/health/health.module';
+import { IdentityAccessModule } from './modules/identity-access/identity-access.module';
 import { RegistrationModule } from './modules/registration/registration.module';
 import { ProfilesModule } from './modules/profiles/profiles.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
@@ -18,6 +19,7 @@ import { PersistenceModule } from './shared/infrastructure/persistence/persisten
     ProfilesModule,
     CatalogModule,
     RegistrationModule,
+    IdentityAccessModule,
     HealthModule,
   ],
 })

@@ -8,8 +8,10 @@ Aplicação Next.js App Router do EventMatch. A base usa React Server Components
 |---|---|---|
 | `/` | RSC | Apresentação do EventMatch e início do cadastro. |
 | `/cadastro` | RSC + ilha cliente | Jornada de cadastro (SDD-010). |
-| `/cadastro/concluido` | RSC | Confirmação sem dados da conta. |
-| `/api/registration/**`, `/api/catalog/interests` | Route Handlers | BFF fino para o NestJS; detalhes em `docs/04-integracoes-externas.md`. |
+| `/cadastro/concluido` | RSC | Confirmação sem dados da conta; oferece “Entrar no EventMatch” quando `AUTH_UI_ENABLED=true`. |
+| `/entrar` | RSC + ilha `LoginForm` | Login por e-mail e senha (SDD-013); pessoa conectada é redirecionada a `/inicio`. |
+| `/inicio` | RSC + ilhas `LogoutButton`/`SessionKeeper` | Primeira área autenticada, validada no servidor antes do render; sem dados privados. |
+| `/api/registration/**`, `/api/catalog/interests`, `/api/auth/**` | Route Handlers | BFF fino para o NestJS; detalhes em `docs/04-integracoes-externas.md`. |
 
 ## Pré-requisitos
 
@@ -41,6 +43,7 @@ A aplicação fica disponível em `http://localhost:3000` por padrão.
 | `ORIGIN_FINGERPRINT_KEY` | — | Segredo base64 (32+ bytes) do HMAC da origem. |
 | `EDGE_PROVIDER` | — | `vercel` (obrigatório em produção) ou `fixture` (local/testes). |
 | `BACKEND_TIMEOUT_MS` | `8000` | Timeout de cada chamada ao backend, sem retry. |
+| `AUTH_UI_ENABLED` | `false` | Expõe `/entrar`, `/inicio`, login e manutenção de sessão (SDD-013). Ligue só depois de `AUTH_HTTP_ENABLED=true` no backend; o logout segue expirando o cookie mesmo desligado. |
 
 Nenhuma dessas variáveis usa o prefixo `NEXT_PUBLIC_`. O servidor valida as variáveis em `dev`, `start` e na inicialização do container de produção. Configuração inválida encerra o processo com erro sem exibir valores recebidos.
 

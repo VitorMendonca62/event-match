@@ -87,6 +87,30 @@ O navegador conversa apenas com a mesma origem. Cada Route Handler delega a exat
 - Logs do BFF: somente `operation`, `status`, `durationMs` e `correlationId` gerado.
 - Configuração server-only (`front/src/shared/config/bff-env.server.ts`): `BACKEND_INTERNAL_URL`, `FRONTEND_PUBLIC_URL`, `BFF_INTERNAL_TOKEN`, `ORIGIN_FINGERPRINT_KEY`, `EDGE_PROVIDER` e `BACKEND_TIMEOUT_MS`. Produção exige HTTPS público, `vercel` e segredos base64 de 32+ bytes; valores nunca são impressos.
 
+### Contrato v1 de autenticação (SDD-013, backend/Swagger 0.11.0)
+
+Interno ao BFF: todas as rotas de `/api/v1/auth` exigem `X-EventMatch-BFF-Token`, respondem `404` enquanto `AUTH_HTTP_ENABLED=false`, usam `Cache-Control: no-store`, nunca definem cookie nem CORS e seguem o envelope padrão. O token opaco (32 bytes em base64url) sai somente no header interno `X-EventMatch-Session`; entra como `Authorization: Bearer` (esquema OpenAPI `authenticated-session`).
+
+| Método e rota | Entrada | Sucesso | Falhas |
+|---|---|---|---|
+| `POST /api/v1/auth/login` | `{ email (IsEmail, ≤320), password (1–256), rememberMe (boolean) }` + `X-EventMatch-Origin-Fingerprint` | `200 { authenticated: true, expiresAt, idleExpiresAt, remembered }` + `X-EventMatch-Session` | `400` forma; `401` neutro (inexistente, senha errada, estado sem sessão comum); `429` genérico, sem `Retry-After` nem escopo; `5xx` genérico, nunca `401` |
+| `GET /api/v1/auth/session?capability=authenticated_home|logout&rotate=true|false` | Bearer | `200 { authenticated: true, expiresAt, idleExpiresAt, remembered, rotationDue }`; com `rotate=true` e rotação devida, novo token em `X-EventMatch-Session` | `401` neutro (ausente, expirada, revogada ou conta fora de `active`; a sessão é removida); `403` genérico (conta `active` com capacidade negada; sessão mantida) |
+| `POST /api/v1/auth/logout` | Bearer | `200 { loggedOut: true }`, idempotente para token bem formado | `401` só para bearer ausente/malformado |
+
+Os corpos de `401`, `403` e `429` são idênticos aos do filtro global (`Authentication is required.`, `You do not have permission to perform this action.`, `Too many requests.`) e não informam estado, motivo, tentativas restantes nem instante de liberação.
+
+### BFF de autenticação no Next.js (SDD-013, frontend 0.12.0)
+
+| Navegador → BFF | NestJS | Observações |
+|---|---|---|
+| `POST /api/auth/login` | `POST /api/v1/auth/login` | mesma origem + JSON (login CSRF); fingerprint de origem; em sucesso grava o cookie e responde só `{ authenticated: true }` |
+| `GET /api/auth/session` | `GET /api/v1/auth/session?capability=authenticated_home&rotate=true` | manutenção chamada pela página no foco/visibilidade/bfcache; `Sec-Fetch-Site` ausente ou `same-origin`; troca o cookie quando rotaciona; `401` expira o cookie, `403` não |
+| `POST /api/auth/logout` | `POST /api/v1/auth/logout` | mesma origem + JSON; sempre expira o cookie (inclusive sem cookie, com sessão já ausente, backend indisponível ou `AUTH_UI_ENABLED=false`) |
+
+- Cookie `__Host-eventmatch_session` (`HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`, sem `Domain`); sem “Manter conectado” não tem `Max-Age`/`Expires`; com ele, `Max-Age = min(expiresAt − agora, 30 dias)`. Fora de produção o nome é `eventmatch_session` sem `Secure`. O cookie de continuação do cadastro nunca é aceito aqui.
+- Sem retry automático; timeout `BACKEND_TIMEOUT_MS`; o header interno e o token nunca voltam ao navegador; tradução conservadora (`400/401/429` genéricos, forma inesperada `502`, `5xx`/rede `503`); logs com `scope: "auth-bff"`, operação, status, duração e correlation id gerado.
+- `/entrar` e `/inicio` validam a sessão no servidor com `GET /api/v1/auth/session` sem rotação (RSC não grava cookie) e nunca serializam principal, prazos ou token para o cliente. `AUTH_UI_ENABLED` (server-only, padrão `false`) oculta `/entrar`, `/inicio`, login e manutenção.
+
 ## 3. Exposição por audiência
 
 | Audiência | Pode receber | Nunca recebe |
@@ -136,6 +160,7 @@ Valide extensão, MIME real, tamanho, assinatura, malware e autorização tanto 
 - No deploy inicial direto na Vercel, somente `x-vercel-forwarded-for` alimenta o resolvedor server-only de origem. O BFF converte o IP em fingerprint HMAC e envia apenas essa fingerprint ao NestJS; headers genéricos do cliente são ignorados.
 - Rotas de cadastro no NestJS exigem credencial interna opaca do BFF, separada da continuação da pessoa. Migração futura para Cloudflare troca apenas o resolvedor de origem e exige nova ADR; não habilita fallback simultâneo para múltiplos headers.
 - Respostas de login/recuperação não confirmam existência da conta.
+- Login (ADR-035): limites independentes em janela deslizante de 15 min, 5 falhas por contato (HMAC em domínio `auth:login:`) e 30 por fingerprint de origem, persistidos em `authentication_attempt` e reservados antes da consulta à conta; sucesso libera a reserva. Contato inexistente paga uma verificação Argon2id dummy. Telemetria `identity_access.*` registra só operação, resultado agregado, duração, correlation id e, no limite, o escopo.
 - Downloads de cópia de dados usam autenticação reforçada, URL temporária e expiração de sete dias.
 - Webhooks externos exigem assinatura, replay protection, idempotência e auditoria.
 - Eventos de auditoria são separados de logs comuns e têm acesso restrito.

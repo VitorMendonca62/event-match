@@ -1,0 +1,235 @@
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { randomBytes, randomUUID } from 'node:crypto';
+import { Pool } from 'pg';
+
+const baseUrl = process.env.E2E_BASE_URL;
+const brevoUrl = process.env.E2E_FAKE_BREVO_URL;
+const databaseUrl = process.env.E2E_DATABASE_URL;
+const bffToken = process.env.E2E_BFF_INTERNAL_TOKEN;
+if (!baseUrl || !brevoUrl || !databaseUrl || !bffToken) {
+  throw new Error('E2E_BASE_URL, E2E_FAKE_BREVO_URL, E2E_DATABASE_URL and E2E_BFF_INTERNAL_TOKEN are required.');
+}
+
+const PASSWORD = 'uma senha longa e rara';
+/** The runner shortens the login window to 8 s and the rotation interval to 3 s (test env only). */
+const WINDOW_MS = 8_000;
+const RENEWAL_MS = 3_000;
+
+interface Reply {
+  status: number;
+  text: string;
+  body: { data: Record<string, unknown>; message: string; statusCode: number };
+  session: string | null;
+  continuation: string | null;
+  cacheControl: string | null;
+}
+
+/** Plays the Next.js BFF: internal token, origin fingerprint and session token kept server-side. */
+async function call(
+  method: string,
+  path: string,
+  options: { body?: unknown; token?: string; continuation?: string; key?: boolean; fingerprint?: string; bff?: string } = {},
+): Promise<Reply> {
+  const headers: Record<string, string> = {
+    'content-type': 'application/json',
+    'x-eventmatch-bff-token': options.bff ?? bffToken!,
+  };
+  const bearer = options.token ?? options.continuation;
+  if (bearer) headers.authorization = `Bearer ${bearer}`;
+  if (options.key) headers['idempotency-key'] = randomUUID();
+  if (options.fingerprint) headers['x-eventmatch-origin-fingerprint'] = options.fingerprint;
+  const response = await fetch(new URL(path, baseUrl), {
+    method,
+    headers,
+    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+  });
+  const text = await response.text();
+  return {
+    status: response.status,
+    text,
+    body: JSON.parse(text) as Reply['body'],
+    session: response.headers.get('x-eventmatch-session'),
+    continuation: response.headers.get('x-registration-continuation'),
+    cacheControl: response.headers.get('cache-control'),
+  };
+}
+
+const fingerprint = () => randomBytes(32).toString('base64url');
+const unique = (label: string) => `${label}-${randomBytes(4).toString('hex')}@example.test`;
+const sleep = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+async function lastOtp(address: string): Promise<string> {
+  const messages = (await (await fetch(new URL('/__messages', brevoUrl))).json()) as { to: string[]; text: string }[];
+  const otp = messages.filter((message) => message.to.includes(address)).at(-1)?.text.match(/\b(\d{6})\b/)?.[1];
+  if (!otp) throw new Error('no OTP delivered');
+  return otp;
+}
+
+/** Creates an active account through the real registration contract, exactly as a person would. */
+async function activeAccount(contact: string): Promise<void> {
+  let continuation = (await call('POST', '/api/v1/registration/eligibility', { body: { birthDate: '1990-05-10' } })).continuation;
+  const requested = await call('POST', '/api/v1/registration/contact-verification', {
+    continuation: continuation!,
+    key: true,
+    fingerprint: fingerprint(),
+    body: { channel: 'email', contact },
+  });
+  expect(requested.status).toBe(202);
+  const confirmed = await call('POST', '/api/v1/registration/contact-verification/confirm', {
+    continuation: continuation!,
+    key: true,
+    body: { otp: await lastOtp(contact) },
+  });
+  continuation = confirmed.continuation;
+  const password = await call('PUT', '/api/v1/registration/password', {
+    continuation: continuation!,
+    key: true,
+    body: { password: PASSWORD, passwordConfirmation: PASSWORD },
+  });
+  const required = await call('PUT', '/api/v1/registration/required-data', {
+    continuation: password.continuation!,
+    key: true,
+    body: { displayName: 'Ana', region: 'Recife - PE', usageIntents: ['friendship'] },
+  });
+  const documents = await call('GET', '/api/v1/registration/legal-documents?locale=pt-BR');
+  const documentIds = (documents.body.data.documents as { id: string }[]).map((document) => document.id);
+  if (documentIds.length !== 3) throw new Error('the E2E database must hold the three approved legal documents');
+  const interests = (await (await fetch(new URL('/api/v1/catalog/interests?locale=pt-BR', baseUrl))).json()) as {
+    data: { interests: { id: string }[] };
+  };
+  const complete = await call('POST', '/api/v1/registration/complete', {
+    continuation: required.continuation!,
+    key: true,
+    body: { birthDate: '1990-05-10', documentIds, interestIds: interests.data.interests.slice(0, 3).map((i) => i.id) },
+  });
+  expect(complete.body.data).toEqual({ status: 'active' });
+}
+
+const login = (email: string, options: { password?: string; rememberMe?: boolean; origin?: string } = {}) =>
+  call('POST', '/api/v1/auth/login', {
+    fingerprint: options.origin ?? fingerprint(),
+    body: { email, password: options.password ?? PASSWORD, rememberMe: options.rememberMe ?? false },
+  });
+
+describe('Auth API v1 (e2e, container)', () => {
+  const pool = new Pool({ connectionString: databaseUrl, max: 1 });
+  const ana = unique('ana');
+
+  beforeAll(async () => {
+    await activeAccount(ana);
+  }, 30_000);
+
+  afterAll(async () => {
+    await pool.end();
+  });
+
+  test('BFF token, flag, methods, DTOs, Swagger and no-store', async () => {
+    const without = await call('POST', '/api/v1/auth/login', {
+      bff: 'x',
+      fingerprint: fingerprint(),
+      body: { email: ana, password: PASSWORD, rememberMe: false },
+    });
+    expect(without.status).toBe(401);
+    expect(without.cacheControl).toBe('no-store');
+    expect((await call('GET', '/api/v1/auth/login')).status).toBe(404);
+    expect((await call('POST', '/api/v1/auth/login', { fingerprint: fingerprint(), body: { email: ana } })).status).toBe(400);
+
+    const document = (await (await fetch(new URL('/docs-json', baseUrl))).json()) as {
+      info: { version: string };
+      paths: Record<string, unknown>;
+    };
+    expect(document.info.version).toBe('0.11.0');
+    expect(Object.keys(document.paths)).toEqual(
+      expect.arrayContaining(['/api/v1/auth/login', '/api/v1/auth/session', '/api/v1/auth/logout']),
+    );
+  });
+
+  test('login → session → logout → the old bearer is refused; the token never reaches a body', async () => {
+    const logged = await login(ana);
+    expect(logged.status).toBe(200);
+    expect(logged.cacheControl).toBe('no-store');
+    expect(logged.body.data).toMatchObject({ authenticated: true, remembered: false });
+    const token = logged.session!;
+    expect(token).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(logged.text).not.toContain(token);
+
+    const session = await call('GET', '/api/v1/auth/session', { token });
+    expect(session.status).toBe(200);
+    expect(session.body.data).toMatchObject({ authenticated: true, rotationDue: false });
+    expect(session.text).not.toContain(ana);
+
+    const stored = await pool.query<{ digest: string }>(`select encode(token_digest, 'base64') as digest from authenticated_session`);
+    expect(JSON.stringify(stored.rows)).not.toContain(token);
+
+    expect((await call('POST', '/api/v1/auth/logout', { token })).body).toEqual({
+      data: { loggedOut: true },
+      message: 'Sessão encerrada.',
+      statusCode: 200,
+    });
+    expect((await call('GET', '/api/v1/auth/session', { token })).status).toBe(401);
+    expect((await call('POST', '/api/v1/auth/logout', { token })).status).toBe(200);
+  });
+
+  test('unknown contact, wrong password and forbidden states answer the same 401 snapshot', async () => {
+    const suspended = unique('suspensa');
+    await activeAccount(suspended);
+    // The account just activated is the most recent one; tests in this file run sequentially.
+    await pool.query(
+      `update account set status = 'suspended'
+       where id = (select id from account where status = 'active' order by activated_at desc limit 1)`,
+    );
+    const replies = await Promise.all([
+      login(unique('ninguem')),
+      login(ana, { password: 'outra senha qualquer' }),
+      login(suspended),
+    ]);
+    for (const reply of replies) {
+      expect(reply.status).toBe(401);
+      expect(reply.session).toBeNull();
+      expect(reply.text).toBe(replies[0]!.text);
+    }
+    expect(replies[0]!.body).toEqual({ data: {}, message: 'Authentication is required.', statusCode: 401 });
+  });
+
+  test('the contact bucket answers a generic 429 and recovers by itself', async () => {
+    await sleep(WINDOW_MS + 500); // earlier tests left failures for this contact in the window
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      expect((await login(ana, { password: 'errada' })).status).toBe(401);
+    }
+    const limited = await login(ana);
+    expect(limited.status).toBe(429);
+    expect(limited.body).toEqual({ data: {}, message: 'Too many requests.', statusCode: 429 });
+    await sleep(WINDOW_MS + 500);
+    expect((await login(ana)).status).toBe(200);
+  }, 30_000);
+
+  test('the origin bucket limits every contact behind one origin', async () => {
+    const origin = fingerprint();
+    // Concurrent on purpose: the bucket must stay exact, and the burst fits well inside the window.
+    const burst = await Promise.all(Array.from({ length: 30 }, () => login(unique('varredura'), { origin })));
+    expect(burst.map((reply) => reply.status)).toEqual(Array.from({ length: 30 }, () => 401));
+    expect((await login(ana, { origin })).status).toBe(429);
+    await sleep(WINDOW_MS + 500);
+    expect((await login(ana, { origin })).status).toBe(200);
+  }, 30_000);
+
+  test('a remembered session rotates only through the internal header, never in a body', async () => {
+    const logged = await login(ana, { rememberMe: true });
+    const token = logged.session!;
+    await sleep(RENEWAL_MS + 200);
+
+    const reported = await call('GET', '/api/v1/auth/session', { token });
+    expect(reported.body.data).toMatchObject({ remembered: true, rotationDue: true });
+    expect(reported.session).toBeNull();
+
+    const rotated = await call('GET', '/api/v1/auth/session?rotate=true', { token });
+    expect(rotated.session).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(rotated.session).not.toBe(token);
+    expect(rotated.text).not.toContain(rotated.session!);
+    expect(rotated.body.data.expiresAt).toBe(reported.body.data.expiresAt);
+
+    expect((await call('GET', '/api/v1/auth/session', { token: rotated.session! })).status).toBe(200);
+    await sleep(2_200);
+    expect((await call('GET', '/api/v1/auth/session', { token })).status).toBe(401);
+  }, 30_000);
+});

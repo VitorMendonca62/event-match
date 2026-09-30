@@ -1,8 +1,9 @@
-import { createCipheriv, createDecipheriv, createHmac, randomBytes } from 'node:crypto';
+import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import type { BackendEnv } from '../../../../shared/infrastructure/config/env';
+import { contactBlindIndex, hmacSha256 } from '../../../../shared/infrastructure/security/contact-blind-index';
 import type { ContactProtectorPort, SealedContact } from '../../domain/ports/outbound/security.ports';
 import { ContactIdentifier, type ContactChannel } from '../../domain/value-objects/contact-identifier';
 
@@ -26,11 +27,11 @@ export class ContactProtectorAdapter implements ContactProtectorPort {
   }
 
   blindIndex(contact: ContactIdentifier): Buffer {
-    return this.hmac(`contact:${contact.channel}:${contact.value}`);
+    return contactBlindIndex(this.hashKey, contact.channel, contact.value);
   }
 
   rateLimitSubject(contact: ContactIdentifier): Buffer {
-    return this.hmac(`rate:contact:${contact.channel}:${contact.value}`);
+    return hmacSha256(this.hashKey, `rate:contact:${contact.channel}:${contact.value}`);
   }
 
   seal(contact: ContactIdentifier): SealedContact {
@@ -56,9 +57,5 @@ export class ContactProtectorAdapter implements ContactProtectorPort {
       decipher.final(),
     ]);
     return ContactIdentifier.create(channel, plain.toString('utf8'));
-  }
-
-  private hmac(value: string): Buffer {
-    return createHmac('sha256', this.hashKey).update(value).digest();
   }
 }

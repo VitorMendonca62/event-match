@@ -25,6 +25,16 @@ As regras normativas completas são RN001–RN168 em [`DER-EventMatch-MVP.md`](D
 - A retomada entre etapas usa exclusivamente a continuação opaca emitida após a elegibilidade (ADR-021): cada etapa só aceita o estágio anterior esperado, mudanças de privilégio rotacionam a continuação e a conclusão a revoga. Identificadores internos nunca autorizam operações.
 - O navegador pode reter por no máximo 30 minutos, em `sessionStorage` versionado, apenas etapa, nome de exibição, cidade/região, intenção, interesses e campos opcionais. Segredos, contato, nascimento, OTP, tokens, aceites e respostas do backend não são retidos localmente.
 
+### Login, sessão e primeiro acesso (SDD-013)
+
+- Concluir o cadastro não autentica: `/cadastro/concluido` oferece “Entrar no EventMatch” (`/entrar`) e o login é sempre explícito (ADR-037). A continuação do cadastro nunca autoriza `/inicio` nem `/api/auth/**`, e a sessão comum nunca autoriza operações do cadastro.
+- Somente conta `active`, com e-mail confirmado e senha correta, recebe sessão comum. Contato inexistente, senha errada e qualquer outro estado (`account_incomplete`, `expired`, `age_verification`, `recovery_restricted`, `deactivation_pending`, `deactivated`, `deletion_pending`, `deleted`, `suspended`) recebem a mesma recusa neutra, sem sessão (ADR-036). O caminho de contato inexistente também executa uma verificação Argon2id (dummy).
+- Sem “Manter conectado” (padrão desmarcado): 12 horas absolutas, 30 minutos de inatividade e cookie que termina com o navegador. Com “Manter conectado”: 30 dias absolutos, 7 dias de inatividade, cookie persistente até o limite absoluto e rotação transparente do segredo a cada 24 horas. Atividade renova só a inatividade (gravada no máximo a cada 5 minutos); o prazo absoluto exige novo login (ADR-033).
+- Uma conta mantém até cinco sessões; o sexto login remove a sessão válida menos recentemente usada. Logout revoga só a sessão atual e apaga o cookie; reutilizar o segredo depois é recusado. Encerrar as outras sessões (RF011) fica para tarefa futura.
+- Estado e capacidade são reavaliados em cada requisição protegida: conta que deixa de estar `active` perde a sessão imediatamente (recusa neutra `401`); conta `active` com capacidade negada recebe `403` genérico e mantém a sessão. Nesta entrega as capacidades são `authenticated_home` e `logout`; o resto é negado por padrão.
+- Falhas de login consomem dois limites independentes em janela deslizante de 15 minutos: 5 por contato (inclusive inexistente) e 30 por origem. Cada tentativa reserva nos dois antes da consulta à conta; sucesso libera a reserva, então logins bem-sucedidos não contam. Acima de qualquer limite a resposta é genérica, sem escopo nem tempo de espera, e a janela libera sozinha; não há bloqueio permanente (ADR-035).
+- `/inicio` confirma o acesso sem nome, e-mail ou id e mostra “Completar perfil” e “Descobrir encontros” como itens “Em breve”, sem links. A recuperação de senha ainda não existe e `/entrar` informa isso sem link quebrado.
+
 ## 3. Eventos e anfitriões
 
 - Apenas encontros presenciais, informais, gratuitos e em local público/estabelecimento identificável podem ser publicados (RN019–RN020).

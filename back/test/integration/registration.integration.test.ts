@@ -31,6 +31,9 @@ const REGISTRATION_TABLES = [
   'account_contact',
   'account_credential',
   'account_interest',
+  // SDD-013 (identity-access): sessions and login attempts.
+  'authenticated_session',
+  'authentication_attempt',
   'contact_verification',
   'interest',
   'profile',
@@ -189,7 +192,7 @@ describe('registration persistence (PostgreSQL integration)', () => {
       const [interests] = await query<{ count: string }>(`select count(*)::text as count from interest`);
       const [ledger] = await query<{ count: string }>(`select count(*)::text as count from drizzle.__drizzle_migrations`);
       expect(interests?.count).toBe('20');
-      expect(ledger?.count).toBe('6');
+      expect(ledger?.count).toBe('7');
     });
   });
 

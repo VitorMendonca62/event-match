@@ -10,7 +10,7 @@ const collect = (directory: string): string[] =>
 const FORBIDDEN_IMPORT = /from ['"](?:drizzle-orm|pg|@nestjs\/|node:|[^'"]*\/infrastructure\/)/;
 
 describe('hexagonal boundaries', () => {
-  test.each(['registration', 'profiles', 'catalog'])(
+  test.each(['registration', 'profiles', 'catalog', 'identity-access'])(
     '%s keeps framework, driver, crypto and infrastructure imports out of domain/application',
     (module) => {
       for (const layer of ['domain', 'application']) {
@@ -26,8 +26,8 @@ describe('hexagonal boundaries', () => {
     },
   );
 
-  test('registration presentation reaches the database only through use cases', () => {
-    const directory = join(modulesRoot, 'registration', 'presentation');
+  test.each(['registration', 'identity-access'])('%s presentation reaches the database only through use cases', (module) => {
+    const directory = join(modulesRoot, module, 'presentation');
     for (const file of collect(directory)) {
       const source = readFileSync(file, 'utf8');
       expect({ file, source }).not.toMatchObject({

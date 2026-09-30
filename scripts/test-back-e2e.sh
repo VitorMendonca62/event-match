@@ -46,6 +46,11 @@ random_secret() { bun -e 'process.stdout.write(require("node:crypto").randomByte
 export POSTGRES_DB POSTGRES_USER POSTGRES_PORT BACK_PORT POSTGRES_PASSWORD
 export CONTACT_HASH_KEY CONTACT_ENCRYPTION_KEY VERIFICATION_SECRET_KEY
 export REGISTRATION_FLOW_SECRET BFF_INTERNAL_TOKEN
+# SDD-013: disposable session secret; a short login window and rotation interval make recovery and
+# rotation observable within the suite (allowed only outside production).
+AUTH_SESSION_SECRET="$(random_secret)"
+export AUTH_SESSION_SECRET
+export AUTH_LOGIN_WINDOW_SECONDS=8 AUTH_SESSION_RENEWAL_INTERVAL_SECONDS=3 AUTH_SESSION_PREVIOUS_TOKEN_GRACE_SECONDS=2
 # Percent-encode credentials: a valid password may contain URL-reserved characters (@ # ? / :).
 url_encode() { bun -e 'process.stdout.write(encodeURIComponent(process.argv[1]))' "$1"; }
 encoded_user="$(url_encode "${POSTGRES_USER}")"

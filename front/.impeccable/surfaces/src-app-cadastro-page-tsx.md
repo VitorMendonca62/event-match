@@ -1,8 +1,8 @@
 ---
 version: 1
-slug: "front-src-app-cadastro-page-tsx"
-primary_target: "front/src/app/cadastro/page.tsx"
-related_targets: ["front/src/app/page.tsx","front/src/app/cadastro/concluido/page.tsx"]
+slug: "src-app-cadastro-page-tsx"
+primary_target: "src/app/cadastro/page.tsx"
+related_targets: ["src/app/page.tsx","src/app/cadastro/concluido/page.tsx"]
 ---
 
 # Cadastro — surface brief
