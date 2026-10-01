@@ -1,3 +1,307 @@
+TASK 19 — Acessibilidade e alimentação com privacidade contextual
+
+Objetivo:
+Permitir que a pessoa registre necessidades de acessibilidade e alimentação para usos claramente informados, mantendo esses dados privados por padrão e revelando somente o necessário no contexto autorizado.
+
+Valor para a pessoa usuária:
+Como participante, quero informar necessidades relevantes com controle e segurança, para avaliar e participar de encontros sem expor dados sensíveis fora de contexto.
+
+Requisitos de origem e dependências:
+- Depende da TASK 13 para edição, revisão, visibilidade e prévia do perfil.
+- Rastreia RF015, RF017, RF081, RN014, RN112 e RNF001–RNF002 do DER.
+- Integração efetiva com eventos depende dos fluxos de criação, descoberta e participação correspondentes.
+
+Escopo:
+- Definir vocabulários controlados e opção textual mínima para acessibilidade e alimentação, sem solicitar diagnóstico médico.
+- Manter ambos privados por padrão e permitir consentimento granular para cada finalidade/contexto suportado.
+- Exibir claramente quem poderá receber cada informação e permitir revogação sem perder o dado privado.
+- Preparar projeções contextuais mínimas para eventos, sem liberar acesso geral pelo perfil público.
+- Registrar observabilidade sem conteúdo sensível e atualizar contratos, modelo, documentação e testes.
+
+Fora de escopo:
+- Diagnóstico, laudo, documento médico, inferência de deficiência, recomendação clínica ou garantia de segurança alimentar.
+- Compartilhamento com anfitrião ou evento antes de os respectivos fluxos terem autorização e finalidade definidas.
+
+Critérios de aceite:
+- Dado um campo novo, quando salvo sem escolha explícita de compartilhamento, então permanece privado.
+- Dado um contexto autorizado, quando a pessoa consente, então somente a projeção mínima necessária é disponibilizada e a audiência é informada.
+- Revogar o consentimento impede novas exposições sem apagar automaticamente o valor privado.
+- Perfil público, logs e respostas não autorizadas nunca incluem acessibilidade ou alimentação.
+
+Dúvidas e bloqueios para o planejamento:
+- Pendente de definição: vocabulários, texto livre permitido, finalidades, audiências, duração do consentimento e tratamento de alergias.
+- Exige avaliação jurídica/privacidade antes de exposição contextual em produção.
+
+Estimativa inicial:
+- Complexidade Fibonacci: 8.
+- Risco de deploy: alto, por envolver dados potencialmente sensíveis e consentimento contextual.
+
+---
+
+TASK 18 — Redes sociais opcionais com validação e visibilidade
+
+Objetivo:
+Permitir que a pessoa associe perfis sociais opcionais sem transformar o EventMatch em diretório de contatos nem expor URLs por padrão.
+
+Valor para a pessoa usuária:
+Como participante, quero escolher se compartilho uma presença social específica, para oferecer contexto adicional sem perder o controle da minha privacidade.
+
+Requisitos de origem e dependências:
+- Depende da TASK 13 para edição, revisão, audiências e prévia.
+- Rastreia RF015, RF081, RN009, RN014 e RNF001.
+- Exposição real a terceiros depende da tarefa futura de perfil público e de regras de confiança e segurança.
+
+Escopo:
+- Definir provedores inicialmente aceitos, um identificador/URL canônico por provedor e limites de quantidade.
+- Normalizar e validar URLs no backend, recusando esquemas, hosts, credenciais e redirecionamentos não permitidos.
+- Aplicar visibilidade individual `private | authenticated | public`, com default `private` e audiências indisponíveis enquanto seus fluxos não existirem.
+- Permitir adicionar, editar, remover, ordenar e conferir a projeção de cada vínculo.
+- Prever mitigação de spam, personificação, assédio e URLs maliciosas sem importar conteúdo externo.
+
+Fora de escopo:
+- Login social, importação de amigos, OAuth, scraping, preview remoto e confirmação de propriedade da conta social.
+- Campo genérico para qualquer URL na primeira entrega.
+
+Critérios de aceite:
+- Somente provedores/hosts e formatos aceitos são persistidos, em forma canônica e sem parâmetros desnecessários.
+- Cada vínculo começa privado e respeita sua audiência sem expor contato ou token.
+- Remoção elimina o vínculo das projeções; falhas não removem outros dados do perfil.
+- Nenhum fetch server-side é feito para a URL informada, evitando SSRF e rastreamento involuntário.
+
+Dúvidas e bloqueios para o planejamento:
+- Pendente de definição: provedores iniciais, quantidade máxima, identificador versus URL e se `public` será oferecido.
+
+Estimativa inicial:
+- Complexidade Fibonacci: 5.
+- Risco de deploy: médio, por URLs externas, personificação e exposição entre plataformas.
+
+---
+
+TASK 17 — Galeria de fotos adicionais do perfil
+
+Objetivo:
+Permitir fotos adicionais opcionais com ordenação, legenda mínima, visibilidade e lifecycle seguro, reutilizando a integração Cloudinary da foto principal.
+
+Valor para a pessoa usuária:
+Como participante, quero complementar minha apresentação com algumas fotos escolhidas, para mostrar interesses e contexto sem perder o controle sobre cada imagem.
+
+Requisitos de origem e dependências:
+- Depende da TASK 13 e da ADR-039 para upload assinado, transformação, entrega autenticada, limpeza e exclusão.
+- Rastreia RF012, RF015, RF068, RF081, RN014 e RNF001.
+- Exposição a terceiros depende de política de moderação e denúncia aceita antes do rollout.
+
+Escopo:
+- Definir quantidade máxima, ordenação estável, substituição, remoção e eventual legenda curta.
+- Reutilizar formatos, limites, normalização, EXIF stripping, rate limits e lifecycle Cloudinary, sem duplicar adapter.
+- Aplicar visibilidade por foto com default `private` e projeções por audiência.
+- Tratar concorrência, reordenação, exclusão da conta, cópia de dados e cleanup de órfãos.
+- Adicionar moderação compatível com a audiência antes de qualquer visualização por terceiros.
+
+Fora de escopo:
+- Vídeo, áudio, stories, comentários, reações, reconhecimento facial ou importação de redes sociais.
+- Armazenamento em provedor diferente da foto principal sem novo ADR.
+
+Critérios de aceite:
+- A pessoa não ultrapassa o limite e consegue ordenar/remover sem afetar a foto principal.
+- Arquivo inválido ou upload incompleto nunca entra na galeria ativa.
+- Cada foto respeita sua audiência; original e metadados privados nunca são entregues.
+- Substituições, remoções e exclusão da conta convergem para limpeza idempotente no provedor.
+
+Dúvidas e bloqueios para o planejamento:
+- Pendente de definição: limite de fotos, legenda, audiência habilitada e solução de moderação/denúncia.
+
+Estimativa inicial:
+- Complexidade Fibonacci: 8.
+- Risco de deploy: alto, por custo de mídia, moderação, ordenação concorrente e exclusão externa.
+
+---
+
+TASK 16 — Disponibilidade e distância preferida
+
+Objetivo:
+Permitir que a pessoa informe quando costuma participar e até onde pretende se deslocar, sem coletar rotina detalhada, endereço ou localização contínua.
+
+Valor para a pessoa usuária:
+Como participante, quero registrar disponibilidade geral e alcance aproximado, para futuramente receber encontros compatíveis sem revelar minha rotina ou localização exata.
+
+Requisitos de origem e dependências:
+- Depende da TASK 13 para edição, revisão, privacidade e prévia.
+- Rastreia RF081, RN011–RN014, RN112 e RNF001–RNF002.
+- Uso em recomendação/filtro depende da futura implementação de descoberta.
+
+Escopo:
+- Modelar disponibilidade geral por dias/períodos, com fuso e limites que evitem agenda detalhada.
+- Modelar distância preferida como faixa aproximada, vinculada à região manual e não a endereço residencial.
+- Manter ambos privados por padrão e separados da localização pontual do aparelho.
+- Permitir editar, remover e conferir como os dados serão usados, sem prometer recomendação nesta entrega.
+- Preparar contratos para consumo futuro pela descoberta sem expor rotina na visão pública.
+
+Fora de escopo:
+- Calendário, recorrência avançada, compromissos, localização em tempo real, geofencing, rota ou rastreamento.
+- Implementar busca, ranking ou recomendação de eventos.
+
+Critérios de aceite:
+- A disponibilidade não representa horários exatos nem é exibida publicamente.
+- A distância usa faixas aceitas e não exige coordenada/endereço.
+- Negar localização do aparelho não impede salvar região e distância manualmente.
+- Remover os campos elimina seu uso futuro sem afetar o restante do perfil.
+
+Dúvidas e bloqueios para o planejamento:
+- Pendente de definição: períodos, fuso, faixas de distância, unidade e significado para regiões sem coordenadas.
+
+Estimativa inicial:
+- Complexidade Fibonacci: 8.
+- Risco de deploy: médio/alto, por semântica temporal, privacidade de rotina e futura integração geográfica.
+
+---
+
+TASK 15 — Preferências opcionais de atividades
+
+Objetivo:
+Permitir preferências mais específicas de atividades sem confundi-las com os três interesses obrigatórios do perfil.
+
+Valor para a pessoa usuária:
+Como participante, quero indicar quais formatos de encontro prefiro, para futuramente melhorar filtros e recomendações sem alterar meus interesses principais.
+
+Requisitos de origem e dependências:
+- Depende da TASK 13 para edição, revisão e visibilidade.
+- Reutiliza o catálogo de tipos de atividade do DER e rastreia RF017, RF022–RF023, RF081 e RN014.
+- Uso efetivo em descoberta depende da tarefa futura de busca/recomendação.
+
+Escopo:
+- Definir relação entre interesses, tipos de atividade e preferências, evitando catálogos duplicados.
+- Permitir múltipla seleção, remoção e ordenação/prioridade somente se houver valor confirmado.
+- Manter a preferência privada por padrão e separada da projeção pública do perfil.
+- Preparar contrato estável para filtros/recomendação futura e tratar itens de catálogo desativados.
+
+Fora de escopo:
+- Algoritmo de recomendação, ranking, aprendizado implícito ou criação de novas categorias pela pessoa.
+- Disponibilidade, distância e localização.
+
+Critérios de aceite:
+- Preferências aceitam somente ids ativos e únicos do catálogo definido.
+- Desativar item não quebra leitura e impede nova seleção, com orientação para substituição.
+- Alterar preferências não reduz os três interesses obrigatórios nem muda eventos existentes.
+- Nenhuma preferência privada aparece em perfil público ou logs.
+
+Dúvidas e bloqueios para o planejamento:
+- Pendente de definição: catálogo canônico, limite de escolhas e existência de prioridade explícita.
+
+Estimativa inicial:
+- Complexidade Fibonacci: 5.
+- Risco de deploy: médio, por alinhamento de catálogo e contrato futuro com descoberta.
+
+---
+
+TASK 14 — Identidade opcional: pronomes, profissão e idiomas
+
+Objetivo:
+Permitir que a pessoa complemente sua apresentação com pronomes, profissão e idiomas, escolhendo separadamente a visibilidade de cada campo.
+
+Valor para a pessoa usuária:
+Como participante, quero adicionar informações opcionais de identidade e comunicação, para me apresentar melhor sem ser obrigada a expô-las.
+
+Requisitos de origem e dependências:
+- Depende da TASK 13 para edição autenticada, revisão otimista, audiências e prévia.
+- Rastreia RF012, RF015, RF081, RN014 e RNF001.
+
+Escopo:
+- Definir formato e limites de pronomes e profissão com suporte a autoidentificação sem lista excludente.
+- Definir catálogo/normalização de idiomas e, somente se aprovado, nível de proficiência.
+- Aplicar visibilidade independente `private | authenticated | public`, sempre `private` por padrão.
+- Permitir adicionar, editar, remover e visualizar projeções por audiência.
+- Atualizar modelo, contratos, documentação, observabilidade segura e testes.
+
+Fora de escopo:
+- Verificação de profissão, tradução automática, testes de idioma, redes sociais e inferência de identidade.
+- Usar esses campos para restringir participação ou recomendar pessoas nesta entrega.
+
+Critérios de aceite:
+- Todos os campos são opcionais e sua ausência não reduz capacidades da conta.
+- Cada campo começa privado e só aparece na audiência explicitamente escolhida e habilitada.
+- Valores inválidos são recusados sem perder os demais dados do perfil.
+- Alterar ou remover um campo atualiza imediatamente as projeções autorizadas.
+- Conteúdo e valores não aparecem em logs, métricas ou respostas sem autorização.
+
+Dúvidas e bloqueios para o planejamento:
+- Pendente de definição: texto livre/lista para pronomes, limite/formato de profissão, catálogo de idiomas e proficiência.
+
+Estimativa inicial:
+- Complexidade Fibonacci: 8.
+- Risco de deploy: médio, por modelagem inclusiva, i18n e visibilidade individual.
+
+---
+
+TASK 13 — Primeiro acesso com convite para completar o perfil
+
+Objetivo:
+Transformar a primeira área autenticada em um próximo passo útil, convidando a pessoa a completar seu perfil com foto, apresentação e dados opcionais, sem bloquear o uso comum do EventMatch nem tratar esses dados como obrigatórios fora das capacidades que realmente os exigem.
+
+Valor para a pessoa usuária:
+Como pessoa que acabou de entrar no EventMatch, quero entender o que falta no meu perfil e escolher o que desejo adicionar, para me apresentar com confiança e controlar o que outras pessoas poderão ver.
+
+Requisitos de origem e dependências:
+- Depende da TASK 11: sessão autenticada, `/inicio`, logout e proteção server-side devem estar disponíveis.
+- Consultar `docs/DER-EventMatch-MVP.md` v1.3, especialmente RF012–RF016, RF081, RN008–RN014, RN018 e RNF001, além de `docs/02-regras-de-negocio.md` e `docs/03-modelos-de-dominio.md §2.2`.
+- Reutilizar nome de exibição, região aproximada, intenções e interesses já coletados no cadastro; não solicitar novamente dados que já estejam válidos.
+- Aplicar `nestjs-expert` e `nestjs-hexagonal-architecture` no backend; `nextjs-architecture`, `vercel-react-best-practices` e `impeccable` no frontend.
+
+Escopo:
+- Atualizar `/inicio` para apresentar um convite claro e não coercitivo para completar o perfil, com estado de progresso baseado nos dados realmente existentes.
+- Permitir iniciar, retomar, pular e dispensar temporariamente o convite sem perder a sessão ou reduzir as capacidades comuns da conta ativa.
+- Criar edição autenticada de foto principal e apresentação, com prévia antes de publicar e mensagens seguras para formatos, tamanho, processamento ou moderação recusados.
+- Permitir editar os dados já existentes do perfil: nome de exibição, região aproximada, intenções de uso e interesses, preservando o mínimo de três interesses.
+- Adiar os campos opcionais do RF081 para as TASKS 14–19: identidade opcional; preferências de atividades; disponibilidade/distância; fotos adicionais; redes sociais; acessibilidade/alimentação.
+- Aplicar a foto e apresentação visibilidade `private | authenticated | public`, privadas por padrão; nesta entrega a API/UI permite somente `private | authenticated`, reservando `public` até existir exposição pública moderada.
+- Criar uma prévia autenticada que mostre exatamente a visão pública do perfil, sem contato, nascimento, sessão ou outros dados privados.
+- Manter a habilitação de anfitrião como capacidade derivada: foto e apresentação contribuem para o requisito, mas completar o perfil não concede a capacidade sozinho.
+- Incluir observabilidade segura para início, conclusão, adiamento, upload e recusa, sem registrar conteúdo da apresentação, imagem, campos privados ou URLs assinadas.
+- Atualizar contratos, documentação, `.env.example`, README, `CHANGELOG.md` e versões afetadas.
+
+Decisões obrigatórias no planejamento:
+- Armazenamento e entrega de imagens: provedor, buckets/objetos, upload direto ou mediado, URLs assinadas, limites, formatos, redimensionamento, remoção de EXIF, antivírus/moderação, exclusão e retenção. Registrar decisão em ADR `proposed` e aceitá-la antes da implementação.
+- Modelo de perfil e visibilidade: campos da primeira entrega, limites, valores permitidos, defaults privados, representação PostgreSQL e compatibilidade futura. Registrar decisão material em ADR próprio.
+- Jornada: rota de edição, funcionamento do progresso, quando o convite reaparece, significado de “Agora não”, prévia pública e comportamento em múltiplas abas.
+- Segurança e moderação: autorização por titular, proteção contra arquivos maliciosos, conteúdo impróprio, enumeração, abuso de armazenamento e exposição acidental de dados privados.
+- Política de apresentação: tamanho, conteúdo permitido, sanitização, moderação e tratamento de denúncias futuras sem inventar fluxo administrativo fora do escopo.
+
+Decisões confirmadas para o planejamento:
+- Usar Cloudinary para a foto principal, isolado por porta do backend; upload assinado direto, assets autenticados e somente derivados normalizados sem EXIF na entrega.
+- Limitar esta entrega a uma foto principal e apresentação, além da edição dos dados básicos já existentes: nome de exibição, região aproximada, intenções e interesses.
+- Manter todos os demais campos opcionais do RF081 nas TASKS 14–19, inclusive redes sociais e fotos adicionais.
+- Exibir o convite a qualquer conta ativa cujo perfil esteja incompleto, independentemente de ser novata ou veterana.
+- “Agora não” adia o convite por sete dias somente no navegador atual, por cookie `HttpOnly`; a completude continua autoritativa no backend.
+- Manter a prévia autenticada restrita à titular; exposição do perfil para outras pessoas e moderação visual automática ficam fora desta entrega.
+- Preparar as audiências `authenticated` e `public` no domínio/schema, sem entregar URLs a terceiros nem habilitar `public` na API/UI desta tarefa.
+
+Fora de escopo:
+- Tornar foto, apresentação ou campos opcionais obrigatórios para login, sessão ou uso comum da conta ativa.
+- Criação de eventos, habilitação completa de anfitrião, descoberta, participação, conversa, conexão, notificações e painel de moderação.
+- Verificação de identidade por documento, reconhecimento facial, biometria ou inferência automática de atributos pela foto.
+- Exibir e-mail, celular, nascimento, localização exata ou qualquer credencial na visão pública.
+- Implementar antecipadamente qualquer campo reservado às TASKS 14–19.
+
+Critérios de aceite:
+- Dada uma conta ativa com perfil básico, quando a pessoa entra em `/inicio`, então vê o que pode completar e consegue continuar usando a área autenticada sem preencher nada.
+- Dado que a pessoa escolheu “Agora não”, quando continua navegando ou entra novamente, então o convite respeita a política de reapresentação definida sem bloquear o acesso.
+- Foto e apresentação podem ser adicionadas, substituídas e removidas somente pela titular autenticada; arquivos inválidos ou perigosos não são publicados.
+- A imagem publicada não preserva metadados EXIF e não expõe caminho interno, credencial ou URL de upload reutilizável.
+- Foto e apresentação começam privadas e só aparecem na prévia quando a pessoa escolhe visibilidade compatível.
+- Nome, região, intenções e interesses existentes aparecem preenchidos; a edição mantém ao menos três interesses e não cria duplicatas.
+- A prévia pública nunca contém contato, nascimento, estados internos da conta, sessão, restrições ou campos privados.
+- Completar foto e apresentação não habilita anfitrião se os demais requisitos de RN018 não estiverem atendidos.
+- Interfaces funcionam por teclado, leitor de tela, zoom de 200%, desktop e mobile, com foco e erros acessíveis.
+- Testes unitários, integração, contrato e E2E cobrem convite, adiamento, retomada, edição, visibilidade, upload válido/inválido, remoção, prévia e autorização entre contas.
+
+Dúvidas e bloqueios para o planejamento:
+- Resolvidas na SDD-015 e nos ADRs 038–040 aceitos; plano `ready` para implementação.
+
+Estimativa inicial:
+- Complexidade Fibonacci: 13. Dividir a SDD em perfil/visibilidade, pipeline seguro de imagens e experiência de primeiro acesso.
+- Risco de deploy: alto, por introduzir upload de conteúdo, armazenamento externo, dados públicos configuráveis e obrigações de exclusão/moderação.
+
+---
+
 TASK 12 — Operação Docker local com Makefile
 
 Objetivo:
