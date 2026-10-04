@@ -36,12 +36,8 @@ test('1. cadastro concluído não autentica; “Entrar no EventMatch” leva ao 
   expect(html).not.toContain(email);
   expect(html).not.toContain(cookie.value);
 
-  // Next steps are plain text with a status tag, never links or buttons.
-  for (const step of ['Completar perfil', 'Descobrir encontros']) {
-    await expect(page.getByRole('listitem').filter({ hasText: step })).toContainText('Em breve');
-    await expect(page.getByRole('link', { name: step })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: step })).toHaveCount(0);
-  }
+  await expect(page.getByRole('link', { name: 'Completar perfil' })).toBeVisible();
+  await expect(page.getByRole('listitem').filter({ hasText: 'Descobrir encontros' })).toContainText('Em breve');
   await expectNoSeriousA11yViolations(page);
   await expectNoHorizontalScroll(page);
 

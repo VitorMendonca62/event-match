@@ -6,6 +6,14 @@ import { Test } from '@nestjs/testing';
 
 import { CatalogModule } from '../../src/modules/catalog/catalog.module';
 import { ProfilesModule } from '../../src/modules/profiles/profiles.module';
+import { GetOwnProfile, UpdateOwnProfile } from '../../src/modules/profiles/application/use-cases/profile.use-cases';
+import { CleanupProfileMedia, CreateProfilePhotoUpload, FinalizeProfilePhotoUpload, RemoveProfilePhoto } from '../../src/modules/profiles/application/use-cases/profile-media.use-cases';
+import {
+  PROFILE_IMAGE_STORE_PORT,
+  PROFILE_MEDIA_REPOSITORY_PORT,
+  type ProfileMediaRepositoryPort,
+} from '../../src/modules/profiles/domain/ports/outbound/profile-media.ports';
+import { FakeProfileImageStoreAdapter } from '../../src/modules/profiles/infrastructure/media/fake-profile-image-store.adapter';
 import { CompleteRegistration } from '../../src/modules/registration/application/use-cases/complete-registration.use-case';
 import { ExpireStaleRegistrations } from '../../src/modules/registration/application/use-cases/expire-stale-registrations.use-case';
 import { RequestContactVerification } from '../../src/modules/registration/application/use-cases/request-contact-verification.use-case';
@@ -18,6 +26,7 @@ import { CLOCK_PORT } from '../../src/modules/registration/domain/ports/outbound
 import { VERIFICATION_DELIVERY_PORT } from '../../src/modules/registration/domain/ports/outbound/security.ports';
 import { RegistrationModule } from '../../src/modules/registration/registration.module';
 import { validateEnv } from '../../src/shared/infrastructure/config/env';
+import { UNIT_OF_WORK_PORT, type UnitOfWorkPort } from '../../src/shared/application/ports/unit-of-work.port';
 import { createEphemeralDatabase, type EphemeralDatabase } from '../support/ephemeral-database';
 import { CapturingDelivery, CapturingTelemetry, FakeClock } from '../support/registration-fakes';
 
@@ -37,6 +46,8 @@ const REGISTRATION_TABLES = [
   'contact_verification',
   'interest',
   'profile',
+  'profile_media_attempt',
+  'profile_photo_asset',
   'profile_usage_intent',
   'registration',
   'registration_flow_session',
@@ -62,6 +73,8 @@ async function createNode(clock: FakeClock, delivery: CapturingDelivery, telemet
       RegistrationModule,
     ],
   })
+    .overrideProvider(PROFILE_IMAGE_STORE_PORT)
+    .useClass(FakeProfileImageStoreAdapter)
     .overrideProvider(CLOCK_PORT)
     .useValue(clock)
     .overrideProvider(VERIFICATION_DELIVERY_PORT)
@@ -79,6 +92,14 @@ async function createNode(clock: FakeClock, delivery: CapturingDelivery, telemet
     saveRequiredData: module.get(SaveRequiredData),
     complete: module.get(CompleteRegistration),
     expireStale: module.get(ExpireStaleRegistrations),
+    getProfile: module.get(GetOwnProfile),
+    updateProfile: module.get(UpdateOwnProfile),
+    createPhotoUpload: module.get(CreateProfilePhotoUpload),
+    finalizePhotoUpload: module.get(FinalizeProfilePhotoUpload),
+    removePhoto: module.get(RemoveProfilePhoto),
+    cleanupMedia: module.get(CleanupProfileMedia),
+    mediaRepository: module.get<ProfileMediaRepositoryPort>(PROFILE_MEDIA_REPOSITORY_PORT),
+    uow: module.get<UnitOfWorkPort>(UNIT_OF_WORK_PORT),
   };
 }
 
@@ -192,7 +213,7 @@ describe('registration persistence (PostgreSQL integration)', () => {
       const [interests] = await query<{ count: string }>(`select count(*)::text as count from interest`);
       const [ledger] = await query<{ count: string }>(`select count(*)::text as count from drizzle.__drizzle_migrations`);
       expect(interests?.count).toBe('20');
-      expect(ledger?.count).toBe('7');
+      expect(ledger?.count).toBe('8');
     });
   });
 
@@ -296,6 +317,20 @@ describe('registration persistence (PostgreSQL integration)', () => {
   });
 
   describe('concurrency across two pools', () => {
+    test('two profile writes with the same revision commit exactly once', async () => {
+      const accountId = await incompleteAccount(nodeA, 'profile-race@example.test');
+      await nodeA.complete.execute({ accountId, birthDate: '1990-05-10', interestIds: INTEREST_IDS.slice(0, 3), documentIds: DOCUMENT_IDS });
+      const current = await nodeA.getProfile.execute(accountId);
+      const input = { accountId, revision: current.revision, displayName: 'Ana Atualizada', region: 'Recife - PE', usageIntents: ['friendship'] as const, interestIds: INTEREST_IDS.slice(0, 3), presentation: 'Atividades culturais em grupo', photoVisibility: 'private' as const, presentationVisibility: 'authenticated' as const };
+
+      const results = await Promise.allSettled([nodeA.updateProfile.execute(input), nodeB.updateProfile.execute(input)]);
+
+      expect(results.filter(({ status }) => status === 'fulfilled')).toHaveLength(1);
+      expect(results.find(({ status }) => status === 'rejected')).toMatchObject({ reason: { code: 'PROFILE_REVISION_CONFLICT' } });
+      const [row] = await query<{ revision: number; display_name: string; presentation: string }>(`select revision, display_name, presentation from profile where account_id = $1`, [accountId]);
+      expect(row).toEqual({ revision: current.revision + 1, display_name: 'Ana Atualizada', presentation: 'Atividades culturais em grupo' });
+    });
+
     test('six concurrent wrong OTPs count exactly five failures and lock the challenge', async () => {
       const { verificationId } = await nodeA.request.execute({ channel: 'email', contact: 'otp-race@example.test' });
 
@@ -348,7 +383,136 @@ describe('registration persistence (PostgreSQL integration)', () => {
     });
   });
 
+  describe('profile media lifecycle', () => {
+    test('persists pending → active → delete_pending and cleans it idempotently', async () => {
+      const accountId = await incompleteAccount(nodeA, 'profile-media@example.test');
+      await nodeA.complete.execute({ accountId, birthDate: '1990-05-10', interestIds: INTEREST_IDS.slice(0, 3), documentIds: DOCUMENT_IDS });
+      const initial = await nodeA.getProfile.execute(accountId);
+      const grant = await nodeA.createPhotoUpload.execute({ accountId, originSubject: 'integration-origin', revision: initial.revision });
+
+      const [pending] = await query<{ state: string }>(`select state from profile_photo_asset where id = $1`, [grant.uploadId]);
+      expect(pending?.state).toBe('pending');
+
+      await nodeA.finalizePhotoUpload.execute({ accountId, uploadId: grant.uploadId, revision: initial.revision, providerResponse: { public_id: grant.publicId, signature: 'fixture-response-signature' } });
+      const activeProfile = await nodeA.getProfile.execute(accountId);
+      expect(activeProfile.revision).toBe(initial.revision + 1);
+      const [active] = await query<{ state: string; version: number }>(`select state, version from profile_photo_asset where id = $1`, [grant.uploadId]);
+      expect(active).toEqual({ state: 'active', version: 1 });
+
+      await nodeA.removePhoto.execute({ accountId, revision: activeProfile.revision });
+      const [deleting] = await query<{ state: string }>(`select state from profile_photo_asset where id = $1`, [grant.uploadId]);
+      expect(['delete_pending', undefined]).toContain(deleting?.state);
+      await nodeA.cleanupMedia.execute(20);
+      await nodeA.cleanupMedia.execute(20);
+      const [remaining] = await query<{ count: string }>(`select count(*)::text as count from profile_photo_asset where id = $1`, [grant.uploadId]);
+      expect(remaining?.count).toBe('0');
+    });
+
+    test('persists the account rate limit across use-case calls', async () => {
+      const accountId = await incompleteAccount(nodeA, 'profile-limit@example.test');
+      await nodeA.complete.execute({ accountId, birthDate: '1990-05-10', interestIds: INTEREST_IDS.slice(0, 3), documentIds: DOCUMENT_IDS });
+      const current = await nodeA.getProfile.execute(accountId);
+      for (let attempt = 0; attempt < 10; attempt += 1) {
+        await nodeA.createPhotoUpload.execute({ accountId, originSubject: `origin-${attempt}`, revision: current.revision });
+      }
+      await expect(nodeB.createPhotoUpload.execute({ accountId, originSubject: 'origin-last', revision: current.revision })).rejects.toMatchObject({ code: 'MEDIA_RATE_LIMITED' });
+    });
+
+    test('enforces the exact origin limit across distinct account subjects', async () => {
+      const originSubject = Buffer.alloc(32, 91);
+      const attempts = await Promise.all(
+        Array.from({ length: 30 }, (_, index) =>
+          nodeA.uow.execute((context) => nodeA.mediaRepository.consumeLimit(context, {
+            accountSubject: Buffer.alloc(32, index + 1),
+            originSubject,
+            now: new Date(),
+            accountLimit: 10,
+            originLimit: 30,
+          })),
+        ),
+      );
+      expect(attempts.every((result) => result === 'allowed')).toBeTrue();
+      await expect(nodeB.uow.execute((context) => nodeB.mediaRepository.consumeLimit(context, {
+        accountSubject: Buffer.alloc(32, 99),
+        originSubject,
+        now: new Date(),
+        accountLimit: 10,
+        originLimit: 30,
+      }))).resolves.toBe('origin_limited');
+    });
+
+    test('activates a pending upload exactly once under concurrent finalization', async () => {
+      const accountId = await incompleteAccount(nodeA, 'profile-media-race@example.test');
+      await nodeA.complete.execute({ accountId, birthDate: '1990-05-10', interestIds: INTEREST_IDS.slice(0, 3), documentIds: DOCUMENT_IDS });
+      const initial = await nodeA.getProfile.execute(accountId);
+      const grant = await nodeA.createPhotoUpload.execute({ accountId, originSubject: 'race-origin', revision: initial.revision });
+      const input = { accountId, uploadId: grant.uploadId, revision: initial.revision, providerResponse: { public_id: grant.publicId, signature: 'fixture-response-signature' } };
+
+      const settled = await Promise.allSettled([
+        nodeA.finalizePhotoUpload.execute(input),
+        nodeB.finalizePhotoUpload.execute(input),
+      ]);
+
+      expect(settled.filter(({ status }) => status === 'fulfilled')).toHaveLength(1);
+      const rejected = settled.find(({ status }) => status === 'rejected');
+      expect(['PROFILE_NOT_FOUND', 'PROFILE_REVISION_CONFLICT', 'PHOTO_UPLOAD_EXPIRED']).toContain((rejected as PromiseRejectedResult).reason.code);
+      const [state] = await query<{ active: string; revision: number }>(
+        `select (select count(*) from profile_photo_asset where account_id = $1 and state = 'active')::text as active,
+                (select revision from profile where account_id = $1) as revision`,
+        [accountId],
+      );
+      expect(state).toEqual({ active: '1', revision: initial.revision + 1 });
+    });
+
+    test('binds pending assets to their owner and rejects expired grants', async () => {
+      const [ownerId, strangerId] = await Promise.all([
+        incompleteAccount(nodeA, 'profile-owner@example.test'),
+        incompleteAccount(nodeB, 'profile-stranger@example.test'),
+      ]);
+      await Promise.all([
+        nodeA.complete.execute({ accountId: ownerId, birthDate: '1990-05-10', interestIds: INTEREST_IDS.slice(0, 3), documentIds: DOCUMENT_IDS }),
+        nodeB.complete.execute({ accountId: strangerId, birthDate: '1990-05-10', interestIds: INTEREST_IDS.slice(0, 3), documentIds: DOCUMENT_IDS }),
+      ]);
+      const [owner, stranger] = await Promise.all([nodeA.getProfile.execute(ownerId), nodeB.getProfile.execute(strangerId)]);
+      const grant = await nodeA.createPhotoUpload.execute({ accountId: ownerId, originSubject: 'owner-origin', revision: owner.revision });
+
+      await expect(nodeB.finalizePhotoUpload.execute({
+        accountId: strangerId,
+        uploadId: grant.uploadId,
+        revision: stranger.revision,
+        providerResponse: { public_id: grant.publicId, signature: 'fixture-response-signature' },
+      })).rejects.toMatchObject({ code: 'PROFILE_NOT_FOUND' });
+      await expect(nodeB.removePhoto.execute({ accountId: strangerId, revision: stranger.revision })).resolves.toEqual({ removed: false });
+      await query(`update profile_photo_asset set upload_expires_at = now() - interval '1 second' where id = $1`, [grant.uploadId]);
+      await expect(nodeA.finalizePhotoUpload.execute({
+        accountId: ownerId,
+        uploadId: grant.uploadId,
+        revision: owner.revision,
+        providerResponse: { public_id: grant.publicId, signature: 'fixture-response-signature' },
+      })).rejects.toMatchObject({ code: 'PHOTO_UPLOAD_EXPIRED' });
+    });
+  });
+
   describe('transactions and expiration', () => {
+    test('a failure while replacing interests rolls the whole profile update back', async () => {
+      const accountId = await incompleteAccount(nodeA, 'profile-rollback@example.test');
+      await nodeA.complete.execute({ accountId, birthDate: '1990-05-10', interestIds: INTEREST_IDS.slice(0, 3), documentIds: DOCUMENT_IDS });
+      const before = await nodeA.getProfile.execute(accountId);
+      await database.pool.query(`
+        create function fail_profile_interest() returns trigger language plpgsql as $$
+        begin raise exception 'simulated profile interest failure'; end $$;
+        create trigger fail_profile_interest before insert on account_interest
+        for each row execute function fail_profile_interest();`);
+      try {
+        await expect(nodeA.updateProfile.execute({ accountId, revision: before.revision, displayName: 'Não deve persistir', region: before.region, usageIntents: ['explore_city'], interestIds: INTEREST_IDS.slice(1, 4), presentation: 'Também não persiste', photoVisibility: 'private', presentationVisibility: 'private' })).rejects.toThrow();
+      } finally {
+        await database.pool.query(`drop trigger fail_profile_interest on account_interest; drop function fail_profile_interest();`);
+      }
+      const after = await nodeA.getProfile.execute(accountId);
+      expect(after).toMatchObject({ revision: before.revision, displayName: before.displayName, presentation: before.presentation, usageIntents: before.usageIntents });
+      expect(after.interests.map(({ id }) => id).sort()).toEqual(before.interests.map(({ id }) => id).sort());
+    });
+
     test('a failure midway through activation leaves no partial effect', async () => {
       const accountId = await incompleteAccount(nodeA, 'rollback@example.test');
       await database.pool.query(`

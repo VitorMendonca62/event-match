@@ -10,6 +10,11 @@ import { LogoutButton } from '@/features/authentication/components/logout-button
 import { SessionKeeper } from '@/features/authentication/components/session-keeper';
 import { PosterHeadline } from '@/features/registration/components/poster-headline';
 import { currentSessionView } from '@/shared/server/authenticated-view';
+import { currentProfileView } from '@/shared/server/profile-view';
+import { invitationDismissed, profileInvitationCookieName } from '@/shared/server/profile-invitation-cookie';
+import { getBffEnv } from '@/shared/config/bff-env.server';
+import { cookies } from 'next/headers';
+import { ProfileInvitation } from '@/features/profile/components/profile-invitation';
 
 export const metadata: Metadata = {
   title: 'Início · EventMatch',
@@ -39,7 +44,8 @@ const NEXT_STEPS: readonly NextStep[] = [
  * an “Em breve” tag, never controls.
  */
 export default async function HomePage() {
-  const { enabled, view } = await currentSessionView();
+  const [session, profile, cookieStore] = await Promise.all([currentSessionView(), currentProfileView(), cookies()]);
+  const { enabled, view } = session;
   if (!enabled) notFound();
   if (view === 'anonymous') redirect('/entrar');
 
@@ -51,13 +57,14 @@ export default async function HomePage() {
         <LogoutButton />
       </header>
       <main className="flex-1 pt-6 lg:pt-16">
-        {view === 'authenticated' ? <Welcome /> : <Unavailable forbidden={view === 'forbidden'} />}
+        {view === 'authenticated' ? <Welcome profile={profile} cookieValue={cookieStore.get(profileInvitationCookieName(getBffEnv()))?.value} /> : <Unavailable forbidden={view === 'forbidden'} />}
       </main>
     </div>
   );
 }
 
-function Welcome() {
+function Welcome({ profile, cookieValue }: Readonly<{ profile: Awaited<ReturnType<typeof currentProfileView>>; cookieValue?: string }>) {
+  const showInvitation = profile.kind === 'ok' && !profile.value.completion.complete && !invitationDismissed(cookieValue, profile.value.invitationSubject);
   return (
     <section aria-labelledby="home-title" className="grid gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-16">
       <div className="space-y-5">
@@ -72,7 +79,8 @@ function Welcome() {
           Próximos passos
         </h2>
         <ul className="divide-y divide-border rounded-2xl border-2 border-border bg-surface">
-          {NEXT_STEPS.map((step) => (
+          {showInvitation ? <ProfileInvitation completed={profile.value.completion.completedCount} total={profile.value.completion.totalCount} /> : null}
+          {NEXT_STEPS.filter((step) => step.title !== 'Completar perfil').map((step) => (
             <li key={step.title} className="flex items-start gap-4 p-5">
               <span aria-hidden className="mt-0.5 shrink-0 text-muted-foreground">
                 {step.icon}
@@ -89,9 +97,7 @@ function Welcome() {
             </li>
           ))}
         </ul>
-        <p className="text-sm text-muted-foreground">
-          Essas áreas ainda estão em preparação e aparecem aqui quando estiverem disponíveis.
-        </p>
+        {profile.kind !== 'ok' && profile.kind !== 'disabled' ? <Notice tone="warning" title="Não conseguimos carregar seu perfil agora.">Tente novamente em instantes.</Notice> : null}
       </section>
     </section>
   );

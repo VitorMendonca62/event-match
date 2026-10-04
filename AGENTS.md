@@ -38,7 +38,7 @@ Ainda não existem manifests. Estes são os comandos-alvo e devem ser confirmado
 | `bun run --cwd front test` | Testes do frontend. | Durante a implementação e antes de PR. |
 | `bun run --cwd back test` | Testes unitários do backend. | Durante a implementação e antes de PR. |
 | `bun run --cwd back test:e2e` | Testes E2E da API. | Antes de PR. |
-| `bun run --cwd front test:e2e` | E2E do cadastro em navegador real (Playwright; Docker, `back/.env.test.local` e `bunx playwright install chromium firefox`). | Antes de PR que altere o fluxo do frontend. |
+| `bun run --cwd front test:e2e` | E2E do cadastro em navegador real (Playwright; Docker, `back/.env.test.local` e `bunx playwright install chromium`). | Antes de PR que altere o fluxo do frontend. |
 | `bun run --cwd front lint` | Lint do frontend. | Após alterações. |
 | `bun run --cwd back lint` | Lint do backend. | Após alterações. |
 | `bun run --cwd front typecheck` | Checagem TypeScript do frontend. | Após mudanças de contrato. |

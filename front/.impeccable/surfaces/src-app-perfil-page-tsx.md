@@ -24,7 +24,7 @@ Pessoa adulta com conta ativa, novata ou veterana, chega a `/inicio` com foto ou
 
 THESIS: completar o perfil é preparar uma apresentação para uma atividade em grupo, não montar uma vitrine pessoal nem atravessar outro cadastro obrigatório.
 
-STRUCTURE: em `/inicio`, o item antes indisponível vira uma linha acionável com progresso curto e duas decisões claras: completar ou adiar. `/perfil` é uma superfície de trabalho contínua, sem wizard e sem cards aninhados: foto e apresentação vêm primeiro; dados básicos e interesses aparecem em seções subsequentes; ações de salvar permanecem próximas ao conteúdo alterado. `/perfil/previa` remove os controles de edição e apresenta somente a projeção autorizada do perfil.
+STRUCTURE: em `/inicio`, o item antes indisponível vira uma linha acionável com progresso curto e duas decisões claras: completar ou adiar. `/perfil` é uma superfície de trabalho contínua, sem wizard e sem cards aninhados: foto e dados básicos vêm primeiro; apresentação e interesses aparecem em seções subsequentes; ações de salvar permanecem próximas ao conteúdo alterado. `/perfil/previa` remove os controles de edição e apresenta somente a projeção autorizada do perfil.
 
 FOCAL MOMENT: a foto recortada e a apresentação aparecem juntas na prévia, permitindo conferir como a pessoa será apresentada sem publicar para terceiros nesta entrega.
 
@@ -51,8 +51,9 @@ VISUAL AUTHORITY: herdar marca, tipografia, tokens, bordas, foco âmbar, ritmo e
 
 - RSC carrega sessão, perfil e catálogo antes da superfície; Client Components ficam restritos a formulário, recorte, upload, pending, foco e confirmação de remoção.
 - A edição usa labels persistentes, feedback junto ao campo, resumo focável no erro e prevenção de duplo envio.
-- O seletor de foto aceita arrastar/soltar e seleção por arquivo, mas mantém um botão nativo claramente rotulado. Recorte por teclado e alternativa sem gesto são obrigatórios.
+- O seletor de foto aceita arrastar/soltar e seleção por arquivo, mas mantém um botão nativo claramente rotulado. O editor abre em diálogo modal, mostra a imagem completa com um quadrado de recorte arrastável e redimensionável, e oferece sliders e botões de ajuste para posição e ampliação, com equivalência por teclado.
 - A navegação entre edição e prévia usa ações nomeadas e rotas reais, preservando voltar/atualizar; não simula abas que perdem estado silenciosamente.
+- Ao pedir a prévia com alterações não salvas, um diálogo explica que somente dados persistidos serão exibidos e oferece salvar antes de avançar ou descartar o rascunho e continuar.
 - Mobile empilha as seções e mantém alvos de pelo menos 44 px. Desktop usa uma coluna principal legível com prévia da foto ao lado apenas quando houver largura real.
 - Motion limita-se a feedback de estado e respeita `prefers-reduced-motion`; nenhum upload depende de animação para comunicar progresso.
 

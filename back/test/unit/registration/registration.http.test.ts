@@ -343,7 +343,7 @@ describe('registration HTTP contract v1', () => {
       paths: Record<string, Record<string, { parameters?: { name: string; in: string; required?: boolean }[] }>>;
     };
 
-    expect(document.info.version).toBe('0.11.0');
+    expect(document.info.version).toBe('0.12.0');
     const contract = Object.fromEntries(
       Object.entries(document.paths)
         .filter(([path]) => path.startsWith('/api/v1/'))

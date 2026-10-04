@@ -1,8 +1,8 @@
 .DEFAULT_GOAL := help
 
 COMPOSE := docker compose
-BACK_DEV := $(COMPOSE) -f docker-compose.back.dev.yml
-BACK_PROD := $(COMPOSE) -f docker-compose.back.yml
+BACK_DEV := $(COMPOSE) -f docker-compose.back.dev.yml --env-file back/.env.development.local
+BACK_PROD := $(COMPOSE) -f docker-compose.back.yml --env-file back/.env
 BACK_TEST := $(COMPOSE) --env-file back/.env.test.local -f docker-compose.back.test.yml
 FRONT_DEV := $(COMPOSE) -f docker-compose.front.dev.yml
 FRONT_PROD := $(COMPOSE) -f docker-compose.front.yml

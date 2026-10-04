@@ -4,7 +4,7 @@
 - **Data:** 2026-09-30
 - **Decisores:** produto, backend, segurança, privacidade e operação
 - **Relacionado:** `specs/sdd-015-primeiro-acesso-completar-perfil/tasks.md`; ADR-017, ADR-038
-- **Substitui/Substituído por:** N/A
+- **Substitui/Substituído por:** substituída parcialmente pela ADR-042 quanto à expiração da URL de entrega
 
 ## Contexto
 
@@ -34,7 +34,7 @@ Cloudinary e Cloudflare R2 + Images foram comparados. Cloudinary reduz o trabalh
 
 Adotar a opção 1.
 
-O domínio conhece apenas `ProfilePhotoRef` e `ProfileImageStorePort`. O adapter `CloudinaryProfileImageStoreAdapter`, injetado pelo módulo NestJS, assina uploads, verifica resultados, gera entrega temporária e destrói assets. Casos de uso não importam SDK, URLs ou tipos Cloudinary.
+O domínio conhece apenas `ProfilePhotoRef` e `ProfileImageStorePort`. O adapter `CloudinaryProfileImageStoreAdapter`, injetado pelo módulo NestJS, assina uploads, verifica resultados, gera a URL assinada de entrega e destrói assets. Casos de uso não importam SDK, URLs ou tipos Cloudinary. Conforme a ADR-042, a assinatura protege o caminho, mas não impõe expiração temporal.
 
 ### Upload e finalização
 
@@ -51,8 +51,8 @@ O preset aplica transformação de entrada com limite de 1600 x 1600, qualidade 
 ### Acesso e privacidade
 
 - Assets usam entrega `authenticated`; originais e derivados exigem URL assinada.
-- `GetOwnProfile` e a prévia podem receber uma URL de variante com validade máxima de cinco minutos, `Cache-Control: private, no-store` no contrato do EventMatch e política de referrer `no-referrer`.
-- A URL temporária nunca é persistida, logada, enviada à telemetria ou tratada como identidade do asset.
+- `GetOwnProfile` e a prévia podem receber uma URL assinada de variante, sem promessa de expiração temporal, com `Cache-Control: private, no-store` no contrato do EventMatch e política de referrer `no-referrer` (ADR-042).
+- A URL de entrega nunca é persistida, logada, enviada à telemetria ou tratada como identidade do asset. Uma URL copiada pode ser reutilizada enquanto o asset e sua versão existirem no provedor.
 - Nesta entrega somente a titular recebe URL. Visibilidade `authenticated` afeta a prévia simulada, mas não cria endpoint para terceiros; `public` permanece indisponível na API/UI até uma tarefa própria.
 - Moderação visual automática fica adiada até a exposição a terceiros. Não se integra antivírus externo nesta fase: allowlist raster, decodificação pelo provedor, transformação de entrada e entrega somente de derivados normalizados reduzem a superfície de arquivo ativo, mas não equivalem a antivírus nem avaliam adequação do conteúdo. Original ou formato não transformado nunca é entregue.
 
@@ -84,7 +84,7 @@ Foto de perfil é dado pessoal sob a LGPD. Antes de produção, jurídico/privac
 
 - Créditos combinados tornam custo menos previsível, e o primeiro plano pago é um salto relevante.
 - Upload e finalização formam uma saga; órfãos temporários são inevitáveis.
-- URLs assinadas ainda podem ser compartilhadas durante sua curta validade.
+- URLs assinadas podem ser compartilhadas e reutilizadas enquanto o asset e sua versão existirem; autenticação do endpoint e `no-store` não revogam uma URL já obtida (ADR-042).
 - A moderação visual não existe enquanto a foto permanece restrita à titular.
 - Preset e Strict Transformations são configuração externa sujeita a drift.
 - Região, subprocessadores e retenção de backups dependem do contrato do provedor e exigem validação jurídica/privacidade.

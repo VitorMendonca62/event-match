@@ -225,3 +225,7 @@ Referências: RF057–RF062, RF068, RF073–RF078; RN080–RN106, RN115–RN123.
 ## 6. Retenção e ressalva jurídica
 
 Implemente retenção por categoria conforme `docs/02-regras-de-negocio.md §9`, com eliminação verificável, anonimização quando prevista e legal hold granular. RF068, RF073, RF074, RN068, RN080–RN083, RN093, RN096, RN100–RN104, RN115–RN122 e RNF023 não podem ter política final liberada sem validação jurídica brasileira.
+- **Agregado `Profile` (SDD-015):** `displayName`, `region`, intenções, interesses ativos, apresentação opcional, visibilidades de foto/apresentação e `revision` positiva. `ProfileCompletion` deriva seis itens; `ProfilePreviewProjector` materializa somente a audiência solicitada.
+- **Concorrência:** alterações usam compare-and-set por `revision`; intenções e interesses são substituídos na mesma unidade de trabalho.
+- **Mídia:** `ProfilePhotoAsset` percorre `pending → active → delete_pending`; há no máximo um pending e um active por conta. Identidade do provedor e metadados validados ficam no asset; URL assinada nunca é persistida. `ProfileMediaAttempt` guarda apenas subject HMAC e instante para limites compartilhados.
+- **Privacidade:** foto/apresentação começam `private`; o schema conhece `authenticated` e `public`, mas o contrato SDD-015 rejeita `public`.

@@ -2,8 +2,52 @@
 
 exports[`registration HTTP contract v1 the OpenAPI contract is versioned and documents every route and internal header 1`] = `
 {
+  "/api/v1/auth/login": {
+    "post": [
+      "x-eventmatch-bff-token*",
+      "x-eventmatch-origin-fingerprint*",
+    ],
+  },
+  "/api/v1/auth/logout": {
+    "post": [
+      "x-eventmatch-bff-token*",
+    ],
+  },
+  "/api/v1/auth/session": {
+    "get": [
+      "x-eventmatch-bff-token*",
+    ],
+  },
   "/api/v1/catalog/interests": {
     "get": [],
+  },
+  "/api/v1/profiles/me": {
+    "get": [
+      "x-eventmatch-bff-token*",
+    ],
+    "put": [
+      "x-eventmatch-bff-token*",
+    ],
+  },
+  "/api/v1/profiles/me/photo": {
+    "delete": [
+      "x-eventmatch-bff-token*",
+    ],
+  },
+  "/api/v1/profiles/me/photo/uploads": {
+    "post": [
+      "x-eventmatch-bff-token*",
+    ],
+  },
+  "/api/v1/profiles/me/photo/uploads/{uploadId}/finalize": {
+    "post": [
+      "x-eventmatch-bff-token*",
+    ],
+  },
+  "/api/v1/profiles/me/preview": {
+    "get": [
+      "x-eventmatch-bff-token*",
+    ],
   },
   "/api/v1/registration": {
     "delete": [

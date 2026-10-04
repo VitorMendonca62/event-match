@@ -58,7 +58,7 @@ export function Choice({
       <span
         aria-hidden
         className={cn(
-          'grid size-6 shrink-0 place-items-center border-2 border-muted-foreground text-transparent transition-colors',
+          'pointer-events-none grid size-6 shrink-0 place-items-center border-2 border-muted-foreground text-transparent transition-colors',
           type === 'radio' ? 'rounded-full' : 'rounded-md',
           'peer-checked:border-primary peer-checked:bg-primary peer-checked:text-foreground',
           disabled && 'border-disabled',

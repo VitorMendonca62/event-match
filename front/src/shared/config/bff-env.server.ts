@@ -31,6 +31,10 @@ export const bffEnvSchema = z
       .enum(['true', 'false'])
       .default('false')
       .transform((value) => value === 'true'),
+    PROFILE_UI_ENABLED: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((value) => value === 'true'),
   })
   .superRefine((env, context) => {
     if (env.NODE_ENV !== 'production') return;

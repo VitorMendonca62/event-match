@@ -15,6 +15,7 @@ export function testEnv(overrides: Partial<BffEnv> = {}): BffEnv {
     EDGE_PROVIDER: 'fixture',
     BACKEND_TIMEOUT_MS: 1000,
     AUTH_UI_ENABLED: true,
+    PROFILE_UI_ENABLED: true,
     ...overrides,
   };
 }

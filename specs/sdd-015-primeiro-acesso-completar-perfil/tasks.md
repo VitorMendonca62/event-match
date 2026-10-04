@@ -3,7 +3,7 @@
 - **Slug:** primeiro-acesso-completar-perfil
 - **Autor do plano:** Code-Planner (SDD)
 - **Data:** 2026-09-30
-- **Status:** ready
+- **Status:** ready — ADR-041 rejeitada e contrato sem promessa de expiração conforme ADR-042
 - **Versão-alvo:** workspace/front `0.13.0`; back `0.12.0`
 - **Tipo:** feature
 - **Impacto público:** additive
@@ -171,7 +171,7 @@ POST /api/profile/invitation/dismiss
 - Client Components ficam restritos a formulário, recorte, upload direto, pending, foco, contador e confirmação de remoção. Nenhum token de sessão, account id, provider secret ou `invitationSubject` vira prop.
 - Route Handlers validam origem/content-type/tamanho, leem cookie HttpOnly, delegam uma vez ao NestJS, filtram resposta e nunca acessam PostgreSQL.
 - A resposta de grant contém somente valores públicos/efêmeros necessários ao POST direto; `api_secret` e assinatura fora dos parâmetros exatos nunca saem do backend.
-- URLs de foto expiram em cinco minutos. Usar elemento com dimensões estáveis e entrega direta sem cache público do otimizador Next; CSP permite somente endpoints Cloudinary necessários.
+- URLs de foto são assinadas, mas não prometem expiração temporal. Usar elemento com dimensões estáveis e entrega direta sem cache público do otimizador Next; CSP permite somente endpoints Cloudinary necessários.
 - Aplicar `server-auth-actions`, `server-no-shared-module-state`, `server-serialization`, `async-api-routes`, `async-parallel`, `async-defer-await`, `bundle-barrel-imports`, `bundle-analyzable-paths`, `rerender-derived-state-no-effect` e `rerender-move-effect-to-event`.
 
 ### PostgreSQL e migration
@@ -195,6 +195,8 @@ Rollback operacional desliga flags e preserva schema. Não há down migration de
 | Agregado editável, completude, revisão, prévia e visibilidade de foto/apresentação | `docs/adrs/ADR-038-modelo-de-completude-e-visibilidade-do-perfil.md` | accepted | Centraliza regras e evita modelar antecipadamente o RF081. |
 | Cloudinary, upload direto assinado, assets autenticados, normalização e cleanup | `docs/adrs/ADR-039-cloudinary-para-foto-principal-do-perfil.md` | accepted | Decide integração externa, segurança, custos e lifecycle. |
 | Convite por estado real e adiamento de 7 dias em cookie por conta/navegador | `docs/adrs/ADR-040-convite-de-perfil-adiado-no-navegador.md` | accepted | Evita persistência de onboarding e flash/client-only state. |
+| Expiração real de URLs de derivados Cloudinary | `docs/adrs/ADR-041-expiracao-real-de-urls-cloudinary.md` | rejected | Produto rejeitou token-based authentication/proxy nesta entrega e retirou a promessa de expiração. |
+| URL assinada sem prazo contratual | `docs/adrs/ADR-042-remover-expiracao-da-url-de-foto.md` | accepted | Remove `expiresAt` e explicita o risco de reutilização da URL enquanto o asset existir. |
 
 As três decisões foram aceitas em 2026-10-01. Mudanças materiais futuras exigem novo ADR ou supersessão explícita; não editar silenciosamente a decisão aceita.
 
@@ -217,7 +219,7 @@ interface OwnProfile {
   presentation: string | null;
   photoVisibility: ProfileFieldVisibility;
   presentationVisibility: ProfileFieldVisibility;
-  photo: null | { deliveryUrl: string; width: 512; height: 512; expiresAt: Date };
+  photo: null | { deliveryUrl: string; width: 512; height: 512 };
   completion: { complete: boolean; completedCount: number; totalCount: 6; missing: readonly MissingProfileItem[] };
 }
 
@@ -234,7 +236,7 @@ interface ProfileRepositoryPort {
 interface ProfileImageStorePort {
   createSignedUpload(input): Promise<SignedUploadGrant>;
   verifyUploaded(input): Promise<VerifiedProfileImage>;
-  createSignedDelivery(input): Promise<{ url: string; expiresAt: Date }>;
+  createSignedDelivery(input): Promise<{ url: string }>;
   delete(input): Promise<'deleted' | 'already_absent'>;
 }
 
@@ -315,7 +317,6 @@ PROFILE_MEDIA_PROVIDER=cloudinary
 PROFILE_MEDIA_KEY=<base64 32+ bytes>
 PROFILE_INVITATION_KEY=<base64 32+ bytes>
 PROFILE_PHOTO_UPLOAD_TTL_SECONDS=300
-PROFILE_PHOTO_DELIVERY_TTL_SECONDS=300
 PROFILE_PHOTO_MAX_BYTES=5242880
 PROFILE_PHOTO_ACCOUNT_DAILY_LIMIT=10
 PROFILE_PHOTO_ORIGIN_15M_LIMIT=30
@@ -331,7 +332,7 @@ Backend valida relações/minimums e recusa config incoerente. `.env.example` co
 ### 4.5 Rotas e UX
 
 - `/inicio`: sessão e perfil resolvidos no servidor. Perfil incompleto sem snooze mostra progresso, ação “Completar perfil” e “Agora não”; completo não mostra convite; falha de perfil mostra estado recuperável sem conteúdo privado.
-- `/perfil`: formulário pré-preenchido, foto/apresentação primeiro, depois nome/região, intenções e interesses. Salvar exige revisão observada; conflito preserva rascunho local e oferece recarregar conscientemente.
+- `/perfil`: formulário pré-preenchido, foto e dados básicos primeiro, depois apresentação, intenções e interesses. Salvar exige revisão observada; conflito preserva rascunho local e oferece recarregar conscientemente.
 - `/perfil/previa`: projeção server-side da audiência `authenticated`, com ação clara de voltar à edição. Campos privados aparecem como ausentes, não como placeholders públicos.
 - Foto: input nativo + drop opcional, recorte quadrado acessível, preview local, estado de upload, retry explícito e remoção confirmada. Layout não se move entre estados.
 - Apresentação: textarea de texto simples, limite 500, contador próximo do limite, instrução para não incluir contato e erro associado.
@@ -353,7 +354,7 @@ Backend valida relações/minimums e recusa config incoerente. `.env.example` co
 | 9 | Não há adiamento. | “Agora não” oculta por sete dias apenas para a mesma conta/navegador. | decisão produto; ADR-040 |
 | 10 | Foto/apresentação não participam do sistema. | Presença contribui para completude e futuro RN018, mas não concede anfitrião nem bloqueia uso. | RF016; RN018 |
 | 11 | Campos RF081 estão apenas documentados. | Permanecem fora desta entrega e não ganham colunas/DTOs vazios. | decisão produto |
-| 12 | Não há exposição de foto. | Somente titular recebe URL curta; exposição a terceiros exige nova tarefa de moderação. | decisão produto; ADR-039 |
+| 12 | Não há exposição de foto. | Somente titular recebe URL assinada sem prazo contratual; exposição a terceiros exige nova tarefa de segurança, privacidade e moderação. | decisão produto; ADR-039; ADR-042 |
 
 ## 6. Critérios de Aceitação
 
@@ -440,11 +441,11 @@ Backend valida relações/minimums e recusa config incoerente. `.env.example` co
 - Editar dados, manter três interesses, apresentação inválida/válida, conflito de duas abas e preview.
 - Foto válida com fixture EXIF, inválida, grant vencido, falha de upload, finalize, replace e remove.
 - Sessão expirada no meio do fluxo retorna login sem expor rascunho/segredo.
-- Chromium e Firefox, desktop e mobile; axe/teclado/zoom conforme harness existente.
+- Chromium desktop e mobile; axe/teclado/zoom conforme harness existente. Firefox foi retirado da matriz por decisão de produto em 2026-10-03 para reduzir o tempo da suíte.
 
 ### Smoke Cloudinary opt-in
 
-- Ambiente isolado cria asset autenticado de fixture, confirma variantes 512/128, metadados removidos, URL curta e destruição.
+- Ambiente isolado cria asset autenticado de fixture, confirma variantes 512/128, metadados removidos, URL assinada e destruição.
 - Executado manualmente/CI protegida somente com segredos dedicados; sempre cleanup em `finally` e sem imprimir resposta completa.
 
 ### Comandos de verificação
@@ -473,7 +474,7 @@ Não criar scripts ausentes apenas para mascarar validação; o plano pode adici
 | Drift de preset/Strict Transformations expõe ou rejeita assets | média | alto | config documentada, smoke opt-in e rollout bloqueado por checklist |
 | Upload concluído sem finalização cria órfão | alta | médio | pending invisível, expiração, cleanup oportunista + comando idempotente |
 | Falha entre ativação DB e deleção anterior | média | médio | estado `delete_pending`, retry fora da UoW e alerta por idade da fila |
-| URL assinada é compartilhada | baixa | médio | TTL 5 min, owner-only, no-store/referrer e nenhum endpoint de terceiros |
+| URL assinada é compartilhada ou reutilizada | baixa | alto | owner-only, no-store/referrer, nenhum endpoint de terceiros e destruição do asset em substituição/remoção; sem promessa de expiração (ADR-042) |
 | Conteúdo visual impróprio sem moderação | média | alto futuro | nenhuma exposição a terceiros; nova tarefa obrigatória antes do perfil público |
 | Texto contém contato disfarçado | média | alto futuro | instrução + padrões evidentes agora; moderação/política antes de terceiros |
 | Duas abas sobrescrevem dados | média | médio | revision otimista e `409` recuperável |
@@ -501,7 +502,9 @@ Não criar scripts ausentes apenas para mascarar validação; o plano pode adici
 
 ## 9. Perguntas em Aberto (bloqueantes)
 
-Nenhuma. ADRs 038–040 aceitas em 2026-10-01. Credenciais, avaliação jurídica e preset Cloudinary são pré-requisitos de rollout, não bloqueios da implementação; testes comuns funcionam com fake sem segredos reais.
+Nenhuma. Produto rejeitou a ADR-041 e aceitou retirar `expiresAt` do contrato conforme ADR-042.
+
+ADRs 038–040 permanecem aceitas. Credenciais, avaliação jurídica e preset Cloudinary continuam pré-requisitos de rollout; testes comuns funcionam com fake sem segredos reais.
 
 ## 10. Checklist de Conformidade
 
