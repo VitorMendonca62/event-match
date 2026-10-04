@@ -290,6 +290,7 @@ export function ProfilePhotoEditor({
           return;
         }
       }
+      resetEditor();
       setMessage({
         tone: 'error',
         text: 'Não foi possível enviar a foto. Sua foto atual foi preservada; tente novamente.',

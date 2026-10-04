@@ -214,7 +214,7 @@ test('perfil: falha do provedor preserva o estado recuperável da foto', async (
   expect(zoomedFrame?.width).toBeLessThan(initialFrame?.width ?? 0);
   await page.getByRole('button', { name: 'Usar este recorte' }).click();
   await expect(page.getByRole('status')).toContainText('foto atual foi preservada');
-  await expect(page.getByRole('button', { name: 'Usar este recorte' })).toBeEnabled();
+  await expect(page.getByRole('dialog', { name: 'Editar foto' })).toBeHidden();
 });
 
 test('perfil: recorte envia a seleção assimétrica como WebP', async ({ page }) => {
@@ -280,6 +280,7 @@ test('perfil: recorte envia a seleção assimétrica como WebP', async ({ page }
   expect(frameStyle).toContain('width: 25%');
   await page.getByRole('button', { name: 'Usar este recorte' }).click();
   await expect(page.getByRole('status')).toContainText('foto atual foi preservada');
+  await expect(page.getByRole('dialog', { name: 'Editar foto' })).toBeHidden();
   if (!sentWebp) throw new Error(`Upload capturado sem WebP reconhecível: ${uploadDiagnostic}`);
   const decoded = await page.evaluate(async (base64) => {
     const binary = atob(base64);
