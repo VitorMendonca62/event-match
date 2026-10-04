@@ -53,12 +53,20 @@ A API responde em `http://localhost:3001`. O Swagger fica disponível em `http:/
 | `AUTH_SESSION_RENEWAL_INTERVAL_SECONDS` / `AUTH_SESSION_PREVIOUS_TOKEN_GRACE_SECONDS` | `86400` / `60` | Rotação do modo lembrado e graça do token anterior. |
 | `AUTH_MAX_SESSIONS_PER_ACCOUNT` | `5` | A sessão excedente menos recentemente usada é removida. |
 | `AUTH_LOGIN_WINDOW_SECONDS` / `AUTH_LOGIN_CONTACT_LIMIT` / `AUTH_LOGIN_ORIGIN_LIMIT` | `900` / `5` / `30` | Janela deslizante e limites de falhas de login (ADR-035). |
+| `PROFILE_HTTP_ENABLED` / `PROFILE_MEDIA_ENABLED` | `false` / `false` | Liga leitura/edição de perfil e, separadamente, o ciclo de foto privada (SDD-015). |
+| `PROFILE_INVITATION_KEY` / `PROFILE_MEDIA_KEY` | — | Chaves HMAC base64 (32+ bytes) para sujeito pseudônimo do convite e limites de mídia. |
+| `PROFILE_MEDIA_PROVIDER` | `cloudinary` | `cloudinary` em execução real; `fake` é aceito somente com `NODE_ENV=test`. |
+| `PROFILE_MEDIA_SMOKE_ENABLED` / `PROFILE_MEDIA_SMOKE_FIXTURE` | `false` / — | Habilita explicitamente o smoke Cloudinary com um JPEG local contendo EXIF/GPS; nunca usar fixture com dados pessoais reais. |
+| `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` / `CLOUDINARY_PROFILE_UPLOAD_PRESET` | — | Credenciais exigidas somente quando a mídia Cloudinary está habilitada; nunca envie o secret ao navegador. |
+| `PROFILE_PHOTO_UPLOAD_TTL_SECONDS` | `300` | Validade do grant de upload direto, entre 60 e 900 segundos. A URL assinada de entrega não promete expiração (ADR-042). O arquivo fica entre 1 KiB e 5 MiB; limites configuráveis não podem exceder 10/conta/dia e 30/origem/15 min, nem permitir mais por conta que por origem. |
 
 As relações entre prazos são validadas (inatividade ≤ absoluto, escrita < inatividade, graça < renovação…). Em teste os prazos podem ser encurtados; em produção o preflight recusa valores abaixo dos mínimos documentados em `AUTH_PRODUCTION_MINIMUMS` (`src/shared/infrastructure/config/env.ts`) e limites de login acima de 5/30.
 
 Gere cada chave com `openssl rand -base64 32`. Valores vazios, placeholders ou base64 inválido fazem o preflight falhar. Perder `CONTACT_ENCRYPTION_KEY` torna os contatos cifrados ilegíveis; trocar `CONTACT_HASH_KEY` invalida a unicidade dos contatos existentes. Mantenha as chaves em cofre e não as rotacione sem migration de reprocessamento.
 
 O preflight Zod roda antes de iniciar o processo. Em falha, o processo encerra sem abrir porta e informa apenas a chave e o motivo da validação, nunca o valor recebido. A política TLS vem exclusivamente de `DATABASE_SSL_MODE`; parâmetros TLS/SSL em `DATABASE_URL` são rejeitados para impedir que sobrescrevam a validação de certificado do pool.
+
+O ciclo operacional da foto, incluindo limpeza idempotente, smoke opt-in, rollback das flags e diagnóstico do provedor, está em `docs/runbooks/profile-media.md`. A limpeza manual usa `bun run --cwd back profile-media:cleanup`; o smoke isolado usa `bun run --cwd back profile-media:smoke`.
 
 ## Contratos técnicos
 

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.13.0 — 2026-10-01
+
+Primeiro acesso com convite e edição do perfil (SDD-015; ADR-038 a ADR-040). Mudança aditiva: frontend/workspace `0.13.0`, backend `0.12.0`; aplicar `0007_profile_completion` e publicar inicialmente com `PROFILE_HTTP_ENABLED=false`, `PROFILE_MEDIA_ENABLED=false` e `PROFILE_UI_ENABLED=false`.
+
+- O contexto `profiles` passa a oferecer agregado editável, completude derivada, projeção autenticada, visibilidade privada/autenticada e revisão otimista; atualizações de nome, região, intenções, interesses e apresentação são atômicas.
+- API interna `/api/v1/profiles/me`, `/preview` e subrotas de foto com sessão/capacidades, DTOs validados, Swagger, `no-store` e erros allowlisted. BFFs Next.js filtram respostas, aplicam same-origin/JSON e nunca expõem o sujeito do convite nem segredos do provedor.
+- Foto principal privada no Cloudinary por upload direto assinado: grant curto, verificação server-side, consulta autoritativa, variantes autenticadas, substituição/remoção e cleanup operacional `bun run --cwd back profile-media:cleanup`.
+- A ADR-041 foi rejeitada e a ADR-042 remove `expiresAt` da foto e `PROFILE_PHOTO_DELIVERY_TTL_SECONDS`: a URL de entrega permanece assinada e restrita à titular, mas não promete expiração; o prazo de cinco minutos continua somente no grant de upload.
+- `/inicio` mostra progresso real e permite adiar por sete dias em cookie HttpOnly vinculado a um sujeito HMAC da conta. `/perfil` edita o perfil e recorta a foto; `/perfil/previa` exibe somente a projeção permitida.
+- Migration `0007` amplia `profile` e cria `profile_photo_asset`/`profile_media_attempt`, com unicidade parcial e índices de lifecycle. Rollback é operacional por flags; schema e assets são preservados para correção forward-only.
+- **Ação necessária:** concluir avaliação jurídica/privacidade do Cloudinary, configurar preset assinado com entrega autenticada, Strict Transformations, `fl_force_strip` e variantes 512/128 antes de ligar mídia em produção.
+
 ## 0.12.0 — 2026-09-29
 
 Login, sessão e primeiro acesso após o cadastro (SDD-013; ADR-033 a ADR-037). Mudança aditiva: o backend e o Swagger passam a `0.11.0`; a raiz e o frontend, a `0.12.0`. Rollout: aplicar a migration `0006` antes do backend, publicar com `AUTH_HTTP_ENABLED=false` e `AUTH_UI_ENABLED=false`, validar e ligar primeiro o backend e depois a UI.
@@ -27,7 +39,7 @@ Conteúdo dos documentos legais e aceite ou recusa no cadastro (SDD-011; ADR-028
 - `baseUrl` do cliente Brevo reativado em `brevo-verification-delivery.adapter.ts`: o E2E volta a receber o OTP e o link pelo Brevo falso e passa integralmente.
 - `react-markdown` fixado em `10.1.0` e `LegalMarkdown` restrito à lista de elementos e ao `urlTransform` da ADR-029.
 - Acessibilidade: novo token `--primary-foreground` (`#ffffff`, 4,7:1 sobre `--primary`; o `#fafafa` dava exatamente 4,5:1 e o axe no Firefox o reprovava) para o texto do botão primário (`DESIGN.md`, `.impeccable/design.json`). O `Dialog` ganhou `returnFocus`: ao fechar um documento reaberto por “Rever documentos”, o foco volta ao link do documento em vez de se perder.
-- E2E full-stack do cadastro no navegador (SDD-012; ADR-032), só ferramentas de desenvolvimento e testes: `@playwright/test` `1.63.0` e `@axe-core/playwright` `4.13.0`; `bun run --cwd front test:e2e` (`scripts/test-front-e2e.sh`) em Chromium desktop e móvel e Firefox, mais o projeto `destructive`; `FRONTEND_PUBLIC_URL` parametrizável em `docker-compose.back.test.yml`. A revisão manual com leitor de tela real foi retirada do escopo da SDD-012 (2026-09-29).
+- E2E full-stack do cadastro no navegador (SDD-012; ADR-032), só ferramentas de desenvolvimento e testes: `@playwright/test` `1.63.0` e `@axe-core/playwright` `4.13.0`; `bun run --cwd front test:e2e` (`scripts/test-front-e2e.sh`) em Chromium desktop e móvel, mais o projeto `destructive`; Firefox foi retirado da matriz em 2026-10-03 para reduzir o tempo da suíte; `FRONTEND_PUBLIC_URL` parametrizável em `docker-compose.back.test.yml`. A revisão manual com leitor de tela real foi retirada do escopo da SDD-012 (2026-09-29).
 - Snapshot do Drizzle `0005_snapshot.json` adicionado e schema de `terms_document` alinhado à migration `0005` (`CHECK` de digest e índice `terms_document_current_idx`): `db:generate` não gera mais uma migration que tentava recriar `content`. Sem mudança de banco.
 - “Sim, cancelar” fica desabilitado, com indicação “Cancelando…”, enquanto o cancelamento está pendente; “Continuar cadastro” também.
 - Paleta obrigatória do `AGENTS.md` §5 inclui `--primary-foreground`.

@@ -138,7 +138,7 @@ describe('Auth API v1 (e2e, container)', () => {
       info: { version: string };
       paths: Record<string, unknown>;
     };
-    expect(document.info.version).toBe('0.11.0');
+    expect(document.info.version).toBe('0.12.0');
     expect(Object.keys(document.paths)).toEqual(
       expect.arrayContaining(['/api/v1/auth/login', '/api/v1/auth/session', '/api/v1/auth/logout']),
     );
@@ -169,6 +169,82 @@ describe('Auth API v1 (e2e, container)', () => {
     expect((await call('GET', '/api/v1/auth/session', { token })).status).toBe(401);
     expect((await call('POST', '/api/v1/auth/logout', { token })).status).toBe(200);
   });
+
+  test('profile endpoints authorize the owner, isolate accounts and preserve optimistic concurrency', async () => {
+    const bia = unique('bia-perfil');
+    await activeAccount(bia);
+    const [anaLogin, biaLogin] = await Promise.all([login(ana), login(bia)]);
+    const anaToken = anaLogin.session!;
+    const biaToken = biaLogin.session!;
+    expect((await call('GET', '/api/v1/profiles/me')).status).toBe(401);
+
+    const anaProfile = await call('GET', '/api/v1/profiles/me', { token: anaToken });
+    const biaProfile = await call('GET', '/api/v1/profiles/me', { token: biaToken });
+    expect(anaProfile.status).toBe(200);
+    expect(biaProfile.status).toBe(200);
+    const interests = (anaProfile.body.data.interests as { id: string }[]).map(({ id }) => id);
+    const update = {
+      revision: anaProfile.body.data.revision,
+      displayName: 'Ana do perfil',
+      region: anaProfile.body.data.region,
+      usageIntents: anaProfile.body.data.usageIntents,
+      interestIds: interests,
+      presentation: 'Atividades culturais em grupo.',
+      photoVisibility: 'private',
+      presentationVisibility: 'authenticated',
+    };
+    const saved = await call('PUT', '/api/v1/profiles/me', { token: anaToken, body: update });
+    expect(saved.status).toBe(200);
+    expect(saved.body.data).toMatchObject({ displayName: 'Ana do perfil', revision: Number(update.revision) + 1 });
+    expect((await call('PUT', '/api/v1/profiles/me', { token: anaToken, body: update })).status).toBe(409);
+
+    const preview = await call('GET', '/api/v1/profiles/me/preview', { token: anaToken });
+    expect(preview.body.data).toMatchObject({ displayName: 'Ana do perfil', presentation: 'Atividades culturais em grupo.' });
+    expect(JSON.stringify(preview.body.data)).not.toMatch(/accountId|birthDate|contact|session/i);
+    const biaAfter = await call('GET', '/api/v1/profiles/me', { token: biaToken });
+    expect(biaAfter.body.data.displayName).toBe('Ana');
+  }, 30_000);
+
+  test('profile photo grant, finalize and removal run end to end with the local fake provider', async () => {
+    const logged = await login(ana);
+    const token = logged.session!;
+    const before = await call('GET', '/api/v1/profiles/me', { token });
+    const grant = await call('POST', '/api/v1/profiles/me/photo/uploads', {
+      token,
+      fingerprint: fingerprint(),
+      body: { revision: before.body.data.revision },
+    });
+    expect(grant.status).toBe(201);
+    expect(grant.body.data).toMatchObject({ cloudName: 'fixture', apiKey: 'fixture-public-key' });
+    expect(JSON.stringify(grant.body.data)).not.toMatch(/api_secret|secret/i);
+
+    const finalized = await call('POST', `/api/v1/profiles/me/photo/uploads/${String(grant.body.data.uploadId)}/finalize`, {
+      token,
+      body: {
+        revision: before.body.data.revision,
+        providerResponse: {
+          asset_id: 'fixture-asset',
+          public_id: grant.body.data.publicId,
+          version: 1,
+          signature: 'fixture-response-signature',
+          format: 'webp',
+          bytes: 1024,
+          width: 512,
+          height: 512,
+        },
+      },
+    });
+    expect(finalized.status).toBe(200);
+    expect(finalized.body.data.photo).toMatchObject({ width: 512, height: 512 });
+    expect(String((finalized.body.data.photo as Record<string, unknown>).deliveryUrl)).toContain('media.example.test');
+
+    const removed = await call('DELETE', '/api/v1/profiles/me/photo', {
+      token,
+      body: { revision: finalized.body.data.revision },
+    });
+    expect(removed.status).toBe(200);
+    expect(removed.body.data.photo).toBeNull();
+  }, 30_000);
 
   test('unknown contact, wrong password and forbidden states answer the same 401 snapshot', async () => {
     const suspended = unique('suspensa');

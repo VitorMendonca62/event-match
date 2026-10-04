@@ -18,7 +18,7 @@ export const ACCOUNT_STATUSES = [
 export type AccountStatus = (typeof ACCOUNT_STATUSES)[number];
 
 /** Capabilities a common session may request; anything else is denied by default (ADR-036). */
-export const ACCOUNT_CAPABILITIES = ['authenticated_home', 'logout'] as const;
+export const ACCOUNT_CAPABILITIES = ['authenticated_home', 'logout', 'profile_read', 'profile_write'] as const;
 
 export type AccountCapability = (typeof ACCOUNT_CAPABILITIES)[number];
 

@@ -125,6 +125,10 @@ Referência: RN021, RN025, RN075–RN077, RN152–RN159.
 
 ## 4. Integrações externas necessárias
 
+### Cloudinary (foto principal)
+
+Entrega `authenticated`, preset assinado, Strict Transformations, `fl_force_strip` e variantes WebP 512/128. O original não é servido. Produção exige avaliação jurídica/privacidade e configuração conforme `docs/runbooks/profile-media.md`; flags permanecem desligadas até essa validação.
+
 | Integração | Finalidade | Requisitos/controles |
 |---|---|---|
 | Brevo (e-mail) | OTP, link de confirmação e recuperação | remetente individual verificado no MVP sem domínio, template em código, antienumeração, timeout de 5 s e até duas novas tentativas transitórias |
@@ -171,7 +175,16 @@ Valide extensão, MIME real, tamanho, assinatura, malware e autorização tanto 
 - SLO de disponibilidade mensal: 99,5%, excluída manutenção comunicada com 24 h.
 - Alertas para falha de confirmação, inconsistência de vagas, atraso em notificações essenciais, erro de upload e jobs de retenção.
 - Logs de segurança não expõem relato, anexo, documento, contato completo ou sinais antifraude.
+- Perfil emite somente eventos allowlisted `profile.read`, `profile.update`, `profile.conflict`, `profile.preview`, `profile.photo.grant`, `profile.photo.finalize`, `profile.photo.reject`, `profile.photo.remove` e `profile.media.cleanup`; o BFF emite `profile.invite.dismiss`. Os campos ficam limitados a resultado/status, duração, correlation id aleatório, provedor e contagens agregadas do cleanup, sem conteúdo, conta, fingerprint, URL, assinatura ou id do provedor.
+- Resultados `invalid`, `conflict`, `rate_limited`, `rejected`, `provider_error` e `failed` permitem separar validação, concorrência, abuso, provedor, persistência e cleanup sem labels de alta cardinalidade. A operação deve alertar quando `profile.media.cleanup.failedCount > 0` persistir ou a fila `delete_pending` crescer entre execuções.
 
 ## 8. Pendência jurídica
 
 Exportação de dados, documentos excepcionais e retenção permanecem condicionados à validação jurídica brasileira: RF068, RF073, RF074, RN068, RN080–RN083, RN093, RN096, RN100–RN104, RN115–RN122, RNF023 e RNF025.
+### Perfil v1 e BFF (SDD-015, backend 0.12.0; frontend 0.13.0)
+
+- `GET|PUT /api/v1/profiles/me`, `GET /api/v1/profiles/me/preview`, `POST /api/v1/profiles/me/photo/uploads`, `POST /api/v1/profiles/me/photo/uploads/:uploadId/finalize` e `DELETE /api/v1/profiles/me/photo` exigem credencial BFF, Bearer de sessão, capacidade live e `no-store`.
+- BFFs equivalentes em `/api/profile/**` validam origem/JSON/tamanho, fazem uma chamada sem retry, expiram sessão em `401`, preservam em `403` e removem `invitationSubject`, ids/segredos do provedor e mensagens upstream.
+- O grant retorna somente URL oficial, cloud name, API key pública, preset e parâmetros efêmeros assinados. O browser envia direto ao Cloudinary; a finalização revalida assinatura e consulta o recurso antes da transação curta de ativação.
+- A foto retornada contém somente `deliveryUrl`, `width` e `height`. A URL do derivado é assinada, mas não possui nem promete expiração temporal; `expiresAt` existe somente no grant de upload (ADR-042).
+- `POST /api/profile/invitation/dismiss` consulta o perfil e grava cookie HttpOnly de sete dias, por sujeito HMAC; não grava preferência de onboarding no banco.

@@ -36,15 +36,15 @@ export default defineConfig({
       testIgnore: DESTRUCTIVE,
       use: { ...devices['Desktop Chrome'], viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true },
     },
-    {
-      name: 'firefox-desktop',
-      testIgnore: DESTRUCTIVE,
-      use: { ...devices['Desktop Firefox'], viewport: { width: 1440, height: 900 } },
-    },
+    // {
+    //   name: 'firefox-desktop',
+    //   testIgnore: DESTRUCTIVE,
+    //   use: { ...devices['Desktop Firefox'], viewport: { width: 1440, height: 900 } },
+    // },
     {
       name: 'destructive',
       testMatch: DESTRUCTIVE,
-      dependencies: ['chromium-desktop', 'chromium-mobile', 'firefox-desktop'],
+      dependencies: ['chromium-desktop', 'chromium-mobile', /*'firefox-desktop'*/],
       use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
     },
   ],

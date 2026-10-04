@@ -49,7 +49,10 @@ export REGISTRATION_FLOW_SECRET BFF_INTERNAL_TOKEN
 # SDD-013: disposable session secret; a short login window and rotation interval make recovery and
 # rotation observable within the suite (allowed only outside production).
 AUTH_SESSION_SECRET="$(random_secret)"
-export AUTH_SESSION_SECRET
+PROFILE_INVITATION_KEY="$(random_secret)"
+PROFILE_MEDIA_KEY="$(random_secret)"
+export AUTH_SESSION_SECRET PROFILE_INVITATION_KEY PROFILE_MEDIA_KEY
+export PROFILE_MEDIA_ENABLED=true PROFILE_MEDIA_PROVIDER=fake
 export AUTH_LOGIN_WINDOW_SECONDS=8 AUTH_SESSION_RENEWAL_INTERVAL_SECONDS=3 AUTH_SESSION_PREVIOUS_TOKEN_GRACE_SECONDS=2
 # Percent-encode credentials: a valid password may contain URL-reserved characters (@ # ? / :).
 url_encode() { bun -e 'process.stdout.write(encodeURIComponent(process.argv[1]))' "$1"; }

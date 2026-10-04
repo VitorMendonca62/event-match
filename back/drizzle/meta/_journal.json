@@ -50,6 +50,13 @@
       "when": 1790714035312,
       "tag": "0006_authenticated_session",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790841600000,
+      "tag": "0007_profile_completion",
+      "breakpoints": true
     }
   ]
 }

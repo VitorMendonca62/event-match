@@ -48,6 +48,9 @@ fi
 : "${VERIFICATION_SECRET_KEY:?VERIFICATION_SECRET_KEY must be set in back/.env.test.local}"
 export POSTGRES_DB POSTGRES_USER POSTGRES_PORT POSTGRES_PASSWORD
 export CONTACT_HASH_KEY CONTACT_ENCRYPTION_KEY VERIFICATION_SECRET_KEY
+random_secret() { bun -e 'process.stdout.write(require("node:crypto").randomBytes(32).toString("base64"))'; }
+export PROFILE_INVITATION_KEY="$(random_secret)"
+export PROFILE_MEDIA_KEY="$(random_secret)"
 
 # Waits on the Compose healthcheck instead of a fixed polling budget, which flaked on cold starts.
 if ! "${compose[@]}" up --detach --wait --wait-timeout 120 postgres >/dev/null; then

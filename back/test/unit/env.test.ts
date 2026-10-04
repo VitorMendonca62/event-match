@@ -32,6 +32,16 @@ const AUTH_DEFAULTS = {
   AUTH_LOGIN_CONTACT_LIMIT: 5,
   AUTH_LOGIN_ORIGIN_LIMIT: 30,
 };
+const PROFILE_DEFAULTS = {
+  PROFILE_HTTP_ENABLED: false,
+  PROFILE_MEDIA_ENABLED: false,
+  PROFILE_PHOTO_UPLOAD_TTL_SECONDS: 300,
+  PROFILE_PHOTO_MAX_BYTES: 5_242_880,
+  PROFILE_PHOTO_ACCOUNT_DAILY_LIMIT: 10,
+  PROFILE_PHOTO_ORIGIN_15M_LIMIT: 30,
+  PROFILE_MEDIA_PROVIDER: 'cloudinary' as const,
+  PROFILE_MEDIA_SMOKE_ENABLED: false,
+};
 
 describe('validateEnv', () => {
   test('applies safe defaults', () => {
@@ -53,6 +63,7 @@ describe('validateEnv', () => {
       REGISTRATION_HTTP_ENABLED: false,
       BREVO_BASE_URL: 'https://api.brevo.com/v3',
       ...AUTH_DEFAULTS,
+      ...PROFILE_DEFAULTS,
       ...secrets,
     });
   });
@@ -171,6 +182,36 @@ describe('validateEnv', () => {
     test('keeps the registration routes disabled by default', () => {
       expect(validateEnv(base).REGISTRATION_HTTP_ENABLED).toBe(false);
     });
+  });
+});
+
+describe('profile configuration (SDD-015)', () => {
+  const base = { ...secrets, DATABASE_URL: 'postgresql://eventmatch:eventmatch@localhost:5432/eventmatch' };
+  test('requires an invitation key only when profile HTTP is enabled', () => {
+    expect(() => validateEnv({ ...base, PROFILE_HTTP_ENABLED: 'true' })).toThrow('PROFILE_INVITATION_KEY');
+    expect(validateEnv({ ...base, PROFILE_HTTP_ENABLED: 'true', PROFILE_INVITATION_KEY: Buffer.alloc(32, 8).toString('base64') }).PROFILE_HTTP_ENABLED).toBe(true);
+  });
+  test('media requires every Cloudinary credential without echoing values', () => {
+    expect(() => validateEnv({ ...base, PROFILE_MEDIA_ENABLED: 'true', PROFILE_MEDIA_KEY: Buffer.alloc(32, 9).toString('base64') })).toThrow('CLOUDINARY_CLOUD_NAME');
+  });
+  test('Cloudinary smoke is explicit and requires a GPS fixture path', () => {
+    const configured = {
+      ...base,
+      PROFILE_MEDIA_ENABLED: 'true',
+      PROFILE_MEDIA_KEY: Buffer.alloc(32, 9).toString('base64'),
+      CLOUDINARY_CLOUD_NAME: 'isolated',
+      CLOUDINARY_API_KEY: 'public',
+      CLOUDINARY_API_SECRET: 'secret',
+      CLOUDINARY_PROFILE_UPLOAD_PRESET: 'profile-signed',
+      PROFILE_MEDIA_SMOKE_ENABLED: 'true',
+    };
+    expect(() => validateEnv(configured)).toThrow('PROFILE_MEDIA_SMOKE_FIXTURE');
+    expect(validateEnv({ ...configured, PROFILE_MEDIA_SMOKE_FIXTURE: '/tmp/profile-gps.jpg' }).PROFILE_MEDIA_SMOKE_ENABLED).toBe(true);
+  });
+  test('media policy refuses unsafe bounds and incoherent account/origin limits', () => {
+    expect(() => validateEnv({ ...base, PROFILE_PHOTO_UPLOAD_TTL_SECONDS: '59' })).toThrow('PROFILE_PHOTO_UPLOAD_TTL_SECONDS');
+    expect(() => validateEnv({ ...base, PROFILE_PHOTO_MAX_BYTES: '5242881' })).toThrow('PROFILE_PHOTO_MAX_BYTES');
+    expect(() => validateEnv({ ...base, PROFILE_PHOTO_ACCOUNT_DAILY_LIMIT: '10', PROFILE_PHOTO_ORIGIN_15M_LIMIT: '9' })).toThrow('must not exceed PROFILE_PHOTO_ORIGIN_15M_LIMIT');
   });
 });
 

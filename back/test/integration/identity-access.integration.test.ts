@@ -367,7 +367,7 @@ describe('migration 0006 over existing 0005 data', () => {
     cpSync(MIGRATIONS_CONFIG.migrationsFolder, folder, { recursive: true });
     const journalPath = join(folder, 'meta', '_journal.json');
     const journal = JSON.parse(readFileSync(journalPath, 'utf8')) as { entries: { tag: string }[] };
-    journal.entries = journal.entries.filter((entry) => entry.tag !== '0006_authenticated_session');
+    journal.entries = journal.entries.filter((entry) => entry.tag < '0006_authenticated_session');
     writeFileSync(journalPath, JSON.stringify(journal));
     database = await createEphemeralDatabase(adminUrl, { initialMigrationsFolder: folder });
   });

@@ -82,12 +82,51 @@ const AUTH_PRODUCTION_MAXIMUMS = {
   AUTH_LOGIN_ORIGIN_LIMIT: 30,
 } as const;
 
+export const PROFILE_POLICY_BOUNDS = {
+  uploadTtlSeconds: { min: 60, max: 900 },
+  maxBytes: { min: 1_024, max: 5_242_880 },
+  accountDailyLimit: { min: 1, max: 10 },
+  origin15mLimit: { min: 1, max: 30 },
+} as const;
+
 type AuthenticationEnvironment = Record<keyof typeof AUTH_PRODUCTION_MINIMUMS, number> &
   Record<'AUTH_MAX_SESSIONS_PER_ACCOUNT' | 'AUTH_LOGIN_CONTACT_LIMIT' | 'AUTH_LOGIN_ORIGIN_LIMIT', number> & {
     AUTH_HTTP_ENABLED: boolean;
     AUTH_SESSION_SECRET?: string;
     REGISTRATION_FLOW_SECRET: string;
   };
+
+type ProfileEnvironment = {
+  PROFILE_HTTP_ENABLED: boolean;
+  PROFILE_MEDIA_ENABLED: boolean;
+  PROFILE_INVITATION_KEY?: string;
+  PROFILE_MEDIA_KEY?: string;
+  CLOUDINARY_CLOUD_NAME?: string;
+  CLOUDINARY_API_KEY?: string;
+  CLOUDINARY_API_SECRET?: string;
+  CLOUDINARY_PROFILE_UPLOAD_PRESET?: string;
+  PROFILE_MEDIA_PROVIDER: 'cloudinary' | 'fake';
+  PROFILE_MEDIA_SMOKE_ENABLED: boolean;
+  PROFILE_MEDIA_SMOKE_FIXTURE?: string;
+  PROFILE_PHOTO_ACCOUNT_DAILY_LIMIT: number;
+  PROFILE_PHOTO_ORIGIN_15M_LIMIT: number;
+};
+
+function validateProfile(environment: ProfileEnvironment, issue: (path: string, message: string) => void): void {
+  if (environment.PROFILE_HTTP_ENABLED && !environment.PROFILE_INVITATION_KEY) issue('PROFILE_INVITATION_KEY', 'is required when PROFILE_HTTP_ENABLED is true');
+  if (environment.PROFILE_PHOTO_ACCOUNT_DAILY_LIMIT > environment.PROFILE_PHOTO_ORIGIN_15M_LIMIT) issue('PROFILE_PHOTO_ACCOUNT_DAILY_LIMIT', 'must not exceed PROFILE_PHOTO_ORIGIN_15M_LIMIT');
+  if (!environment.PROFILE_MEDIA_ENABLED) return;
+  const names = environment.PROFILE_MEDIA_PROVIDER === 'cloudinary'
+    ? ['PROFILE_MEDIA_KEY', 'CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET', 'CLOUDINARY_PROFILE_UPLOAD_PRESET'] as const
+    : ['PROFILE_MEDIA_KEY'] as const;
+  for (const name of names) {
+    if (!environment[name]) issue(name, 'is required when PROFILE_MEDIA_ENABLED is true');
+  }
+  if (environment.PROFILE_MEDIA_SMOKE_ENABLED) {
+    if (environment.PROFILE_MEDIA_PROVIDER !== 'cloudinary') issue('PROFILE_MEDIA_PROVIDER', 'must be cloudinary when PROFILE_MEDIA_SMOKE_ENABLED is true');
+    if (!environment.PROFILE_MEDIA_SMOKE_FIXTURE) issue('PROFILE_MEDIA_SMOKE_FIXTURE', 'is required when PROFILE_MEDIA_SMOKE_ENABLED is true');
+  }
+}
 
 /** Relations between the session deadlines are checked here so the policy can never be incoherent. */
 function validateAuthentication(
@@ -192,6 +231,21 @@ const rawEnvSchema = z
     AUTH_LOGIN_WINDOW_SECONDS: positiveIntSchema.default(900),
     AUTH_LOGIN_CONTACT_LIMIT: positiveIntSchema.default(5),
     AUTH_LOGIN_ORIGIN_LIMIT: positiveIntSchema.default(30),
+    PROFILE_HTTP_ENABLED: booleanSchema.default(false),
+    PROFILE_MEDIA_ENABLED: booleanSchema.default(false),
+    PROFILE_INVITATION_KEY: optionalEnvironmentValue(base64SecretSchema({ min: 32 })),
+    PROFILE_MEDIA_KEY: optionalEnvironmentValue(base64SecretSchema({ min: 32 })),
+    PROFILE_PHOTO_UPLOAD_TTL_SECONDS: z.coerce.number().int().min(PROFILE_POLICY_BOUNDS.uploadTtlSeconds.min).max(PROFILE_POLICY_BOUNDS.uploadTtlSeconds.max).default(300),
+    PROFILE_PHOTO_MAX_BYTES: z.coerce.number().int().min(PROFILE_POLICY_BOUNDS.maxBytes.min).max(PROFILE_POLICY_BOUNDS.maxBytes.max).default(5_242_880),
+    PROFILE_PHOTO_ACCOUNT_DAILY_LIMIT: z.coerce.number().int().min(PROFILE_POLICY_BOUNDS.accountDailyLimit.min).max(PROFILE_POLICY_BOUNDS.accountDailyLimit.max).default(10),
+    PROFILE_PHOTO_ORIGIN_15M_LIMIT: z.coerce.number().int().min(PROFILE_POLICY_BOUNDS.origin15mLimit.min).max(PROFILE_POLICY_BOUNDS.origin15mLimit.max).default(30),
+    PROFILE_MEDIA_PROVIDER: z.enum(['cloudinary', 'fake']).default('cloudinary'),
+    PROFILE_MEDIA_SMOKE_ENABLED: booleanSchema.default(false),
+    PROFILE_MEDIA_SMOKE_FIXTURE: optionalEnvironmentValue(z.string().trim().min(1)),
+    CLOUDINARY_CLOUD_NAME: optionalEnvironmentValue(z.string().trim().min(1)),
+    CLOUDINARY_API_KEY: optionalEnvironmentValue(z.string().trim().min(1)),
+    CLOUDINARY_API_SECRET: optionalEnvironmentValue(z.string().trim().min(1)),
+    CLOUDINARY_PROFILE_UPLOAD_PRESET: optionalEnvironmentValue(z.string().trim().min(1)),
   })
   .superRefine((environment, context) => {
     const databaseUrl = parseUrl(environment.DATABASE_URL);
@@ -226,6 +280,8 @@ const rawEnvSchema = z
     }
 
     validateAuthentication(environment, production, issue);
+    validateProfile(environment, issue);
+    if (environment.PROFILE_MEDIA_PROVIDER === 'fake' && environment.NODE_ENV !== 'test') issue('PROFILE_MEDIA_PROVIDER', 'fake is allowed only when NODE_ENV is test');
 
     if (
       production &&

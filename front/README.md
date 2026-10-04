@@ -44,6 +44,7 @@ A aplicação fica disponível em `http://localhost:3000` por padrão.
 | `EDGE_PROVIDER` | — | `vercel` (obrigatório em produção) ou `fixture` (local/testes). |
 | `BACKEND_TIMEOUT_MS` | `8000` | Timeout de cada chamada ao backend, sem retry. |
 | `AUTH_UI_ENABLED` | `false` | Expõe `/entrar`, `/inicio`, login e manutenção de sessão (SDD-013). Ligue só depois de `AUTH_HTTP_ENABLED=true` no backend; o logout segue expirando o cookie mesmo desligado. |
+| `PROFILE_UI_ENABLED` | `false` | Expõe o convite em `/inicio`, `/perfil`, a prévia e os Route Handlers de perfil (SDD-015). Ligue após `PROFILE_HTTP_ENABLED=true` no backend. |
 
 Nenhuma dessas variáveis usa o prefixo `NEXT_PUBLIC_`. O servidor valida as variáveis em `dev`, `start` e na inicialização do container de produção. Configuração inválida encerra o processo com erro sem exibir valores recebidos.
 
