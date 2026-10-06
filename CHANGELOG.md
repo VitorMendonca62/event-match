@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.15.0 — 2026-10-06
+
+Preferências de atividades no perfil (SDD-017; ADR-044). Mudança aditiva na leitura: frontend/workspace `0.15.0`, backend `0.14.0`. Rollout coordenado: desligar `PROFILE_UI_ENABLED`, aplicar `0009_profile_activity_preferences`, publicar backend e depois frontend, executar o smoke de catálogo/perfil/prévia e religar a UI.
+
+- Novo catálogo versionado `activity_preference` com as 12 opções do DER §3.10, endpoint público `GET /api/v1/catalog/activity-preferences` (`no-store`) e proxy BFF filtrado.
+- Perfil aceita de zero a cinco preferências únicas, sem prioridade (ordem do catálogo), com visibilidade própria privada por padrão; item desativado já escolhido é preservável e não readicionável. Interesses, completude e capacidades não mudam.
+- **Contrato:** `PUT /api/v1/profiles/me` passa a exigir `activityPreferenceCodes` e `activityPreferencesVisibility` (ausência → `400`); novos reasons `422` `unknown_activity_preference` e `inactive_activity_preference`. Leitura e prévia são aditivas.
+- `/perfil` ganha a seção “Como você gosta dos encontros”, carregada em paralelo e degradada isoladamente se o catálogo falhar; `/perfil/previa` mostra a lista somente quando autorizada.
+- Migration `0009` é aditiva e forward-only; purga de expiração e exclusão de conta removem a relação. Rollback operacional preserva schema e dados.
+
 ## 0.14.0 — 2026-10-03
 
 Identidade opcional no perfil (SDD-016; ADR-043). Mudança aditiva: frontend/workspace `0.14.0`, backend `0.13.0`. Rollout coordenado: desligar `PROFILE_UI_ENABLED`, aplicar `0008_profile_optional_identity`, publicar o backend e depois o frontend, executar o smoke conjunto e somente então religar a UI; não há compatibilidade cruzada durante essa janela controlada.

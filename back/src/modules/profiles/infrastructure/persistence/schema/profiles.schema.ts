@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { check, customType, index, integer, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { account } from '../../../../registration/infrastructure/persistence/schema/registration.schema';
-import { interest, language } from '../../../../catalog/infrastructure/persistence/schema/catalog.schema';
+import { activityPreference, interest, language } from '../../../../catalog/infrastructure/persistence/schema/catalog.schema';
 const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => 'bytea' });
 
 export const profile = pgTable('profile', {
@@ -17,6 +17,7 @@ export const profile = pgTable('profile', {
   profession: text('profession'),
   professionVisibility: text('profession_visibility').notNull().default('private'),
   languagesVisibility: text('languages_visibility').notNull().default('private'),
+  activityPreferencesVisibility: text('activity_preferences_visibility').notNull().default('private'),
   revision: integer('revision').notNull().default(1),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -33,6 +34,7 @@ export const profile = pgTable('profile', {
   check('profile_profession_length_check', sql`${table.profession} is null or char_length(${table.profession}) between 1 and 80`),
   check('profile_profession_visibility_check', sql`${table.professionVisibility} in ('private', 'authenticated', 'public')`),
   check('profile_languages_visibility_check', sql`${table.languagesVisibility} in ('private', 'authenticated', 'public')`),
+  check('profile_activity_preferences_visibility_check', sql`${table.activityPreferencesVisibility} in ('private', 'authenticated', 'public')`),
   check('profile_pronouns_prefer_private_check', sql`${table.pronounSelection} is distinct from 'prefer_not_to_say' or ${table.pronounsVisibility} = 'private'`),
 ]);
 
@@ -58,6 +60,15 @@ export const profileLanguage = pgTable('profile_language', {
 }, (table) => [
   primaryKey({ columns: [table.accountId, table.languageCode] }),
   index('profile_language_language_index').on(table.languageCode),
+]);
+
+export const profileActivityPreference = pgTable('profile_activity_preference', {
+  accountId: uuid('account_id').notNull().references(() => account.id, { onDelete: 'cascade' }),
+  preferenceCode: text('preference_code').notNull().references(() => activityPreference.code),
+  selectedAt: timestamp('selected_at', { withTimezone: true }).notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.accountId, table.preferenceCode] }),
+  index('profile_activity_preference_preference_index').on(table.preferenceCode),
 ]);
 
 export const profilePhotoAsset = pgTable('profile_photo_asset', {

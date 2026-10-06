@@ -6,6 +6,7 @@ import request from 'supertest';
 
 import { ListActiveInterests } from '../../../src/modules/catalog/application/use-cases/list-active-interests.use-case';
 import { ListActiveLanguages } from '../../../src/modules/catalog/application/use-cases/list-active-languages.use-case';
+import { ListActiveActivityPreferences } from '../../../src/modules/catalog/application/use-cases/list-active-activity-preferences.use-case';
 import { CatalogModule } from '../../../src/modules/catalog/catalog.module';
 import { ProfilesModule } from '../../../src/modules/profiles/profiles.module';
 import { CheckRegistrationEligibility } from '../../../src/modules/registration/application/use-cases/check-registration-eligibility.use-case';
@@ -70,6 +71,8 @@ async function createApp(overrides: Record<string, string> = {}): Promise<INestA
     .useValue({ execute: async () => [{ id: '00000000-0000-7000-8000-000000000001', slug: 'cinema', label: 'Cinema' }] })
     .overrideProvider(ListActiveLanguages)
     .useValue({ execute: async () => [{ code: 'pt', label: 'Português', active: true }, { code: 'bzs', label: 'Libras', active: true }] })
+    .overrideProvider(ListActiveActivityPreferences)
+    .useValue({ execute: async () => [{ code: 'outdoor', label: 'Ao ar livre', active: true }, { code: 'small_group', label: 'Grupo pequeno', active: true }] })
     .compile();
   const app = module.createNestApplication();
   configureApplication(app);
@@ -326,6 +329,11 @@ describe('registration HTTP contract v1', () => {
       const languages = await http().get('/api/v1/catalog/languages?locale=pt-BR').expect(200);
       expect(languages.body.data.languages).toEqual([{ code: 'pt', label: 'Português' }, { code: 'bzs', label: 'Libras' }]);
       expect(languages.headers['cache-control']).toBe('no-store');
+
+      const preferences = await http().get('/api/v1/catalog/activity-preferences?locale=pt-BR').expect(200);
+      expect(preferences.body.data.activityPreferences).toEqual([{ code: 'outdoor', label: 'Ao ar livre' }, { code: 'small_group', label: 'Grupo pequeno' }]);
+      expect(preferences.headers['cache-control']).toBe('no-store');
+      await http().get('/api/v1/catalog/activity-preferences?locale=en-US').expect(400);
     });
   });
 
@@ -352,7 +360,7 @@ describe('registration HTTP contract v1', () => {
       components?: { schemas?: Record<string, { required?: string[]; properties?: Record<string, { nullable?: boolean; maxLength?: number; maxItems?: number }> }> };
     };
 
-    expect(document.info.version).toBe('0.13.0');
+    expect(document.info.version).toBe('0.14.0');
     const contract = Object.fromEntries(
       Object.entries(document.paths)
         .filter(([path]) => path.startsWith('/api/v1/'))
@@ -385,6 +393,13 @@ describe('registration HTTP contract v1', () => {
       ownNullable: ownNullableFields.filter((field) => own.properties?.[field]?.nullable === true),
       previewOptional: ['pronouns', 'profession', 'languages'].filter((field) => !preview.required?.includes(field)),
       languageListRequired: schemas.LanguageListDto?.required ?? [],
+      activityPreferences: {
+        updateRequired: ['activityPreferenceCodes', 'activityPreferencesVisibility'].filter((field) => update.required?.includes(field)),
+        codesMaxItems: update.properties?.activityPreferenceCodes?.maxItems,
+        ownRequired: ['activityPreferences', 'activityPreferencesVisibility'].filter((field) => own.required?.includes(field)),
+        previewOptional: !preview.required?.includes('activityPreferences') && preview.properties?.activityPreferences !== undefined,
+        listRequired: schemas.ActivityPreferenceListDto?.required ?? [],
+      },
     };
     expect({ __identity: identityContract, ...contract }).toMatchSnapshot();
     expect(JSON.stringify(document)).not.toContain(process.env.BFF_INTERNAL_TOKEN!);

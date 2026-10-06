@@ -123,6 +123,73 @@ test('perfil: convite, edição, prévia e adiamento por navegador', async ({
   await expect(page.getByRole('link', { name: 'Completar perfil' })).toBeVisible();
 });
 
+test('perfil: preferências de atividades com limite, privacidade e prévia', async ({ page }) => {
+  const email = await registerAccount(page, 'perfil-preferencias');
+  await page.goto('/entrar');
+  await signIn(page, email);
+  await expect(page).toHaveURL(/\/inicio$/);
+  await page.goto('/perfil');
+  const group = page.getByRole('group', { name: /Preferências de atividades/ });
+  await expect(group).toBeVisible();
+  const visibility = page.getByRole('switch', { name: 'Compartilhar preferências futuramente?' });
+  await expect(visibility).not.toBeChecked();
+  const labels = ['Grupo pequeno', 'Ao ar livre', 'Ambiente tranquilo', 'Conversa e socialização', 'Experiência cultural'];
+  for (const label of labels) {
+    const option = group.getByRole('checkbox', { name: label, exact: true });
+    await option.focus();
+    await option.press('Space');
+    await expect(option).toBeChecked();
+  }
+  await expect(group).toContainText('5/5');
+  await expect(page.getByText('Você escolheu as cinco preferências possíveis', { exact: false })).toBeVisible();
+  const blocked = group.getByRole('checkbox', { name: 'Grupo médio', exact: true });
+  await expect(blocked).toHaveAttribute('aria-disabled', 'true');
+  await blocked.focus();
+  await blocked.press('Space');
+  await expect(blocked).not.toBeChecked();
+  await expectNoSeriousA11yViolations(page);
+  await expectNoHorizontalScroll(page);
+  const viewport = page.viewportSize();
+  const capture = viewport?.width === 1440 || viewport?.width === 390 ? (viewport.width === 390 ? 'mobile' : 'desktop') : null;
+  // Impeccable evidence: the limit state is the section's most demanding render.
+  if (capture)
+    await page.getByRole('region', { name: 'Como você gosta dos encontros' })
+      .screenshot({ path: `.impeccable/review/perfil-preferencias-${capture}.png` });
+
+  await page.getByText('Compartilhar preferências futuramente?', { exact: true }).click();
+  const update = page.waitForRequest((request) => request.url().endsWith('/api/profile') && request.method() === 'PUT');
+  await page.getByRole('button', { name: 'Salvar perfil' }).click();
+  await expect(page.getByRole('status')).toContainText('Perfil salvo');
+  const sent = (await update).postDataJSON() as { activityPreferenceCodes: string[]; activityPreferencesVisibility: string };
+  expect([...sent.activityPreferenceCodes].sort()).toEqual(['conversation_and_socializing', 'cultural_experience', 'outdoor', 'quiet_setting', 'small_group']);
+  expect(sent.activityPreferencesVisibility).toBe('authenticated');
+
+  await page.goto('/perfil/previa');
+  const previewList = page.getByRole('list', { name: 'Preferências de atividades' });
+  await expect(previewList.getByRole('listitem')).toHaveText(['Ao ar livre', 'Ambiente tranquilo', 'Grupo pequeno', 'Experiência cultural', 'Conversa e socialização']);
+  if (capture) await page.screenshot({ path: `.impeccable/review/perfil-previa-preferencias-${capture}.png`, fullPage: true });
+
+  await page.goto('/perfil');
+  if (capture === 'desktop') {
+    // 200% zoom of a 1280×800 window = 640×400 CSS px (same convention as test 14b).
+    await page.setViewportSize({ width: 640, height: 400 });
+    await expectNoHorizontalScroll(page);
+    await page.getByRole('region', { name: 'Como você gosta dos encontros' })
+      .screenshot({ path: '.impeccable/review/perfil-preferencias-zoom200.png' });
+  }
+  const reloaded = page.getByRole('group', { name: /Preferências de atividades/ });
+  const removed = reloaded.getByRole('checkbox', { name: 'Grupo pequeno', exact: true });
+  await removed.focus();
+  await removed.press('Space');
+  await expect(removed).not.toBeChecked();
+  await expect(reloaded.getByRole('checkbox', { name: 'Grupo médio', exact: true })).not.toHaveAttribute('aria-disabled', 'true');
+  await page.getByText('Compartilhar preferências futuramente?', { exact: true }).click();
+  await page.getByRole('button', { name: 'Salvar perfil' }).click();
+  await expect(page.getByRole('status')).toContainText('Perfil salvo');
+  await page.goto('/perfil/previa');
+  await expect(page.getByRole('list', { name: 'Preferências de atividades' })).toHaveCount(0);
+});
+
 test('perfil: combobox de pronomes funciona integralmente por teclado', async ({ page }) => {
   const email = await registerAccount(page, 'perfil-pronomes-teclado');
   await page.goto('/entrar');

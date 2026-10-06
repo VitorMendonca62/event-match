@@ -1,6 +1,7 @@
 import type { UnitOfWorkPort } from '../../../../shared/application/ports/unit-of-work.port';
 import type { InterestCatalogReaderPort } from '../../../catalog/domain/ports/interest-catalog-reader.port';
 import type { LanguageCatalogReaderPort } from '../../../catalog/domain/ports/language-catalog-reader.port';
+import type { ActivityPreferenceCatalogReaderPort } from '../../../catalog/domain/ports/activity-preference-catalog-reader.port';
 import { Profile, type EditableProfileVisibility, type UsageIntent } from '../../domain/entities/profile';
 import { ProfileError } from '../../domain/errors/profile.error';
 import type { ProfileRepositoryPort } from '../../domain/ports/outbound/profile-repository.port';
@@ -18,12 +19,20 @@ async function hydrateProfile(
   context: Parameters<LanguageCatalogReaderPort['findByCodes']>[0],
   profile: Awaited<ReturnType<ProfileRepositoryPort['findOwn']>> & {},
   languages: LanguageCatalogReaderPort,
+  preferences: ActivityPreferenceCatalogReaderPort,
 ) {
-  const entries = await languages.findByCodes(context, profile.languageCodes);
+  const [entries, preferenceEntries] = await Promise.all([
+    languages.findByCodes(context, profile.languageCodes),
+    preferences.findByCodes(context, profile.activityPreferenceCodes),
+  ]);
   const byCode = new Map(entries.map((entry) => [entry.code, entry]));
+  const { activityPreferenceCodes, ...rest } = profile;
+  void activityPreferenceCodes;
   return {
-    ...profile,
+    ...rest,
     languages: profile.languageCodes.map((code) => byCode.get(code)).filter((entry): entry is NonNullable<typeof entry> => Boolean(entry)),
+    // Catalog order, never selection order: preferences are an unordered set (ADR-044).
+    activityPreferences: preferenceEntries,
   };
 }
 
@@ -35,6 +44,7 @@ function ownView(profile: ReturnType<Profile['snapshot']>, hasActivePhoto = prof
     pronounSelection: profile.pronounSelection, customPronouns: profile.customPronouns, pronounsVisibility: profile.pronounsVisibility,
     profession: profile.profession, professionVisibility: profile.professionVisibility,
     languages: profile.languages, languagesVisibility: profile.languagesVisibility,
+    activityPreferences: profile.activityPreferences, activityPreferencesVisibility: profile.activityPreferencesVisibility,
     completion: new ProfileCompletion().calculate(profile, hasActivePhoto),
   };
 }
@@ -46,10 +56,11 @@ export type UpdateOwnProfileInput = Readonly<{
   pronounSelection: import('../../domain/entities/profile').PronounSelection | null; customPronouns: string | null;
   pronounsVisibility: EditableProfileVisibility; profession: string | null; professionVisibility: EditableProfileVisibility;
   languageCodes: readonly string[]; languagesVisibility: EditableProfileVisibility;
+  activityPreferenceCodes: readonly string[]; activityPreferencesVisibility: EditableProfileVisibility;
 }>;
 
 export class GetOwnProfile {
-  constructor(private readonly uow: UnitOfWorkPort, private readonly profiles: ProfileRepositoryPort, private readonly subjects: ProfileInvitationSubjectPort, private readonly catalog: InterestCatalogReaderPort, private readonly languages: LanguageCatalogReaderPort, private readonly media: ProfileMediaRepositoryPort, private readonly images: ProfileImageStorePort, private readonly telemetry: ProfileTelemetryPort, private readonly mediaPolicy: ProfileMediaPolicy) {}
+  constructor(private readonly uow: UnitOfWorkPort, private readonly profiles: ProfileRepositoryPort, private readonly subjects: ProfileInvitationSubjectPort, private readonly catalog: InterestCatalogReaderPort, private readonly languages: LanguageCatalogReaderPort, private readonly preferences: ActivityPreferenceCatalogReaderPort, private readonly media: ProfileMediaRepositoryPort, private readonly images: ProfileImageStorePort, private readonly telemetry: ProfileTelemetryPort, private readonly mediaPolicy: ProfileMediaPolicy) {}
   async execute(accountId: string) {
     return observed(this.telemetry, 'profile.read', async () => {
     const loaded = await this.uow.execute(async (context) => {
@@ -57,7 +68,7 @@ export class GetOwnProfile {
       if (!found) return null;
       const [active, hydrated, photo] = await Promise.all([
         this.catalog.listActive(context),
-        hydrateProfile(context, found, this.languages),
+        hydrateProfile(context, found, this.languages, this.preferences),
         this.mediaPolicy.enabled ? this.media.findActive(context, accountId) : null,
       ]);
       const selected = new Set(found.interests.map(({ id }) => id));
@@ -72,7 +83,7 @@ export class GetOwnProfile {
 }
 
 export class UpdateOwnProfile {
-  constructor(private readonly uow: UnitOfWorkPort, private readonly profiles: ProfileRepositoryPort, private readonly catalog: InterestCatalogReaderPort, private readonly languages: LanguageCatalogReaderPort, private readonly media: ProfileMediaRepositoryPort, private readonly images: ProfileImageStorePort, private readonly telemetry: ProfileTelemetryPort, private readonly mediaPolicy: ProfileMediaPolicy) {}
+  constructor(private readonly uow: UnitOfWorkPort, private readonly profiles: ProfileRepositoryPort, private readonly catalog: InterestCatalogReaderPort, private readonly languages: LanguageCatalogReaderPort, private readonly preferences: ActivityPreferenceCatalogReaderPort, private readonly media: ProfileMediaRepositoryPort, private readonly images: ProfileImageStorePort, private readonly telemetry: ProfileTelemetryPort, private readonly mediaPolicy: ProfileMediaPolicy) {}
   async execute(input: UpdateOwnProfileInput) {
     return observed(this.telemetry, 'profile.update', async () => {
     const updated = await this.uow.execute(async (context) => {
@@ -92,7 +103,19 @@ export class UpdateOwnProfile {
       const languageEntries = input.languageCodes.map((code) => languagesByCode.get(code)!);
       const selected = new Set(input.interestIds);
       const currentByCode = new Map(catalogLanguages.map((item) => [item.code, item]));
-      const hydratedCurrent = { ...current, languages: current.languageCodes.map((code) => currentByCode.get(code)).filter((entry): entry is NonNullable<typeof entry> => Boolean(entry)) };
+      const catalogPreferences = await this.preferences.findByCodes(context, [...new Set([...input.activityPreferenceCodes, ...current.activityPreferenceCodes])]);
+      const requestedPreferences = new Set(input.activityPreferenceCodes);
+      if (requestedPreferences.size !== input.activityPreferenceCodes.length) throw new ProfileError('INVALID_PROFILE_CONTENT');
+      const foundPreferences = catalogPreferences.filter(({ code }) => requestedPreferences.has(code));
+      if (foundPreferences.length !== requestedPreferences.size) throw new ProfileError('UNKNOWN_ACTIVITY_PREFERENCE', 'unknown_activity_preference');
+      const currentPreferences = new Set(current.activityPreferenceCodes);
+      if (foundPreferences.some(({ code, active }) => !active && !currentPreferences.has(code))) throw new ProfileError('INACTIVE_ACTIVITY_PREFERENCE', 'inactive_activity_preference');
+      const { activityPreferenceCodes: currentPreferenceCodes, ...currentRest } = current;
+      const hydratedCurrent = {
+        ...currentRest,
+        languages: current.languageCodes.map((code) => currentByCode.get(code)).filter((entry): entry is NonNullable<typeof entry> => Boolean(entry)),
+        activityPreferences: catalogPreferences.filter(({ code }) => currentPreferenceCodes.includes(code)),
+      };
       const next = Profile.restore(hydratedCurrent).update({
         displayName: input.displayName, region: input.region, usageIntents: input.usageIntents,
         interests: summaries.filter((item) => selected.has(item.id)), presentation: input.presentation,
@@ -101,6 +124,8 @@ export class UpdateOwnProfile {
         pronounsVisibility: input.pronounsVisibility, profession: input.profession,
         professionVisibility: input.professionVisibility, languages: languageEntries,
         languagesVisibility: input.languagesVisibility,
+        // findByCodes returns catalog order, so the payload order is ignored.
+        activityPreferences: foundPreferences, activityPreferencesVisibility: input.activityPreferencesVisibility,
       });
       if (await this.profiles.updateIfRevision(context, next, input.revision) === 'conflict') throw new ProfileError('PROFILE_REVISION_CONFLICT');
       return { profile: next.snapshot(), photo: this.mediaPolicy.enabled ? await this.media.findActive(context, input.accountId) : null };
@@ -115,7 +140,7 @@ export class UpdateOwnProfile {
 }
 
 export class PreviewOwnProfile {
-  constructor(private readonly uow: UnitOfWorkPort, private readonly profiles: ProfileRepositoryPort, private readonly catalog: InterestCatalogReaderPort, private readonly languages: LanguageCatalogReaderPort, private readonly media: ProfileMediaRepositoryPort, private readonly images: ProfileImageStorePort, private readonly telemetry: ProfileTelemetryPort, private readonly mediaPolicy: ProfileMediaPolicy) {}
+  constructor(private readonly uow: UnitOfWorkPort, private readonly profiles: ProfileRepositoryPort, private readonly catalog: InterestCatalogReaderPort, private readonly languages: LanguageCatalogReaderPort, private readonly preferences: ActivityPreferenceCatalogReaderPort, private readonly media: ProfileMediaRepositoryPort, private readonly images: ProfileImageStorePort, private readonly telemetry: ProfileTelemetryPort, private readonly mediaPolicy: ProfileMediaPolicy) {}
   async execute(accountId: string) {
     return observed(this.telemetry, 'profile.preview', async () => {
     const loaded = await this.uow.execute(async (context) => {
@@ -123,7 +148,7 @@ export class PreviewOwnProfile {
       if (!found) return null;
       const [active, hydrated, photo] = await Promise.all([
         this.catalog.listActive(context),
-        hydrateProfile(context, found, this.languages),
+        hydrateProfile(context, found, this.languages, this.preferences),
         this.mediaPolicy.enabled ? this.media.findActive(context, accountId) : null,
       ]);
       const selected = new Set(found.interests.map(({ id }) => id));

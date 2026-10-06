@@ -53,6 +53,14 @@ As regras normativas completas são RN001–RN168 em [`DER-EventMatch-MVP.md`](D
 - A pessoa escolhe até cinco códigos únicos do catálogo de idiomas, sem proficiência. Idioma inativo já selecionado pode ser preservado, mas não readicionado após remoção.
 - Pronomes, profissão e idiomas possuem controles independentes entre `private` e `authenticated`; `public` continua reservado.
 
+### Preferências de atividades (SDD-017)
+
+- Preferência de atividade descreve como a pessoa gosta que o encontro seja; é distinta de interesse (gosto amplo, mínimo três) e de tipo de atividade (escolhido pelo anfitrião no evento) (RN147).
+- Seleção opcional e removível de zero a cinco códigos únicos do catálogo de preferências (DER §3.10), sem prioridade: o conjunto é exibido na ordem do catálogo.
+- Opções aparentemente opostas podem coexistir e significam que ambas são aceitáveis.
+- Preferência desativada já escolhida continua legível e pode ser preservada; depois de removida não pode ser readicionada (`inactive_activity_preference`).
+- A lista tem uma visibilidade própria, `private` por padrão e editável entre `private` e `authenticated`. Não altera completude, capacidades, interesses nem eventos, e não é usada em recomendação nesta entrega (ADR-044).
+
 ## 3. Eventos e anfitriões
 
 - Apenas encontros presenciais, informais, gratuitos e em local público/estabelecimento identificável podem ser publicados (RN019–RN020).

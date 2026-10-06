@@ -57,6 +57,10 @@ O bounded context `identity-access` (`IdentityAccessModule`) autentica e-mail e 
 
 O agregado de perfil incorpora pronomes, profissão e até cinco idiomas sem alterar completude ou capacidades (ADR-043). `catalog` é dono do catálogo versionado de idiomas e exporta `LANGUAGE_CATALOG_READER_PORT`; `profiles` valida códigos e substitui `profile_language` na mesma UoW e revisão dos demais campos. Cada grupo possui audiência independente e privada por padrão. O RSC `/perfil` inicia perfil, interesses e idiomas em paralelo e serializa somente as opções necessárias para a ilha cliente.
 
+### Preferências de atividades (SDD-017)
+
+`catalog` também é dono do catálogo versionado `activity_preference` (DER §3.10) e exporta `ACTIVITY_PREFERENCE_CATALOG_READER_PORT` (ADR-044). `profiles` depende só da porta: valida até cinco códigos únicos, preserva item desativado já escolhido e substitui `profile_activity_preference` na mesma UoW e revisão dos demais campos; a lista é sempre ordenada pelo catálogo. Interesses, completude e capacidades não mudam. O RSC `/perfil` inicia quatro leituras em paralelo (perfil, interesses, idiomas, preferências) e a falha do catálogo de preferências degrada apenas a seção, preservando a seleção atual. `GET /api/catalog/activity-preferences` é BFF filtrado sem sessão.
+
 No frontend, `/entrar` e `/inicio` são RSC dinâmicas que leem o cookie `HttpOnly` só no servidor e validam a sessão antes de renderizar (`front/src/shared/server/authenticated-view.ts`); as ilhas cliente são apenas `LoginForm`, `LogoutButton` e `SessionKeeper` (revalida no foco, na visibilidade e no retorno do bfcache). Os Route Handlers `front/src/app/api/auth/{login,session,logout}` checam origem, `Sec-Fetch-Site` e `Content-Type`, convertem o token em cookie `__Host-eventmatch_session` e nunca o devolvem em JSON (ADR-034). `AUTH_HTTP_ENABLED` (backend) e `AUTH_UI_ENABLED` (frontend, server-only) controlam o rollout; o logout continua expirando o cookie mesmo com a UI desligada.
 
 ### Deploy inicial do frontend

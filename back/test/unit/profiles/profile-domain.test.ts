@@ -12,6 +12,7 @@ const state = {
   ], presentation: null, photoVisibility: 'private' as const, presentationVisibility: 'private' as const, photo: null,
   pronounSelection: null, customPronouns: null, pronounsVisibility: 'private' as const,
   profession: null, professionVisibility: 'private' as const, languages: [], languagesVisibility: 'private' as const,
+  activityPreferences: [] as { code: string; label: string; active: boolean }[], activityPreferencesVisibility: 'private' as const,
 };
 const PRONOUN_LABELS = { ela_dela: 'Ela/dela', ele_dele: 'Ele/dele', elu_delu: 'Elu/delu' } as const;
 
@@ -70,5 +71,29 @@ describe('Profile (ADR-038)', () => {
       const withLanguages = projector.project({ ...filled, languagesVisibility: 'authenticated' }, PRONOUN_LABELS);
       expect(withLanguages.languages?.[0]).toEqual({ code: 'bzs', label: 'Libras' });
     });
+  });
+  describe('activity preferences (ADR-044)', () => {
+    const option = (code: string, active = true) => ({ code, label: `Rótulo ${code}`, active });
+    const five = ['outdoor', 'indoor', 'quiet_setting', 'small_group', 'medium_group'].map((code) => option(code));
+    test('accepts absence and up to five unique preferences', () => {
+      expect(Profile.restore(state).update(state).snapshot().activityPreferences).toEqual([]);
+      expect(Profile.restore(state).update({ ...state, activityPreferences: five }).snapshot().activityPreferences).toHaveLength(5);
+    });
+    test('rejects six, duplicates and public visibility', () => {
+      expect(() => Profile.restore(state).update({ ...state, activityPreferences: [...five, option('lively_setting')] })).toThrow(ProfileError);
+      expect(() => Profile.restore(state).update({ ...state, activityPreferences: [option('outdoor'), option('outdoor')] })).toThrow(ProfileError);
+      expect(() => Profile.restore(state).update({ ...state, activityPreferencesVisibility: 'public' })).toThrow(ProfileError);
+    });
+    const projector = new ProfilePreviewProjector();
+    for (const visibility of ['private', 'authenticated'] as const) {
+      for (const selected of [[], [option('small_group', false)]]) {
+        test(`preview with ${visibility} audience and ${selected.length} preference(s)`, () => {
+          const preview = projector.project({ ...state, activityPreferences: selected, activityPreferencesVisibility: visibility }, PRONOUN_LABELS);
+          if (visibility === 'authenticated' && selected.length > 0) expect(preview.activityPreferences).toEqual([{ code: 'small_group', label: 'Rótulo small_group' }]);
+          else expect(preview).not.toHaveProperty('activityPreferences');
+          expect(JSON.stringify(preview)).not.toContain('active');
+        });
+      }
+    }
   });
 });

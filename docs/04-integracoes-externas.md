@@ -196,3 +196,10 @@ Exportação de dados, documentos excepcionais e retenção permanecem condicion
 - Snapshot completo vale também para `presentation`: a chave passa a ser obrigatória no PUT (valor `string` de 1–500 ou `null`); omiti-la responde `400`. Antes o campo era opcional e, quando ausente, chegava indefinido ao domínio e resultava em `500`. Remover a apresentação continua sendo enviar `null`. No OpenAPI, `presentation` e `photo` de `OwnProfileResponseDto` passam a constar como obrigatórios e anuláveis, refletindo o que a API já devolvia.
 - `GET /api/v1/profiles/me/preview` devolve apenas `pronouns`, `profession` e `languages` autorizados; não expõe seleção interna, recusa explícita, visibilidades ou estado do catálogo.
 - Todas as respostas permanecem `no-store`; BFFs validam sessão/origem/JSON e nunca registram conteúdo dos novos campos.
+
+### Preferências de atividades (SDD-017, backend 0.14.0; frontend 0.15.0)
+
+- `GET /api/v1/catalog/activity-preferences?locale=pt-BR` lista `{ code, label }` ativos em ordem estável; público, `no-store`, `400` para locale inválido e `503` em indisponibilidade. `GET /api/catalog/activity-preferences` é o proxy Next.js filtrado (`internal: false`) que falha fechado em resposta inválida.
+- `GET /api/v1/profiles/me` acrescenta `activityPreferences: { code, label, active }[]` e `activityPreferencesVisibility`.
+- `PUT /api/v1/profiles/me` passa a exigir `activityPreferenceCodes` (0–5, únicos, `^[a-z][a-z0-9_]{1,39}$`) e `activityPreferencesVisibility` (`private | authenticated`); ausência responde `400`. Desconhecido/inativo novo responde `422` com somente `unknown_activity_preference` ou `inactive_activity_preference`, sem ecoar códigos. Clientes antigos recebem `400`: front e back são publicados de forma coordenada.
+- `GET /api/v1/profiles/me/preview` acrescenta `activityPreferences?: { code, label }[]` somente quando a visibilidade é `authenticated` e a lista não é vazia; não expõe visibilidade nem `active`.

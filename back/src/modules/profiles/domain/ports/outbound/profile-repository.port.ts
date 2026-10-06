@@ -3,8 +3,9 @@ import type { Profile, ProfileState } from '../../entities/profile';
 
 export const PROFILE_REPOSITORY_PORT = Symbol('PROFILE_REPOSITORY_PORT');
 
-export type PersistedProfileState = Omit<ProfileState, 'languages'> & Readonly<{
+export type PersistedProfileState = Omit<ProfileState, 'languages' | 'activityPreferences'> & Readonly<{
   languageCodes: readonly string[];
+  activityPreferenceCodes: readonly string[];
 }>;
 
 export interface ProfileRepositoryPort {

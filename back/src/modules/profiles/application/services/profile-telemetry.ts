@@ -8,6 +8,8 @@ const ERROR_EVENT: Record<ProfileError['code'], { outcome: ProfileEventOutcome; 
   INACTIVE_INTEREST: { outcome: 'invalid', status: 400 },
   UNKNOWN_LANGUAGE: { outcome: 'invalid', status: 422 },
   INACTIVE_LANGUAGE: { outcome: 'invalid', status: 422 },
+  UNKNOWN_ACTIVITY_PREFERENCE: { outcome: 'invalid', status: 422 },
+  INACTIVE_ACTIVITY_PREFERENCE: { outcome: 'invalid', status: 422 },
   PHOTO_UPLOAD_EXPIRED: { outcome: 'expired', status: 410 },
   PHOTO_REJECTED: { outcome: 'rejected', status: 422 },
   MEDIA_RATE_LIMITED: { outcome: 'rate_limited', status: 429 },

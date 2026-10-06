@@ -15,6 +15,8 @@ export class ProfilePhotoResponseDto {
   @ApiProperty({ example: 512 }) height!: 512;
 }
 export class ProfileLanguageDto { @ApiProperty({ example: 'pt' }) code!: string; @ApiProperty({ example: 'Português' }) label!: string; @ApiProperty() active!: boolean; }
+export class ProfileActivityPreferenceDto { @ApiProperty({ example: 'small_group' }) code!: string; @ApiProperty({ example: 'Grupo pequeno' }) label!: string; @ApiProperty() active!: boolean; }
+export class PreviewActivityPreferenceDto { @ApiProperty({ example: 'small_group' }) code!: string; @ApiProperty({ example: 'Grupo pequeno' }) label!: string; }
 export class PreviewLanguageDto { @ApiProperty({ example: 'pt' }) code!: string; @ApiProperty({ example: 'Português' }) label!: string; }
 export class OwnProfileResponseDto {
   @ApiProperty() revision!: number;
@@ -34,6 +36,8 @@ export class OwnProfileResponseDto {
   @ApiProperty({ enum: ['private', 'authenticated', 'public'] }) professionVisibility!: string;
   @ApiProperty({ type: [ProfileLanguageDto] }) languages!: ProfileLanguageDto[];
   @ApiProperty({ enum: ['private', 'authenticated', 'public'] }) languagesVisibility!: string;
+  @ApiProperty({ type: [ProfileActivityPreferenceDto], maxItems: 5 }) activityPreferences!: ProfileActivityPreferenceDto[];
+  @ApiProperty({ enum: ['private', 'authenticated', 'public'] }) activityPreferencesVisibility!: string;
 }
 export class InternalOwnProfileResponseDto extends OwnProfileResponseDto {
   @ApiProperty({ example: `v1.${'A'.repeat(43)}` }) invitationSubject!: string;
@@ -48,6 +52,7 @@ export class ProfilePreviewResponseDto {
   @ApiPropertyOptional() pronouns?: string;
   @ApiPropertyOptional() profession?: string;
   @ApiPropertyOptional({ type: [PreviewLanguageDto] }) languages?: PreviewLanguageDto[];
+  @ApiPropertyOptional({ type: [PreviewActivityPreferenceDto] }) activityPreferences?: PreviewActivityPreferenceDto[];
 }
 
 export const OwnProfileEnvelopeDto = apiEnvelope(
