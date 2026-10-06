@@ -64,6 +64,13 @@
       "when": 1791082800000,
       "tag": "0008_profile_optional_identity",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791774000000,
+      "tag": "0009_profile_activity_preferences",
+      "breakpoints": true
     }
   ]
 }

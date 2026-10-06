@@ -1,3 +1,50 @@
+TASK 21 — Padronizar o BFF de catálogos em um módulo testável
+
+Objetivo:
+Unificar os proxies BFF de catálogos (interesses, idiomas e preferências de atividades) em um único padrão delegado e testável, eliminando a divergência apontada na revisão da SDD-017, sem mudar contratos públicos.
+
+Valor para a pessoa usuária:
+Como pessoa mantenedora, quero que todo proxy de catálogo siga o mesmo padrão e tenha testes, para que filtros de resposta e falhas fechadas não regridam silenciosamente.
+
+Requisitos de origem e dependências:
+- Origem: revisão `code-reviewer` da SDD-017 (2026-10-06), erro de padrão 2.
+- Depende da TASK 15 (SDD-017), que introduziu `proxyActivityPreferenceCatalog` em `front/src/shared/server/profile-bff.ts`.
+- Segue AGENTS.md §5 (Route Handlers só autenticam/autorizam e delegam) e as regras `server-*` de `vercel-react-best-practices`.
+
+Situação atual:
+- `front/src/app/api/catalog/languages/route.ts` e `interests/route.ts` fazem o proxy inline com `getBffEnv()` e `fetch` global, sem teste.
+- `front/src/app/api/catalog/activity-preferences/route.ts` delega a `proxyActivityPreferenceCatalog`, que aceita `fetchImpl` injetável e é testada, mas vive em `profile-bff.ts`, módulo do contexto de perfil.
+- Segurança e performance são equivalentes nas duas formas (mesmo fetch único, filtro Zod estrito, `jsonResponse` com `no-store`/`nosniff`); a diferença é testabilidade e coesão.
+- Nenhum módulo de `front/src/shared/server/` importa o pacote `server-only`.
+
+Escopo:
+- Criar `front/src/shared/server/catalog-bff.ts` com uma função por catálogo (`proxyInterestCatalog`, `proxyLanguageCatalog`, `proxyActivityPreferenceCatalog`), todas com `Deps = { env, fetchImpl? }`, filtro Zod estrito e mapeamento de erro `400`/`503` idêntico ao atual.
+- Mover `proxyActivityPreferenceCatalog` de `profile-bff.ts` para o novo módulo e reduzir os três `route.ts` a uma linha de delegação.
+- Adicionar testes de integração para interesses e idiomas equivalentes aos de preferências (filtro, campo extra rejeitado, `internal: false`, `400`, `503`).
+- Adicionar `import 'server-only'` aos módulos de `front/src/shared/server/` que leem env ou chamam o backend, se o pacote estiver disponível sem nova dependência; caso contrário, registrar a decisão.
+- Separar ou reverter a reformatação sem mudança funcional feita em `profile-bff.ts` na SDD-017.
+
+Fora de escopo:
+- Alterar rotas, envelopes, mensagens ou contratos dos catálogos no backend ou no BFF.
+- Cache de catálogo no BFF (exige ADR própria).
+- Mudanças visuais.
+
+Critérios de aceite:
+- Os três Route Handlers de catálogo têm a mesma forma e apenas delegam.
+- Respostas e status HTTP dos três endpoints permanecem idênticos (mesmos testes E2E verdes).
+- Cada catálogo tem teste de integração do BFF cobrindo sucesso filtrado, falha fechada e mapeamento de erros.
+- Importar um módulo de `shared/server` em um Client Component quebra o build (via `server-only`), ou a ausência dessa proteção está justificada.
+- Lint, typecheck, testes, build e E2E do frontend passam.
+
+Dúvidas e bloqueios para o planejamento:
+- Confirmar se `server-only` já está disponível como dependência transitiva do Next.js ou se exige ADR para nova dependência.
+
+Estimativa inicial:
+- Complexidade Fibonacci: 2.
+- Risco de deploy: baixo, refatoração interna sem mudança de contrato.
+
+---
+
 TASK 20 — Região estruturada por estado e município
 
 Objetivo:
@@ -228,7 +275,10 @@ Critérios de aceite:
 - Nenhuma preferência privada aparece em perfil público ou logs.
 
 Dúvidas e bloqueios para o planejamento:
-- Pendente de definição: catálogo canônico, limite de escolhas e existência de prioridade explícita.
+- Decidido: catálogo canônico é o de Preferências de atividades do DER §3.10 (RN147), separado de interesses e tipos de atividade; tipos de atividade ficam para o fluxo de eventos.
+- Decidido: até cinco preferências únicas, sem prioridade ou ordenação explícita.
+- Decidido: uma visibilidade para a lista, privada por padrão, editável entre `private | authenticated`.
+- Plano: `specs/sdd-017-preferencias-atividades/tasks.md` (`implemented`, revisado e aprovado em 2026-10-06); ADR-044 `accepted` em 2026-10-06. Follow-up de padrão do BFF na TASK 21.
 
 Estimativa inicial:
 - Complexidade Fibonacci: 5.

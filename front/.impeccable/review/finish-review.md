@@ -1,37 +1,67 @@
-# Finish review — identidade opcional do perfil (SDD-016)
+# Finish review — preferências de atividades do perfil (SDD-017)
 
-- Data: 2026-10-04
+- Data: 2026-10-06 (revisão final após `code-reviewer`)
 - Superfície: `/perfil` e `/perfil/previa`
-- Build path: code-led
-- Direction contract: `../surfaces/src-app-perfil-page-tsx.md`
+- Build path: code-led (sem comp aprovado; o direction contract é a referência de crítica)
+- Direction contract: `../surfaces/src-app-perfil-page-tsx.md` (atualizado para a SDD-017 antes da UI)
+- Revisor: passe in-thread de `reference/degraded/finish-reviewer.md`. O agente `impeccable-finish-reviewer` não está disponível neste harness; substituição declarada.
 - Disposição final: `ship`
-
-## Conformidade com a direção
-
-A implementação preserva a direção visual “Convite Cívico”, a paleta semântica e a composição escolhida pelo produto. A seção “Identidade e comunicação” aparece depois da apresentação e antes de intenções/interesses. Pronomes usam o combobox controlado atual; profissão e idiomas permanecem opcionais, privados por padrão e sem alegação de verificação.
-
-O brief foi corrigido para descrever a interface entregue, sem tentar reordená-la ou substituí-la por um `select` nativo. O seletor de idiomas devolve o foco à busca após cada escolha, permitindo seleções consecutivas por teclado. A remoção de cada idioma usa uma área interativa de 44 × 44 px.
 
 ## Evidências
 
-- `perfil-desktop.png`: viewport CSS 1440 × 900, captura full-page.
-- `perfil-mobile.png`: viewport CSS 390 × 844, captura full-page.
-- `perfil-previa-desktop.png`: viewport CSS 1440 × 900.
-- `perfil-previa-mobile.png`: viewport CSS 390 × 844, captura full-page.
+Capturas geradas pela suíte Playwright desta entrega (`tests/e2e/perfil.e2e.ts`), inspecionadas em um único passe:
 
-As quatro capturas foram abertas e inspecionadas depois da suíte E2E. A composição mantém hierarquia legível, coluna única no mobile, controles sem corte, chips com quebra de linha e prévia coerente com as visibilidades. Não foi observado overflow horizontal, colisão ou regressão visual bloqueante.
+| Arquivo | Viewport | Conteúdo |
+|---|---|---|
+| `perfil-desktop.png` | 1440, full-page | `/perfil` com a seção vazia (0/5), após interesses |
+| `perfil-mobile.png` | 390, full-page | idem, coluna única |
+| `perfil-preferencias-desktop.png` | 1440, seção | limite 5/5 com não marcadas `aria-disabled` e foco visível |
+| `perfil-preferencias-mobile.png` | 390, seção | limite 5/5 em coluna única |
+| `perfil-preferencias-zoom200.png` | 640 × 400 CSS (zoom 200% de 1280 × 800) | seção sem rolagem horizontal, visibilidade ativa |
+| `perfil-previa-preferencias-desktop.png` | 1440, full-page | prévia com a lista autorizada, na ordem do catálogo, após interesses |
+| `perfil-previa-preferencias-mobile.png` | 390, full-page | idem no mobile |
+
+`perfil-previa-desktop.png` e `perfil-previa-mobile.png` vêm de outro cenário, de uma conta sem preferências, e por isso não mostram a seção. A prévia com preferências passou a ter capturas próprias, listadas acima.
+
+## persistence
+
+pass. `PRODUCT.md`, `DESIGN.md` e o surface brief existem; build code-led, sem `state.json` exigido.
+
+## fidelity
+
+| Elemento do contrato | Veredito | Evidência |
+|---|---|---|
+| Seção sem card logo após interesses | match | `perfil-desktop.png`, `perfil-mobile.png` |
+| Frase que separa interesses de preferências | match | cabeçalho da seção nas capturas de seção |
+| Checkboxes nativos em chips ≥ 44 px, ordem do catálogo, sem busca | match | 12 chips na ordem `outdoor` → `spontaneous_activity` |
+| Contador `n/5` | match | `0/5` e `5/5` alinhados à legenda |
+| Limite: não marcadas visíveis, `aria-disabled`, explicação textual | match | borda tracejada e texto apagado (não só cor) e texto de limite; E2E confirma `aria-disabled` e bloqueio por Espaço |
+| Controle de visibilidade próprio ao fim, `private` por padrão | match | toggle desligado no estado inicial e ligado após salvar (zoom 200%) |
+| Prévia só quando autorizada, após interesses | match | `perfil-previa-preferencias-*.png`; E2E confirma ausência quando privada |
+| Item descontinuado e catálogo indisponível | adaptation | sem captura: estados cobertos por `tests/unit/profile-activity-preferences.test.tsx`, não renderizáveis no E2E sem alterar o catálogo |
+| Mobile em uma coluna, zoom 200% | match | capturas mobile e zoom 200%; `expectNoHorizontalScroll` verde |
+
+## ceiling
+
+reached. Componentes nativos do sistema (`Choice` em chip, `ProfileVisibilityToggle`, `Notice`) reutilizados sem variação local; nenhuma cor hexadecimal avulsa.
+
+## material_fixes
+
+Nenhum.
+
+Observação não material: no mobile, os rótulos longos ocupam um chip por linha, o que alonga a seção para cerca de 700 px. Como é o mesmo padrão dos interesses, foi mantido.
+
+## keep
+
+Separação semântica explícita entre interesses e preferências, e o estado de limite que não esconde opções.
 
 ## Validação
 
-- Detector Impeccable executado após cada passe final de interface: zero achados (`[]`).
-- Playwright: a suíte-base passou em 74 cenários, com 1 cenário exclusivamente desktop ignorado no projeto mobile. Após as correções do review, o cenário do combobox por teclado passou novamente em desktop e mobile (2/2).
-- Axe: sem violações graves nos cenários desktop/mobile; zoom de 200% e ausência de rolagem horizontal cobertos.
-- O E2E do perfil comprovou seleção integral por teclado, `Prefiro não informar` sempre privado, contador `n/5`, cinco idiomas na ordem escolhida, aviso de limite e foco preservado.
-- Frontend: lint, typecheck e 141 testes unitários/integração passaram.
-- Backend: lint, typecheck, build, 322 testes unitários, 57 testes PostgreSQL e 26 E2E passaram.
+- Detector Impeccable (`impeccable detect --json`) em `profile-activity-preferences-field.tsx`, `profile-form.tsx`, `perfil/page.tsx` e `perfil/previa/page.tsx`: `[]`.
+- Playwright: 76 cenários passaram em desktop e mobile, sem falhas, incluindo o fluxo de preferências por teclado, limite, salvar, visibilidade, prévia, remoção, axe e a nova checagem de zoom 200%.
+- Frontend: lint, typecheck, 149 testes unitários/integração e build.
+- Backend: lint, typecheck, 354 testes unitários, 59 PostgreSQL, 26 E2E e build.
 
-## Achados e disposição
+## Documentação
 
-Não há achados visuais P0–P3 neste passe. A superfície atende o direction contract atualizado e o craft floor aplicável; disposição final: **ship**.
-
-A tentativa de revisão por um subagente independente foi bloqueada pelo limite de uso do serviço até 2026-10-09. Para não representar uma revisão inexistente, este documento registra um finish review do agente principal, sustentado pelas capturas e validações acima. Uma segunda opinião independente continua recomendada antes do PR, mas não há evidência de bloqueio técnico ou visual.
+Extensão ordinária do mundo “Convite Cívico”: nenhum token, componente ou regra nova. `DESIGN.md` e `.impeccable/design.json` permanecem inalterados; nenhum drift novo identificado.

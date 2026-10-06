@@ -18,22 +18,22 @@ function migrationsThrough0006(): string {
   return folder;
 }
 
-function languageSeedStatement(): string {
-  const migration = readFileSync(
-    join(MIGRATIONS_CONFIG.migrationsFolder, '0008_profile_optional_identity.sql'),
-    'utf8',
-  );
+function seedStatement(file: string, insert: string): string {
+  const migration = readFileSync(join(MIGRATIONS_CONFIG.migrationsFolder, file), 'utf8');
   const migrationBlock = migration
     .split('--> statement-breakpoint')
-    .find((candidate) => candidate.includes('INSERT INTO "language"'))
+    .find((candidate) => candidate.includes(insert))
     ?.trim();
-  const seedStart = migrationBlock?.indexOf('INSERT INTO "language"') ?? -1;
+  const seedStart = migrationBlock?.indexOf(insert) ?? -1;
   if (!migrationBlock || seedStart < 0)
-    throw new Error('language seed statement not found in migration 0008');
+    throw new Error(`seed statement not found in ${file}`);
   return migrationBlock.slice(seedStart);
 }
 
-describe('migrations 0007 and 0008 over existing 0006 profile data', () => {
+const languageSeedStatement = () => seedStatement('0008_profile_optional_identity.sql', 'INSERT INTO "language"');
+const activityPreferenceSeedStatement = () => seedStatement('0009_profile_activity_preferences.sql', 'INSERT INTO "activity_preference"');
+
+describe('migrations 0007 to 0009 over existing 0006 profile data', () => {
   let database: EphemeralDatabase;
   let folder: string;
 
@@ -150,6 +150,46 @@ describe('migrations 0007 and 0008 over existing 0006 profile data', () => {
       await client.query(`delete from account where id = '30000000-0000-7000-8000-000000000007'`);
       const relationAfterAccountDeletion = await client.query(`select count(*)::int as count from profile_language where account_id = '30000000-0000-7000-8000-000000000007'`);
       expect(relationAfterAccountDeletion.rows).toEqual([{ count: 0 }]);
+    } finally {
+      await client.query('rollback');
+      client.release();
+    }
+  });
+  test('adds a private activity preference group and an idempotent catalog', async () => {
+    const id = '30000000-0000-7000-8000-000000000007';
+    const profile = await database.pool.query(`select activity_preferences_visibility from profile where account_id = $1`, [id]);
+    expect(profile.rows).toEqual([{ activity_preferences_visibility: 'private' }]);
+    const catalog = await database.pool.query(`select code, label_pt_br, sort_order from activity_preference order by sort_order`);
+    expect(catalog.rows.map(({ code }) => code)).toEqual([
+      'outdoor', 'indoor', 'quiet_setting', 'lively_setting', 'small_group', 'medium_group',
+      'light_physical_activity', 'moderate_physical_activity', 'cultural_experience',
+      'conversation_and_socializing', 'structured_activity', 'spontaneous_activity',
+    ]);
+    expect(catalog.rows[0]).toEqual({ code: 'outdoor', label_pt_br: 'Ao ar livre', sort_order: 10 });
+    const ledger = await database.pool.query(`select count(*)::int as count from drizzle.__drizzle_migrations`);
+    expect(ledger.rows).toEqual([{ count: 10 }]);
+
+    await expect(database.pool.query(`update profile set activity_preferences_visibility = 'everyone' where account_id = $1`, [id])).rejects.toMatchObject({ code: '23514' });
+    await expect(database.pool.query(`insert into activity_preference (code, label_pt_br, sort_order) values ('Bad-Code', 'Inválida', 999)`)).rejects.toMatchObject({ code: '23514' });
+    await expect(database.pool.query(`insert into activity_preference (code, label_pt_br, sort_order) values ('blank_label', '  ', 998)`)).rejects.toMatchObject({ code: '23514' });
+    await expect(database.pool.query(`insert into activity_preference (code, label_pt_br, sort_order) values ('same_order', 'Mesma ordem', 10)`)).rejects.toMatchObject({ code: '23505' });
+    await database.pool.query(`insert into profile_activity_preference (account_id, preference_code, selected_at) values ($1, 'small_group', now())`, [id]);
+    await expect(database.pool.query(`insert into profile_activity_preference (account_id, preference_code, selected_at) values ($1, 'small_group', now())`, [id])).rejects.toMatchObject({ code: '23505' });
+    await expect(database.pool.query(`insert into profile_activity_preference (account_id, preference_code, selected_at) values ($1, 'rooftop_party', now())`, [id])).rejects.toMatchObject({ code: '23503' });
+    const index = await database.pool.query(`select indexname from pg_indexes where tablename = 'profile_activity_preference' and indexname = 'profile_activity_preference_preference_index'`);
+    expect(index.rows).toHaveLength(1);
+
+    await database.pool.query(activityPreferenceSeedStatement());
+    await database.migrate();
+    const afterRerun = await database.pool.query(`select count(*)::int as count from activity_preference`);
+    expect(afterRerun.rows).toEqual([{ count: 12 }]);
+
+    const client = await database.pool.connect();
+    try {
+      await client.query('begin');
+      await client.query(`delete from account where id = $1`, [id]);
+      const relation = await client.query(`select count(*)::int as count from profile_activity_preference where account_id = $1`, [id]);
+      expect(relation.rows).toEqual([{ count: 0 }]);
     } finally {
       await client.query('rollback');
       client.release();

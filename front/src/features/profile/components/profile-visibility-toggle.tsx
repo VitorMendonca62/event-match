@@ -1,7 +1,7 @@
 'use client';
 
 type ProfileVisibilityToggleProps = Readonly<{
-  name: 'photoVisibility' | 'presentationVisibility' | 'pronounsVisibility' | 'professionVisibility' | 'languagesVisibility';
+  name: 'photoVisibility' | 'presentationVisibility' | 'pronounsVisibility' | 'professionVisibility' | 'languagesVisibility' | 'activityPreferencesVisibility';
   question: string;
   description: string;
   defaultChecked: boolean;

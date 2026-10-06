@@ -1,3 +1,5 @@
+/** @format */
+
 import type { Metadata, Viewport } from 'next';
 import { Archivo, Figtree } from 'next/font/google';
 import type { ReactNode } from 'react';
@@ -22,7 +24,16 @@ const body = Figtree({
 
 export const metadata: Metadata = {
   title: 'EventMatch',
-  description: 'Amizade, companhia e atividades locais para pessoas adultas. Não é app de namoro.',
+  description:
+    'Amizade, companhia e atividades locais para pessoas adultas. Não é app de namoro.',
+  icons: {
+    icon: [
+      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
+  manifest: '/site.webmanifest',
 };
 
 export const viewport: Viewport = {

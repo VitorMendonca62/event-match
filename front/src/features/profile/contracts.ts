@@ -5,6 +5,9 @@ export const visibilitySchema = z.enum(['private', 'authenticated']);
 export const pronounSelectionSchema = z.enum(['ela_dela', 'ele_dele', 'elu_delu', 'other', 'prefer_not_to_say']);
 export const languageSchema = z.object({ code: z.string().regex(/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/), label: z.string().min(1) }).strict();
 export const ownLanguageSchema = languageSchema.extend({ active: z.boolean() }).strict();
+export const MAX_ACTIVITY_PREFERENCES = 5;
+export const activityPreferenceSchema = z.object({ code: z.string().regex(/^[a-z][a-z0-9_]{1,39}$/), label: z.string().min(1) }).strict();
+export const ownActivityPreferenceSchema = activityPreferenceSchema.extend({ active: z.boolean() }).strict();
 export const interestSchema = z.object({ id: z.uuid(), slug: z.string().min(1), label: z.string().min(1) }).strict();
 export const completionSchema = z.object({
   complete: z.boolean(), completedCount: z.number().int().min(0).max(6), totalCount: z.literal(6),
@@ -21,6 +24,8 @@ export const ownProfileSchema = z.object({
   pronounsVisibility: z.enum(['private', 'authenticated', 'public']), profession: z.string().nullable(),
   professionVisibility: z.enum(['private', 'authenticated', 'public']), languages: z.array(ownLanguageSchema).max(5),
   languagesVisibility: z.enum(['private', 'authenticated', 'public']),
+  activityPreferences: z.array(ownActivityPreferenceSchema).max(MAX_ACTIVITY_PREFERENCES),
+  activityPreferencesVisibility: z.enum(['private', 'authenticated', 'public']),
 }).strict();
 export type OwnProfile = z.infer<typeof ownProfileSchema>;
 export const internalOwnProfileSchema = ownProfileSchema.extend({ invitationSubject: z.string().regex(/^v1\.[A-Za-z0-9_-]{43}$/) }).strict();
@@ -33,6 +38,8 @@ export const updateProfileSchema = z.object({
   pronounsVisibility: visibilitySchema, profession: z.string().trim().min(1).max(80).nullable(),
   professionVisibility: visibilitySchema, languageCodes: z.array(languageSchema.shape.code).max(5).refine((items) => new Set(items).size === items.length),
   languagesVisibility: visibilitySchema,
+  activityPreferenceCodes: z.array(activityPreferenceSchema.shape.code).max(MAX_ACTIVITY_PREFERENCES).refine((items) => new Set(items).size === items.length),
+  activityPreferencesVisibility: visibilitySchema,
 }).strict().superRefine((value, context) => {
   if (value.pronounSelection === 'other' && !value.customPronouns) context.addIssue({ code: 'custom', path: ['customPronouns'], message: 'Informe seus pronomes.' });
   if (value.pronounSelection !== 'other' && value.customPronouns !== null) context.addIssue({ code: 'custom', path: ['customPronouns'], message: 'Remova o texto personalizado.' });
@@ -42,6 +49,7 @@ export const profilePreviewSchema = z.object({
   displayName: z.string(), region: z.string(), usageIntents: z.array(usageIntentSchema), interests: z.array(interestSchema),
   presentation: z.string().optional(), photo: profilePhotoSchema.optional(),
   pronouns: z.string().optional(), profession: z.string().optional(), languages: z.array(languageSchema).optional(),
+  activityPreferences: z.array(activityPreferenceSchema).optional(),
 }).strict();
 export type ProfilePreview = z.infer<typeof profilePreviewSchema>;
 export const signedUploadGrantSchema = z.object({
@@ -50,3 +58,5 @@ export const signedUploadGrantSchema = z.object({
 }).strict();
 export const languageListDataSchema = z.object({ languages: z.array(languageSchema) }).strict();
 export type LanguageOption = z.infer<typeof languageSchema>;
+export const activityPreferenceListDataSchema = z.object({ activityPreferences: z.array(activityPreferenceSchema) }).strict();
+export type ActivityPreferenceOption = z.infer<typeof activityPreferenceSchema>;

@@ -11,21 +11,27 @@ import { LANGUAGE_CATALOG_READER_PORT } from './domain/ports/language-catalog-re
 import { DrizzleLanguageCatalogReaderAdapter } from './infrastructure/persistence/drizzle-language-catalog-reader.adapter';
 import { ListActiveLanguages } from './application/use-cases/list-active-languages.use-case';
 import { LanguagesController } from './presentation/http/controllers/languages.controller';
+import { ACTIVITY_PREFERENCE_CATALOG_READER_PORT } from './domain/ports/activity-preference-catalog-reader.port';
+import { DrizzleActivityPreferenceCatalogReaderAdapter } from './infrastructure/persistence/drizzle-activity-preference-catalog-reader.adapter';
+import { ListActiveActivityPreferences } from './application/use-cases/list-active-activity-preferences.use-case';
+import { ActivityPreferencesController } from './presentation/http/controllers/activity-preferences.controller';
 import { NoStoreMiddleware } from '../../shared/presentation/http/no-store.middleware';
 
 @Module({
   imports: [PersistenceModule],
-  controllers: [InterestsController, LanguagesController],
+  controllers: [InterestsController, LanguagesController, ActivityPreferencesController],
   providers: [
     { provide: INTEREST_CATALOG_READER_PORT, useClass: DrizzleInterestCatalogReaderAdapter },
     useCaseProvider(ListActiveInterests, [UNIT_OF_WORK_PORT, INTEREST_CATALOG_READER_PORT]),
     { provide: LANGUAGE_CATALOG_READER_PORT, useClass: DrizzleLanguageCatalogReaderAdapter },
     useCaseProvider(ListActiveLanguages, [UNIT_OF_WORK_PORT, LANGUAGE_CATALOG_READER_PORT]),
+    { provide: ACTIVITY_PREFERENCE_CATALOG_READER_PORT, useClass: DrizzleActivityPreferenceCatalogReaderAdapter },
+    useCaseProvider(ListActiveActivityPreferences, [UNIT_OF_WORK_PORT, ACTIVITY_PREFERENCE_CATALOG_READER_PORT]),
   ],
-  exports: [INTEREST_CATALOG_READER_PORT, LANGUAGE_CATALOG_READER_PORT],
+  exports: [INTEREST_CATALOG_READER_PORT, LANGUAGE_CATALOG_READER_PORT, ACTIVITY_PREFERENCE_CATALOG_READER_PORT],
 })
 export class CatalogModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(NoStoreMiddleware).forRoutes(InterestsController, LanguagesController);
+    consumer.apply(NoStoreMiddleware).forRoutes(InterestsController, LanguagesController, ActivityPreferencesController);
   }
 }

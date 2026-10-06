@@ -138,7 +138,7 @@ describe('Auth API v1 (e2e, container)', () => {
       info: { version: string };
       paths: Record<string, unknown>;
     };
-    expect(document.info.version).toBe('0.13.0');
+    expect(document.info.version).toBe('0.14.0');
     expect(Object.keys(document.paths)).toEqual(
       expect.arrayContaining(['/api/v1/auth/login', '/api/v1/auth/session', '/api/v1/auth/logout']),
     );
@@ -199,26 +199,45 @@ describe('Auth API v1 (e2e, container)', () => {
       professionVisibility: 'authenticated',
       languageCodes: ['pt', 'bzs'],
       languagesVisibility: 'authenticated',
+      activityPreferenceCodes: ['small_group', 'outdoor'],
+      activityPreferencesVisibility: 'authenticated',
     };
+    const { activityPreferenceCodes: _omittedCodes, ...withoutPreferences } = update;
+    void _omittedCodes;
     const invalidCases = [
       { ...update, languageCodes: ['pt', 'en', 'es', 'bzs', 'fr', 'it'] },
       { ...update, languageCodes: ['pt', 'pt'] },
       { ...update, pronounSelection: 'other', customPronouns: null },
       { ...update, pronounsVisibility: 'public' },
+      withoutPreferences,
+      { ...update, activityPreferenceCodes: ['outdoor', 'indoor', 'quiet_setting', 'lively_setting', 'small_group', 'medium_group'] },
+      { ...update, activityPreferenceCodes: ['Small-Group'] },
+      { ...update, activityPreferencesVisibility: 'public' },
     ];
     for (const body of invalidCases) expect((await call('PUT', '/api/v1/profiles/me', { token: anaToken, body })).status).toBe(400);
     const unknownLanguage = await call('PUT', '/api/v1/profiles/me', { token: anaToken, body: { ...update, languageCodes: ['pt', 'xx'] } });
     expect(unknownLanguage.status).toBe(422);
     expect(unknownLanguage.body).toMatchObject({ statusCode: 422, data: { reason: 'unknown_language' } });
-    expect((await call('GET', '/api/v1/profiles/me', { token: anaToken })).body.data).toMatchObject({ revision: update.revision, languages: [] });
+    const unknownPreference = await call('PUT', '/api/v1/profiles/me', { token: anaToken, body: { ...update, activityPreferenceCodes: ['rooftop_party'] } });
+    expect(unknownPreference.status).toBe(422);
+    expect(unknownPreference.body).toMatchObject({ statusCode: 422, data: { reason: 'unknown_activity_preference' } });
+    expect(JSON.stringify(unknownPreference.body)).not.toContain('rooftop_party');
+    expect((await call('GET', '/api/v1/profiles/me', { token: anaToken })).body.data).toMatchObject({ revision: update.revision, languages: [], activityPreferences: [], activityPreferencesVisibility: 'private' });
     const saved = await call('PUT', '/api/v1/profiles/me', { token: anaToken, body: update });
     expect(saved.status).toBe(200);
-    expect(saved.body.data).toMatchObject({ displayName: 'Ana do perfil', revision: Number(update.revision) + 1 });
+    expect(saved.body.data).toMatchObject({ displayName: 'Ana do perfil', revision: Number(update.revision) + 1, activityPreferences: [{ code: 'outdoor', label: 'Ao ar livre', active: true }, { code: 'small_group', label: 'Grupo pequeno', active: true }] });
     expect((await call('PUT', '/api/v1/profiles/me', { token: anaToken, body: update })).status).toBe(409);
 
     const preview = await call('GET', '/api/v1/profiles/me/preview', { token: anaToken });
-    expect(preview.body.data).toMatchObject({ displayName: 'Ana do perfil', presentation: 'Atividades culturais em grupo.', pronouns: 'Ela/dela', profession: 'Produtora cultural', languages: [{ code: 'pt', label: 'Português' }, { code: 'bzs', label: 'Libras' }] });
+    expect(preview.body.data).toMatchObject({ displayName: 'Ana do perfil', presentation: 'Atividades culturais em grupo.', pronouns: 'Ela/dela', profession: 'Produtora cultural', languages: [{ code: 'pt', label: 'Português' }, { code: 'bzs', label: 'Libras' }], activityPreferences: [{ code: 'outdoor', label: 'Ao ar livre' }, { code: 'small_group', label: 'Grupo pequeno' }] });
     expect(JSON.stringify(preview.body.data)).not.toMatch(/accountId|birthDate|contact|session/i);
+    const hidden = await call('PUT', '/api/v1/profiles/me', { token: anaToken, body: { ...update, revision: saved.body.data.revision, activityPreferencesVisibility: 'private' } });
+    expect(hidden.status).toBe(200);
+    expect((await call('GET', '/api/v1/profiles/me/preview', { token: anaToken })).body.data).not.toHaveProperty('activityPreferences');
+    const catalog = await call('GET', '/api/v1/catalog/activity-preferences?locale=pt-BR');
+    expect(catalog.status).toBe(200);
+    expect(catalog.cacheControl).toBe('no-store');
+    expect((catalog.body.data.activityPreferences as { code: string }[]).map(({ code }) => code)).toEqual(['outdoor', 'indoor', 'quiet_setting', 'lively_setting', 'small_group', 'medium_group', 'light_physical_activity', 'moderate_physical_activity', 'cultural_experience', 'conversation_and_socializing', 'structured_activity', 'spontaneous_activity']);
     const biaAfter = await call('GET', '/api/v1/profiles/me', { token: biaToken });
     expect(biaAfter.body.data.displayName).toBe('Ana');
   }, 30_000);

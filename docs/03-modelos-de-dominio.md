@@ -173,6 +173,8 @@ Referências: RF066–RF067, RF082–RF083, RF095–RF101; RN089–RN090, RN114,
 - Catálogos iniciais constam no DER §3.10.
 - `Profile` mantém `pronounSelection/customPronouns`, `profession` e a relação normalizada `profile_language`, cada grupo com visibilidade própria. `prefer_not_to_say` é estado distinto de ausência e não é projetado.
 - `Language(code, labelPtBr, sortOrder, active)` pertence a Catálogos; `code` é uma subtag BCP 47 estável. O seed inicial inclui `pt`, `en`, `es`, `bzs` (Libras), `fr`, `it`, `de`, `cmn`, `ja`, `ko`, `ar`, `ru` e `hi`.
+- `Profile` mantém o conjunto `activityPreferences` (0–5, sem ordem própria) na relação normalizada `profile_activity_preference(account_id, preference_code, selected_at)` e `activityPreferencesVisibility` (default `private`). `selected_at` é auditoria técnica.
+- `ActivityPreference(code, labelPtBr, sortOrder, active)` pertence a Catálogos; `code` é `snake_case` ASCII estável (`^[a-z][a-z0-9_]{1,39}$`). Seed: `outdoor`, `indoor`, `quiet_setting`, `lively_setting`, `small_group`, `medium_group`, `light_physical_activity`, `moderate_physical_activity`, `cultural_experience`, `conversation_and_socializing`, `structured_activity`, `spontaneous_activity` (migration `0009`, ADR-044).
 
 ### 2.12 DataRequest e RetentionHold
 

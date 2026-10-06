@@ -18,6 +18,9 @@ exports[`registration HTTP contract v1 the OpenAPI contract is versioned and doc
       "x-eventmatch-bff-token*",
     ],
   },
+  "/api/v1/catalog/activity-preferences": {
+    "get": [],
+  },
   "/api/v1/catalog/interests": {
     "get": [],
   },
@@ -121,6 +124,21 @@ exports[`registration HTTP contract v1 the OpenAPI contract is versioned and doc
     ],
   },
   "__identity": {
+    "activityPreferences": {
+      "codesMaxItems": 5,
+      "listRequired": [
+        "activityPreferences",
+      ],
+      "ownRequired": [
+        "activityPreferences",
+        "activityPreferencesVisibility",
+      ],
+      "previewOptional": true,
+      "updateRequired": [
+        "activityPreferenceCodes",
+        "activityPreferencesVisibility",
+      ],
+    },
     "customPronounsMaxLength": 40,
     "languageCodesMaxItems": 5,
     "languageListRequired": [

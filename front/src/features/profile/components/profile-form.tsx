@@ -9,19 +9,26 @@ import { Button } from '@/components/server/ui/button';
 import { Choice } from '@/components/server/ui/choice';
 import { Notice } from '@/components/server/ui/notice';
 import { TextField } from '@/components/server/ui/text-field';
-import { ownProfileSchema, updateProfileSchema, type LanguageOption, type OwnProfile } from '../contracts';
-import { LANGUAGE_REJECTION_MESSAGES, USAGE_INTENT_LABELS } from '../messages';
+import { ownProfileSchema, updateProfileSchema, type ActivityPreferenceOption, type LanguageOption, type OwnProfile } from '../contracts';
+import { ACTIVITY_PREFERENCE_REJECTION_MESSAGES, LANGUAGE_REJECTION_MESSAGES, USAGE_INTENT_LABELS } from '../messages';
 import { profileScrollBehavior } from '../profile-motion';
 import { ProfilePhotoEditor } from './profile-photo-editor';
 import { ProfileVisibilityToggle } from './profile-visibility-toggle';
 import { ProfilePronounsField } from './profile-pronouns-field';
 import { ProfileLanguagePicker } from './profile-language-picker';
+import { ProfileActivityPreferencesField } from './profile-activity-preferences-field';
 
 export function ProfileForm({
   initial,
   interestOptions,
   languageOptions,
-}: Readonly<{ initial: OwnProfile; interestOptions: OwnProfile['interests']; languageOptions: readonly LanguageOption[] }>) {
+  activityPreferenceOptions,
+}: Readonly<{
+  initial: OwnProfile;
+  interestOptions: OwnProfile['interests'];
+  languageOptions: readonly LanguageOption[];
+  activityPreferenceOptions: readonly ActivityPreferenceOption[] | null;
+}>) {
   const router = useRouter();
   const [profile, setProfile] = useState(initial);
   const [presentation, setPresentation] = useState(initial.presentation ?? '');
@@ -66,6 +73,8 @@ export function ProfileForm({
       professionVisibility: form.get('professionVisibility'),
       languageCodes: form.getAll('languageCodes'),
       languagesVisibility: form.get('languagesVisibility'),
+      activityPreferenceCodes: form.getAll('activityPreferenceCodes'),
+      activityPreferencesVisibility: form.get('activityPreferencesVisibility'),
     };
     const validated = updateProfileSchema.safeParse(body);
     if (!validated.success) {
@@ -79,6 +88,8 @@ export function ProfileForm({
                 ? 'Escolha ao menos um objetivo.'
                 : issue.path[0] === 'languageCodes'
                   ? 'Escolha no máximo cinco idiomas, sem repetições.'
+                  : issue.path[0] === 'activityPreferenceCodes'
+                  ? 'Escolha no máximo cinco preferências, sem repetições.'
                   : issue.code === 'custom' && issue.message
                     ? issue.message
                     : 'Revise este campo.';
@@ -115,6 +126,9 @@ export function ProfileForm({
         const reason = (envelope as { data?: { reason?: unknown } } | null)?.data?.reason;
         if (reason === 'unknown_language' || reason === 'inactive_language') {
           setErrors({ languageCodes: LANGUAGE_REJECTION_MESSAGES[reason] });
+          setStatus({ tone: 'error', text: 'Revise os campos indicados antes de salvar.' });
+        } else if (reason === 'unknown_activity_preference' || reason === 'inactive_activity_preference') {
+          setErrors({ activityPreferenceCodes: ACTIVITY_PREFERENCE_REJECTION_MESSAGES[reason] });
           setStatus({ tone: 'error', text: 'Revise os campos indicados antes de salvar.' });
         } else
           setStatus({ tone: 'error', text: 'Não foi possível salvar. Revise os campos e tente novamente.' });
@@ -351,6 +365,7 @@ export function ProfileForm({
           ))}
         </div>
       </section>
+      <ProfileActivityPreferencesField initial={profile} options={activityPreferenceOptions} error={errors.activityPreferenceCodes} onDirty={() => setDirty(true)} />
       <div className="flex flex-wrap gap-3">
         <Button type="submit" pending={pending} pendingLabel="Salvando…">
           Salvar perfil

@@ -10,6 +10,7 @@ export type ProfilePreview = Readonly<{
   pronouns?: string;
   profession?: string;
   languages?: ReadonlyArray<{ code: string; label: string }>;
+  activityPreferences?: ReadonlyArray<{ code: string; label: string }>;
 }>;
 
 export type PronounLabels = Readonly<Record<Exclude<ProfileState['pronounSelection'], null | 'other' | 'prefer_not_to_say'>, string>>;
@@ -29,6 +30,9 @@ export class ProfilePreviewProjector {
       ...(profile.professionVisibility === 'authenticated' && profile.profession ? { profession: profile.profession } : {}),
       ...(profile.languagesVisibility === 'authenticated' && profile.languages.length > 0
         ? { languages: profile.languages.map(({ code, label }) => ({ code, label })) }
+        : {}),
+      ...(profile.activityPreferencesVisibility === 'authenticated' && profile.activityPreferences.length > 0
+        ? { activityPreferences: profile.activityPreferences.map(({ code, label }) => ({ code, label })) }
         : {}),
     };
   }

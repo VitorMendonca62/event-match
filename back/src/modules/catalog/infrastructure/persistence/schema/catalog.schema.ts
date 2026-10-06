@@ -24,3 +24,17 @@ export const language = pgTable('language', {
   uniqueIndex('language_sort_order_unique').on(table.sortOrder),
   index('language_active_order_index').on(table.active, table.sortOrder),
 ]);
+
+export const activityPreference = pgTable('activity_preference', {
+  code: text('code').primaryKey(),
+  labelPtBr: text('label_pt_br').notNull(),
+  sortOrder: integer('sort_order').notNull(),
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  check('activity_preference_code_check', sql`${table.code} ~ '^[a-z][a-z0-9_]{1,39}$'`),
+  check('activity_preference_label_pt_br_check', sql`char_length(trim(${table.labelPtBr})) > 0`),
+  uniqueIndex('activity_preference_sort_order_unique').on(table.sortOrder),
+  index('activity_preference_active_order_index').on(table.active, table.sortOrder),
+]);

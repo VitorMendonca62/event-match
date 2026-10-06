@@ -9,6 +9,8 @@ export type ProfilePhoto = Readonly<{ deliveryUrl: string; width: 512; height: 5
 export const PRONOUN_SELECTIONS = ['ela_dela', 'ele_dele', 'elu_delu', 'other', 'prefer_not_to_say'] as const;
 export type PronounSelection = (typeof PRONOUN_SELECTIONS)[number];
 export type ProfileLanguage = Readonly<{ code: string; label: string; active: boolean }>;
+export type ProfileActivityPreference = Readonly<{ code: string; label: string; active: boolean }>;
+export const MAX_ACTIVITY_PREFERENCES = 5;
 
 export type ProfileState = Readonly<{
   accountId: string;
@@ -28,6 +30,8 @@ export type ProfileState = Readonly<{
   professionVisibility: ProfileFieldVisibility;
   languages: readonly ProfileLanguage[];
   languagesVisibility: ProfileFieldVisibility;
+  activityPreferences: readonly ProfileActivityPreference[];
+  activityPreferencesVisibility: ProfileFieldVisibility;
 }>;
 
 const CONTACT_PATTERN = /(?:https?:\/\/|www\.|[\w.+-]+@[\w.-]+\.[a-z]{2,}|(?:\+?55\s*)?(?:\(?\d{2}\)?\s*)?9?\d{4}[-\s]?\d{4})/iu;
@@ -77,7 +81,11 @@ export class Profile {
       ['private', 'authenticated'].includes(input.pronounsVisibility) &&
       ['private', 'authenticated'].includes(input.professionVisibility) &&
       ['private', 'authenticated'].includes(input.languagesVisibility);
-    if (!valid || !identityValid) throw new ProfileError('INVALID_PROFILE_CONTENT');
+    const preferencesValid =
+      input.activityPreferences.length <= MAX_ACTIVITY_PREFERENCES &&
+      new Set(input.activityPreferences.map(({ code }) => code)).size === input.activityPreferences.length &&
+      ['private', 'authenticated'].includes(input.activityPreferencesVisibility);
+    if (!valid || !identityValid || !preferencesValid) throw new ProfileError('INVALID_PROFILE_CONTENT');
     return new Profile({
       ...this.state,
       displayName,
@@ -94,6 +102,8 @@ export class Profile {
       professionVisibility: input.professionVisibility,
       languages: [...input.languages],
       languagesVisibility: input.languagesVisibility,
+      activityPreferences: [...input.activityPreferences],
+      activityPreferencesVisibility: input.activityPreferencesVisibility,
       revision: this.state.revision + 1,
     });
   }

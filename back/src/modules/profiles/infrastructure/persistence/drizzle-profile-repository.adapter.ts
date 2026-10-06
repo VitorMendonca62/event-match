@@ -5,7 +5,7 @@ import type { TransactionContext } from '../../../../shared/application/ports/un
 import { resolveExecutor } from '../../../../shared/infrastructure/persistence/resolve-executor';
 import type { Profile, ProfileState, UsageIntent } from '../../domain/entities/profile';
 import type { PersistedProfileState, ProfileRepositoryPort } from '../../domain/ports/outbound/profile-repository.port';
-import { accountInterest, profile, profileLanguage, profilePhotoAsset, profileUsageIntent } from './schema/profiles.schema';
+import { accountInterest, profile, profileActivityPreference, profileLanguage, profilePhotoAsset, profileUsageIntent } from './schema/profiles.schema';
 
 @Injectable()
 export class DrizzleProfileRepositoryAdapter implements ProfileRepositoryPort {
@@ -13,12 +13,14 @@ export class DrizzleProfileRepositoryAdapter implements ProfileRepositoryPort {
     const database = resolveExecutor(context);
     const [row] = await database.select().from(profile).where(eq(profile.accountId, accountId)).limit(1);
     if (!row?.displayName || !row.region) return null;
-    const [intents, interests, languages, photos] = await Promise.all([
+    const [intents, interests, languages, preferences, photos] = await Promise.all([
       database.select({ value: profileUsageIntent.usageIntent }).from(profileUsageIntent).where(eq(profileUsageIntent.accountId, accountId)),
       database.select({ id: accountInterest.interestId }).from(accountInterest).where(eq(accountInterest.accountId, accountId)),
       database.select({ code: profileLanguage.languageCode })
         .from(profileLanguage)
         .where(eq(profileLanguage.accountId, accountId)).orderBy(profileLanguage.selectedAt),
+      database.select({ code: profileActivityPreference.preferenceCode }).from(profileActivityPreference)
+        .where(eq(profileActivityPreference.accountId, accountId)),
       database.select({ publicId: profilePhotoAsset.publicId }).from(profilePhotoAsset)
         .where(and(eq(profilePhotoAsset.accountId, accountId), eq(profilePhotoAsset.state, 'active'))).limit(1),
     ]);
@@ -32,6 +34,8 @@ export class DrizzleProfileRepositoryAdapter implements ProfileRepositoryPort {
       professionVisibility: row.professionVisibility as ProfileState['professionVisibility'],
       languageCodes: languages.map(({ code }) => code),
       languagesVisibility: row.languagesVisibility as ProfileState['languagesVisibility'],
+      activityPreferenceCodes: preferences.map(({ code }) => code),
+      activityPreferencesVisibility: row.activityPreferencesVisibility as ProfileState['activityPreferencesVisibility'],
       // Delivery URLs are attached by the media use case/adapter; persistence never invents one.
       photo: photos.length > 0 ? { deliveryUrl: '', width: 512, height: 512 } : null,
     };
@@ -46,6 +50,7 @@ export class DrizzleProfileRepositoryAdapter implements ProfileRepositoryPort {
       pronounSelection: value.pronounSelection, customPronouns: value.customPronouns,
       pronounsVisibility: value.pronounsVisibility, profession: value.profession,
       professionVisibility: value.professionVisibility, languagesVisibility: value.languagesVisibility,
+      activityPreferencesVisibility: value.activityPreferencesVisibility,
       revision: value.revision, updatedAt: new Date(),
     }).where(and(eq(profile.accountId, value.accountId), eq(profile.revision, expectedRevision))).returning({ accountId: profile.accountId });
     if (changed.length === 0) return 'conflict';
@@ -56,6 +61,8 @@ export class DrizzleProfileRepositoryAdapter implements ProfileRepositoryPort {
     await database.delete(profileLanguage).where(eq(profileLanguage.accountId, value.accountId));
     const selectedAt = Date.now();
     if (value.languages.length > 0) await database.insert(profileLanguage).values(value.languages.map(({ code }, index) => ({ accountId: value.accountId, languageCode: code, selectedAt: new Date(selectedAt + index) })));
+    await database.delete(profileActivityPreference).where(eq(profileActivityPreference.accountId, value.accountId));
+    if (value.activityPreferences.length > 0) await database.insert(profileActivityPreference).values(value.activityPreferences.map(({ code }) => ({ accountId: value.accountId, preferenceCode: code, selectedAt: new Date(selectedAt) })));
     return 'updated';
   }
 }

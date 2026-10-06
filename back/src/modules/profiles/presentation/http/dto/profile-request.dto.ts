@@ -18,4 +18,6 @@ export class UpdateProfileDto {
   @ApiProperty({ enum: ['private', 'authenticated'] }) @IsEnum(['private', 'authenticated']) readonly professionVisibility!: EditableProfileVisibility;
   @ApiProperty({ type: [String], maxItems: 5 }) @IsArray() @ArrayMaxSize(5) @ArrayUnique() @Matches(/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/, { each: true }) readonly languageCodes!: string[];
   @ApiProperty({ enum: ['private', 'authenticated'] }) @IsEnum(['private', 'authenticated']) readonly languagesVisibility!: EditableProfileVisibility;
+  @ApiProperty({ type: [String], maxItems: 5, uniqueItems: true, pattern: '^[a-z][a-z0-9_]{1,39}$' }) @IsArray() @ArrayMaxSize(5) @ArrayUnique() @Matches(/^[a-z][a-z0-9_]{1,39}$/, { each: true }) readonly activityPreferenceCodes!: string[];
+  @ApiProperty({ enum: ['private', 'authenticated'] }) @IsEnum(['private', 'authenticated']) readonly activityPreferencesVisibility!: EditableProfileVisibility;
 }
