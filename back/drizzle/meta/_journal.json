@@ -57,6 +57,13 @@
       "when": 1790841600000,
       "tag": "0007_profile_completion",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791082800000,
+      "tag": "0008_profile_optional_identity",
+      "breakpoints": true
     }
   ]
 }

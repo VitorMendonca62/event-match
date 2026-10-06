@@ -103,6 +103,7 @@ export class ProfileController {
   @ApiOkResponse({ type: OwnProfileEnvelopeDto })
   @ApiBadRequestResponse()
   @ApiConflictResponse()
+  @ApiUnprocessableEntityResponse()
   async update(@ProfileAccountId() accountId: string, @Body() body: UpdateProfileDto) {
     return new OkResponseDto(
       await this.updateOwn.execute({ accountId, ...body }),

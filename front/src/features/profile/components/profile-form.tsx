@@ -9,19 +9,23 @@ import { Button } from '@/components/server/ui/button';
 import { Choice } from '@/components/server/ui/choice';
 import { Notice } from '@/components/server/ui/notice';
 import { TextField } from '@/components/server/ui/text-field';
-import { ownProfileSchema, updateProfileSchema, type OwnProfile } from '../contracts';
-import { USAGE_INTENT_LABELS } from '../messages';
+import { ownProfileSchema, updateProfileSchema, type LanguageOption, type OwnProfile } from '../contracts';
+import { LANGUAGE_REJECTION_MESSAGES, USAGE_INTENT_LABELS } from '../messages';
 import { profileScrollBehavior } from '../profile-motion';
 import { ProfilePhotoEditor } from './profile-photo-editor';
 import { ProfileVisibilityToggle } from './profile-visibility-toggle';
+import { ProfilePronounsField } from './profile-pronouns-field';
+import { ProfileLanguagePicker } from './profile-language-picker';
 
 export function ProfileForm({
   initial,
   interestOptions,
-}: Readonly<{ initial: OwnProfile; interestOptions: OwnProfile['interests'] }>) {
+  languageOptions,
+}: Readonly<{ initial: OwnProfile; interestOptions: OwnProfile['interests']; languageOptions: readonly LanguageOption[] }>) {
   const router = useRouter();
   const [profile, setProfile] = useState(initial);
   const [presentation, setPresentation] = useState(initial.presentation ?? '');
+  const [profession, setProfession] = useState(initial.profession ?? '');
   const [pending, setPending] = useState(false);
   const [refreshingRevision, setRefreshingRevision] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -55,6 +59,13 @@ export function ProfileForm({
       presentation: presentation.trim() || null,
       photoVisibility: form.get('photoVisibility'),
       presentationVisibility: form.get('presentationVisibility'),
+      pronounSelection: String(form.get('pronounSelection') ?? '') || null,
+      customPronouns: String(form.get('customPronouns') ?? '').trim() || null,
+      pronounsVisibility: form.get('pronounsVisibility'),
+      profession: profession.trim() || null,
+      professionVisibility: form.get('professionVisibility'),
+      languageCodes: form.getAll('languageCodes'),
+      languagesVisibility: form.get('languagesVisibility'),
     };
     const validated = updateProfileSchema.safeParse(body);
     if (!validated.success) {
@@ -66,7 +77,11 @@ export function ProfileForm({
               ? 'Escolha pelo menos três interesses.'
               : issue.path[0] === 'usageIntents'
                 ? 'Escolha ao menos um objetivo.'
-                : 'Revise este campo.';
+                : issue.path[0] === 'languageCodes'
+                  ? 'Escolha no máximo cinco idiomas, sem repetições.'
+                  : issue.code === 'custom' && issue.message
+                    ? issue.message
+                    : 'Revise este campo.';
       setErrors(nextErrors);
       setPending(false);
       setStatus({ tone: 'error', text: 'Revise os campos indicados antes de salvar.' });
@@ -95,6 +110,14 @@ export function ProfileForm({
             window.matchMedia('(prefers-reduced-motion: reduce)').matches,
           ),
         });
+      } else if (result.status === 422) {
+        const envelope: unknown = await result.json().catch(() => null);
+        const reason = (envelope as { data?: { reason?: unknown } } | null)?.data?.reason;
+        if (reason === 'unknown_language' || reason === 'inactive_language') {
+          setErrors({ languageCodes: LANGUAGE_REJECTION_MESSAGES[reason] });
+          setStatus({ tone: 'error', text: 'Revise os campos indicados antes de salvar.' });
+        } else
+          setStatus({ tone: 'error', text: 'Não foi possível salvar. Revise os campos e tente novamente.' });
       } else if (result.status === 409) {
         setHasConflict(true);
         setStatus({
@@ -249,6 +272,24 @@ export function ProfileForm({
           description="Ative para permitir que pessoas no EventMatch vejam sua apresentação quando esse recurso estiver disponível."
           defaultChecked={profile.presentationVisibility === 'authenticated'}
         />
+      </section>
+      <section aria-labelledby="profile-identity" className="space-y-8 border-b border-border pb-10">
+        <div>
+          <h2 id="profile-identity" className="text-xl font-bold">Identidade e comunicação</h2>
+          <p className="mt-1 max-w-[65ch] text-muted-foreground">Tudo aqui é opcional e começa privado. Você decide cada compartilhamento separadamente.</p>
+        </div>
+        <ProfilePronounsField initial={profile} error={errors.customPronouns ?? errors.pronounSelection ?? errors.pronounsVisibility} onDirty={() => setDirty(true)} />
+        <div className="space-y-4 border-t border-border pt-8">
+          <label className="block space-y-2">
+            <span className="font-semibold">Profissão</span>
+            <span className="block text-sm text-muted-foreground">Uma autodeclaração opcional; o EventMatch não verifica este dado.</span>
+            <input name="profession" maxLength={80} value={profession} onChange={(event) => setProfession(event.target.value)} className={`block min-h-13 w-full rounded-xl border-2 bg-surface px-4 text-foreground hover:border-muted-foreground focus-visible:border-foreground ${errors.profession ? 'border-error' : 'border-border'}`} aria-invalid={errors.profession ? true : undefined} aria-describedby={errors.profession ? 'profession-error' : undefined} />
+            {profession.length >= 64 ? <span className="block text-right text-sm tabular-nums text-muted-foreground">{profession.length}/80</span> : null}
+            {errors.profession ? <span id="profession-error" className="block font-semibold text-error">{errors.profession}</span> : null}
+          </label>
+          <ProfileVisibilityToggle name="professionVisibility" question="Compartilhar profissão futuramente?" description="Ative para mostrar a pessoas autenticadas quando esse recurso estiver disponível." defaultChecked={profile.professionVisibility === 'authenticated'} />
+        </div>
+        <div className="border-t border-border pt-8"><ProfileLanguagePicker initial={profile} options={languageOptions} error={errors.languageCodes} onDirty={() => setDirty(true)} /></div>
       </section>
       <section
         aria-labelledby="profile-intents"

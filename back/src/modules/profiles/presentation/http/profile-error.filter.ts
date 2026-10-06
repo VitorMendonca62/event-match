@@ -7,6 +7,8 @@ const STATUS = {
   PROFILE_REVISION_CONFLICT: HttpStatus.CONFLICT,
   INVALID_PROFILE_CONTENT: HttpStatus.BAD_REQUEST,
   INACTIVE_INTEREST: HttpStatus.BAD_REQUEST,
+  UNKNOWN_LANGUAGE: HttpStatus.UNPROCESSABLE_ENTITY,
+  INACTIVE_LANGUAGE: HttpStatus.UNPROCESSABLE_ENTITY,
   PHOTO_UPLOAD_EXPIRED: HttpStatus.GONE,
   PHOTO_REJECTED: HttpStatus.UNPROCESSABLE_ENTITY,
   MEDIA_RATE_LIMITED: HttpStatus.TOO_MANY_REQUESTS,
@@ -15,6 +17,7 @@ const STATUS = {
 const MESSAGE: Record<keyof typeof STATUS, string> = {
   PROFILE_NOT_FOUND: 'Profile not found.', PROFILE_REVISION_CONFLICT: 'Profile changed. Reload before saving again.',
   INVALID_PROFILE_CONTENT: 'Profile content is invalid.', INACTIVE_INTEREST: 'One or more interests are unavailable.',
+  UNKNOWN_LANGUAGE: 'One or more languages are unknown.', INACTIVE_LANGUAGE: 'One or more languages are inactive.',
   PHOTO_UPLOAD_EXPIRED: 'Photo upload expired.', PHOTO_REJECTED: 'Photo was rejected.',
   MEDIA_RATE_LIMITED: 'Too many media requests.', MEDIA_UNAVAILABLE: 'Media service is temporarily unavailable.',
 };
@@ -24,6 +27,6 @@ export class ProfileErrorFilter implements ExceptionFilter {
   catch(error: ProfileError, host: ArgumentsHost): void {
     const response = host.switchToHttp().getResponse<Response>();
     const statusCode = STATUS[error.code];
-    response.status(statusCode).json({ data: {}, message: MESSAGE[error.code], statusCode });
+    response.status(statusCode).json({ data: error.reason ? { reason: error.reason } : {}, message: MESSAGE[error.code], statusCode });
   }
 }

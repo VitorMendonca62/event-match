@@ -171,6 +171,8 @@ Referências: RF066–RF067, RF082–RF083, RF095–RF101; RN089–RN090, RN114,
 - `Catalog`, `CatalogOption`, ordem, estado ativo e intervalo de vigência.
 - Referências históricas apontam para opção imutável/versionada; desativação não altera registros passados.
 - Catálogos iniciais constam no DER §3.10.
+- `Profile` mantém `pronounSelection/customPronouns`, `profession` e a relação normalizada `profile_language`, cada grupo com visibilidade própria. `prefer_not_to_say` é estado distinto de ausência e não é projetado.
+- `Language(code, labelPtBr, sortOrder, active)` pertence a Catálogos; `code` é uma subtag BCP 47 estável. O seed inicial inclui `pt`, `en`, `es`, `bzs` (Libras), `fr`, `it`, `de`, `cmn`, `ja`, `ko`, `ar`, `ru` e `hi`.
 
 ### 2.12 DataRequest e RetentionHold
 

@@ -6,6 +6,7 @@ import request from 'supertest';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { GetOwnProfile, PreviewOwnProfile, UpdateOwnProfile } from '../../../src/modules/profiles/application/use-cases/profile.use-cases';
 import { CreateProfilePhotoUpload, FinalizeProfilePhotoUpload, RemoveProfilePhoto } from '../../../src/modules/profiles/application/use-cases/profile-media.use-cases';
+import { ProfileError } from '../../../src/modules/profiles/domain/errors/profile.error';
 import { ProfilesModule } from '../../../src/modules/profiles/profiles.module';
 import { ResolveAuthenticatedSession } from '../../../src/modules/identity-access/application/use-cases/resolve-authenticated-session.use-case';
 import { configureApplication } from '../../../src/main';
@@ -15,7 +16,7 @@ const TOKEN = 'B'.repeat(43);
 const BFF = { 'X-EventMatch-BFF-Token': process.env.BFF_INTERNAL_TOKEN!, Authorization: `Bearer ${TOKEN}` };
 const ORIGIN = Buffer.alloc(32, 9).toString('base64url');
 const INTERESTS = [1, 2, 3].map((number) => ({ id: `00000000-0000-7000-8000-00000000000${number}`, slug: `interest-${number}`, label: `Interest ${number}` }));
-const PROFILE = { revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'], interests: INTERESTS, presentation: null, photoVisibility: 'private', presentationVisibility: 'private', photo: null, completion: { complete: false, completedCount: 4, totalCount: 6, missing: ['photo', 'presentation'] }, invitationSubject: `v1.${'A'.repeat(43)}` };
+const PROFILE = { revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'], interests: INTERESTS, presentation: null, photoVisibility: 'private', presentationVisibility: 'private', photo: null, pronounSelection: null, customPronouns: null, pronounsVisibility: 'private', profession: null, professionVisibility: 'private', languages: [], languagesVisibility: 'private', completion: { complete: false, completedCount: 4, totalCount: 6, missing: ['photo', 'presentation'] }, invitationSubject: `v1.${'A'.repeat(43)}` };
 const getOwn = { execute: mock(async () => PROFILE) };
 const updateOwn = { execute: mock(async () => ({ ...PROFILE, revision: 2 })) };
 const previewOwn = { execute: mock(async () => ({ displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'], interests: INTERESTS })) };
@@ -57,11 +58,25 @@ describe('profile HTTP contract v1 (SDD-015)', () => {
   });
 
   test('validates updates, accepts UUIDv7 interests and rejects unknown properties', async () => {
-    const body = { revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'], interestIds: INTERESTS.map(({ id }) => id), presentation: null, photoVisibility: 'private', presentationVisibility: 'authenticated' };
+    const body = { revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'], interestIds: INTERESTS.map(({ id }) => id), presentation: null, photoVisibility: 'private', presentationVisibility: 'authenticated', pronounSelection: null, customPronouns: null, pronounsVisibility: 'private', profession: null, professionVisibility: 'private', languageCodes: [], languagesVisibility: 'private' };
     await http().put('/api/v1/profiles/me').set(BFF).send(body).expect(200);
     expect(sessions.execute).toHaveBeenLastCalledWith({ token: TOKEN, capability: 'profile_write', allowRotation: false });
     expect(updateOwn.execute).toHaveBeenCalledWith({ accountId: '00000000-0000-7000-8000-000000000099', ...body });
     await http().put('/api/v1/profiles/me').set(BFF).send({ ...body, accountId: 'forged' }).expect(400);
+    await http().put('/api/v1/profiles/me').set(BFF).send({ ...body, profession: undefined }).expect(400);
+  });
+
+  test('maps language errors to 422 with only the allowlisted reason', async () => {
+    const body = { revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'], interestIds: INTERESTS.map(({ id }) => id), presentation: null, photoVisibility: 'private', presentationVisibility: 'private', pronounSelection: null, customPronouns: null, pronounsVisibility: 'private', profession: 'Produtora', professionVisibility: 'private', languageCodes: ['pt', 'eo'], languagesVisibility: 'private' };
+    for (const [code, reason] of [['UNKNOWN_LANGUAGE', 'unknown_language'], ['INACTIVE_LANGUAGE', 'inactive_language']] as const) {
+      updateOwn.execute.mockImplementationOnce(async () => { throw new ProfileError(code, reason); });
+      const response = await http().put('/api/v1/profiles/me').set(BFF).send(body).expect(422);
+      expect(response.body).toEqual({ data: { reason }, message: expect.any(String), statusCode: 422 });
+      expect(JSON.stringify(response.body)).not.toMatch(/Produtora|eo/);
+    }
+    await http().put('/api/v1/profiles/me').set(BFF).send({ ...body, languageCodes: ['pt', 'en', 'es', 'bzs', 'fr', 'it'] }).expect(400);
+    await http().put('/api/v1/profiles/me').set(BFF).send({ ...body, languageCodes: ['pt', 'pt'] }).expect(400);
+    await http().put('/api/v1/profiles/me').set(BFF).send({ ...body, languageCodes: ['PT'] }).expect(400);
   });
 
   test('projects the preview and protects media with its own flag', async () => {
@@ -82,8 +97,8 @@ describe('profile HTTP contract v1 (SDD-015)', () => {
   });
 
   test('publishes every profile path and the additive API version', () => {
-    const document = SwaggerModule.createDocument(app, new DocumentBuilder().setTitle('EventMatch API').setVersion('0.12.0').build());
-    expect(document.info.version).toBe('0.12.0');
+    const document = SwaggerModule.createDocument(app, new DocumentBuilder().setTitle('EventMatch API').setVersion('0.13.0').build());
+    expect(document.info.version).toBe('0.13.0');
     for (const path of ['/api/v1/profiles/me', '/api/v1/profiles/me/preview', '/api/v1/profiles/me/photo/uploads', '/api/v1/profiles/me/photo/uploads/{uploadId}/finalize', '/api/v1/profiles/me/photo']) expect(document.paths[path]).toBeDefined();
     const schemas = document.components?.schemas ?? {};
     const responseSchema = (path: string, method: 'get' | 'put' | 'post' | 'delete', status: string) => {

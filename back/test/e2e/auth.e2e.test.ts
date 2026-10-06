@@ -138,7 +138,7 @@ describe('Auth API v1 (e2e, container)', () => {
       info: { version: string };
       paths: Record<string, unknown>;
     };
-    expect(document.info.version).toBe('0.12.0');
+    expect(document.info.version).toBe('0.13.0');
     expect(Object.keys(document.paths)).toEqual(
       expect.arrayContaining(['/api/v1/auth/login', '/api/v1/auth/session', '/api/v1/auth/logout']),
     );
@@ -192,14 +192,32 @@ describe('Auth API v1 (e2e, container)', () => {
       presentation: 'Atividades culturais em grupo.',
       photoVisibility: 'private',
       presentationVisibility: 'authenticated',
+      pronounSelection: 'ela_dela',
+      customPronouns: null,
+      pronounsVisibility: 'authenticated',
+      profession: 'Produtora cultural',
+      professionVisibility: 'authenticated',
+      languageCodes: ['pt', 'bzs'],
+      languagesVisibility: 'authenticated',
     };
+    const invalidCases = [
+      { ...update, languageCodes: ['pt', 'en', 'es', 'bzs', 'fr', 'it'] },
+      { ...update, languageCodes: ['pt', 'pt'] },
+      { ...update, pronounSelection: 'other', customPronouns: null },
+      { ...update, pronounsVisibility: 'public' },
+    ];
+    for (const body of invalidCases) expect((await call('PUT', '/api/v1/profiles/me', { token: anaToken, body })).status).toBe(400);
+    const unknownLanguage = await call('PUT', '/api/v1/profiles/me', { token: anaToken, body: { ...update, languageCodes: ['pt', 'xx'] } });
+    expect(unknownLanguage.status).toBe(422);
+    expect(unknownLanguage.body).toMatchObject({ statusCode: 422, data: { reason: 'unknown_language' } });
+    expect((await call('GET', '/api/v1/profiles/me', { token: anaToken })).body.data).toMatchObject({ revision: update.revision, languages: [] });
     const saved = await call('PUT', '/api/v1/profiles/me', { token: anaToken, body: update });
     expect(saved.status).toBe(200);
     expect(saved.body.data).toMatchObject({ displayName: 'Ana do perfil', revision: Number(update.revision) + 1 });
     expect((await call('PUT', '/api/v1/profiles/me', { token: anaToken, body: update })).status).toBe(409);
 
     const preview = await call('GET', '/api/v1/profiles/me/preview', { token: anaToken });
-    expect(preview.body.data).toMatchObject({ displayName: 'Ana do perfil', presentation: 'Atividades culturais em grupo.' });
+    expect(preview.body.data).toMatchObject({ displayName: 'Ana do perfil', presentation: 'Atividades culturais em grupo.', pronouns: 'Ela/dela', profession: 'Produtora cultural', languages: [{ code: 'pt', label: 'Português' }, { code: 'bzs', label: 'Libras' }] });
     expect(JSON.stringify(preview.body.data)).not.toMatch(/accountId|birthDate|contact|session/i);
     const biaAfter = await call('GET', '/api/v1/profiles/me', { token: biaToken });
     expect(biaAfter.body.data.displayName).toBe('Ana');

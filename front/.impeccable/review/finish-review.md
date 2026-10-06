@@ -1,28 +1,37 @@
-# Finish review — convite e edição do perfil (SDD-015)
+# Finish review — identidade opcional do perfil (SDD-016)
 
-- Data: 2026-10-01
-- Superfície: `/inicio`, `/perfil` e `/perfil/previa`
+- Data: 2026-10-04
+- Superfície: `/perfil` e `/perfil/previa`
 - Build path: code-led
 - Direction contract: `../surfaces/src-app-perfil-page-tsx.md`
 - Disposição final: `ship`
 
+## Conformidade com a direção
+
+A implementação preserva a direção visual “Convite Cívico”, a paleta semântica e a composição escolhida pelo produto. A seção “Identidade e comunicação” aparece depois da apresentação e antes de intenções/interesses. Pronomes usam o combobox controlado atual; profissão e idiomas permanecem opcionais, privados por padrão e sem alegação de verificação.
+
+O brief foi corrigido para descrever a interface entregue, sem tentar reordená-la ou substituí-la por um `select` nativo. O seletor de idiomas devolve o foco à busca após cada escolha, permitindo seleções consecutivas por teclado. A remoção de cada idioma usa uma área interativa de 44 × 44 px.
+
 ## Evidências
 
-- `inicio-desktop.png`: viewport CSS 1440 x 900.
-- `inicio-mobile.png`: viewport CSS 390 x 844, captura full-page.
-- `perfil-desktop.png`: viewport CSS 1440 x 900, captura full-page.
-- `perfil-mobile.png`: viewport CSS 390 x 844, captura full-page.
-- `perfil-previa-desktop.png`: viewport CSS 1440 x 900.
-- `perfil-previa-mobile.png`: viewport CSS 390 x 844, captura full-page.
+- `perfil-desktop.png`: viewport CSS 1440 × 900, captura full-page.
+- `perfil-mobile.png`: viewport CSS 390 × 844, captura full-page.
+- `perfil-previa-desktop.png`: viewport CSS 1440 × 900.
+- `perfil-previa-mobile.png`: viewport CSS 390 × 844, captura full-page.
 
-Todas as capturas foram abertas e verificadas após estabilizar navegação e animação. O detector executado uma vez sobre os componentes alterados de perfil e a prévia retornou zero achados. O Playwright confirmou o caminho em Chromium desktop/mobile, incluindo axe sem violações sérias, ausência de overflow, falha de rede recuperável, sessão expirada e indisponibilidade do provedor. Firefox foi retirado da matriz por decisão de produto em 2026-10-03 para reduzir o tempo da suíte.
+As quatro capturas foram abertas e inspecionadas depois da suíte E2E. A composição mantém hierarquia legível, coluna única no mobile, controles sem corte, chips com quebra de linha e prévia coerente com as visibilidades. Não foi observado overflow horizontal, colisão ou regressão visual bloqueante.
 
-## Revisão independente
+## Validação
 
-O passe de hardening corrigiu o indicador de progresso para semântica `progressbar`, protegeu todos os estados pendentes com `finally` e redirecionou `401` para `/entrar`. A revisão visual confirmou hierarquia consistente, coluna única no mobile, controles sem corte, chips com wrap e prévia sem conteúdo privado.
+- Detector Impeccable executado após cada passe final de interface: zero achados (`[]`).
+- Playwright: a suíte-base passou em 74 cenários, com 1 cenário exclusivamente desktop ignorado no projeto mobile. Após as correções do review, o cenário do combobox por teclado passou novamente em desktop e mobile (2/2).
+- Axe: sem violações graves nos cenários desktop/mobile; zoom de 200% e ausência de rolagem horizontal cobertos.
+- O E2E do perfil comprovou seleção integral por teclado, `Prefiro não informar` sempre privado, contador `n/5`, cinco idiomas na ordem escolhida, aviso de limite e foco preservado.
+- Frontend: lint, typecheck e 141 testes unitários/integração passaram.
+- Backend: lint, typecheck, build, 322 testes unitários, 57 testes PostgreSQL e 26 E2E passaram.
 
-O fechamento da revisão acrescentou recuperação explícita de conflito: o aviso de `409` mantém os valores presentes no formulário, oferece carregar a revisão autoritativa e permite reaplicar o rascunho sem refresh destrutivo. O scroll de sucesso alterna para comportamento imediato sob `prefers-reduced-motion`. O detector permaneceu sem achados e o cenário de duas abas passou em Chromium desktop e mobile.
+## Achados e disposição
 
-Audit health score: **20/20** — acessibilidade 4, performance 4, responsividade 4, theming 4 e integridade de implementação 4. Não há achados P0–P3 neste passe. No Chromium mobile, taps e os gestos de mover e redimensionar o recorte foram verificados com eventos touch reais; dispositivo físico permanece fora do ambiente automatizado.
+Não há achados visuais P0–P3 neste passe. A superfície atende o direction contract atualizado e o craft floor aplicável; disposição final: **ship**.
 
-`PRODUCT.md`, `DESIGN.md` e `.impeccable/design.json` permanecem autoridades válidas. A superfície preserva o sistema “Convite Cívico” e não introduz mudança durável no sistema visual.
+A tentativa de revisão por um subagente independente foi bloqueada pelo limite de uso do serviço até 2026-10-09. Para não representar uma revisão inexistente, este documento registra um finish review do agente principal, sustentado pelas capturas e validações acima. Uma segunda opinião independente continua recomendada antes do PR, mas não há evidência de bloqueio técnico ou visual.

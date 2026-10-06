@@ -23,8 +23,16 @@ describe('profile invitation cookie (ADR-040)', () => {
 });
 
 test('profile update rejects public visibility, duplicate intents and fewer than three interests', () => {
-  const value = { revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship', 'friendship'], interestIds: [crypto.randomUUID()], presentation: null, photoVisibility: 'public', presentationVisibility: 'private' };
+  const value = { revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship', 'friendship'], interestIds: [crypto.randomUUID()], presentation: null, photoVisibility: 'public', presentationVisibility: 'private', pronounSelection: null, customPronouns: null, pronounsVisibility: 'private', profession: null, professionVisibility: 'private', languageCodes: [], languagesVisibility: 'private' };
   expect(updateProfileSchema.safeParse(value).success).toBe(false);
+});
+
+test('optional identity requires coherent pronouns and at most five unique languages', () => {
+  const base = { revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'], interestIds: [crypto.randomUUID(), crypto.randomUUID(), crypto.randomUUID()], presentation: null, photoVisibility: 'private', presentationVisibility: 'private', pronounSelection: 'other', customPronouns: 'elu/delu', pronounsVisibility: 'authenticated', profession: 'Pessoa desenvolvedora', professionVisibility: 'private', languageCodes: ['pt', 'bzs'], languagesVisibility: 'authenticated' };
+  expect(updateProfileSchema.safeParse(base).success).toBeTrue();
+  expect(updateProfileSchema.safeParse({ ...base, customPronouns: null }).success).toBeFalse();
+  expect(updateProfileSchema.safeParse({ ...base, pronounSelection: 'prefer_not_to_say', customPronouns: null, pronounsVisibility: 'authenticated' }).success).toBeFalse();
+  expect(updateProfileSchema.safeParse({ ...base, languageCodes: ['pt', 'pt'] }).success).toBeFalse();
 });
 
 test('profile photo contract does not advertise an expiration deadline', () => {

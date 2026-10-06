@@ -53,6 +53,10 @@ O bounded context `identity-access` (`IdentityAccessModule`) autentica e-mail e 
 
 `ProfilesModule` evolui o perfil criado no cadastro para um agregado editável com revisão otimista, completude derivada e projeção por audiência (ADR-038). `identity-access` resolve `profile_read`/`profile_write`; `profiles` depende dele em uma única direção. PostgreSQL permanece nos adapters, e o Cloudinary implementa `ProfileImageStorePort`: grant/finalização e deleção são coordenados pela aplicação, enquanto consulta e destruição externas ocorrem fora de transações. O navegador envia o raster diretamente ao provedor; NestJS verifica a resposta e o recurso autoritativo antes de ativar o asset (ADR-039). O Next.js oferece somente BFFs allowlisted e RSCs dinâmicos; o adiamento do convite é um cookie HttpOnly por sujeito HMAC da conta (ADR-040).
 
+### Identidade opcional e idiomas (SDD-016)
+
+O agregado de perfil incorpora pronomes, profissão e até cinco idiomas sem alterar completude ou capacidades (ADR-043). `catalog` é dono do catálogo versionado de idiomas e exporta `LANGUAGE_CATALOG_READER_PORT`; `profiles` valida códigos e substitui `profile_language` na mesma UoW e revisão dos demais campos. Cada grupo possui audiência independente e privada por padrão. O RSC `/perfil` inicia perfil, interesses e idiomas em paralelo e serializa somente as opções necessárias para a ilha cliente.
+
 No frontend, `/entrar` e `/inicio` são RSC dinâmicas que leem o cookie `HttpOnly` só no servidor e validam a sessão antes de renderizar (`front/src/shared/server/authenticated-view.ts`); as ilhas cliente são apenas `LoginForm`, `LogoutButton` e `SessionKeeper` (revalida no foco, na visibilidade e no retorno do bfcache). Os Route Handlers `front/src/app/api/auth/{login,session,logout}` checam origem, `Sec-Fetch-Site` e `Content-Type`, convertem o token em cookie `__Host-eventmatch_session` e nunca o devolvem em JSON (ADR-034). `AUTH_HTTP_ENABLED` (backend) e `AUTH_UI_ENABLED` (frontend, server-only) controlam o rollout; o logout continua expirando o cookie mesmo com a UI desligada.
 
 ### Deploy inicial do frontend

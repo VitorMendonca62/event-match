@@ -36,6 +36,19 @@ test('perfil: convite, edição, prévia e adiamento por navegador', async ({
   await page
     .getByRole('textbox', { name: /^Apresentação/ })
     .fill('Gosto de conhecer a cidade em atividades de grupo.');
+  await page.getByRole('combobox', { name: 'Pronomes' }).click();
+  await page.getByRole('option', { name: 'Ela/dela' }).click();
+  await page.getByRole('textbox', { name: 'Profissão' }).fill('Produtora cultural');
+  const languageSearch = page.getByRole('searchbox', { name: 'Buscar idioma' });
+  await languageSearch.fill('Libras');
+  await page.getByRole('button', { name: 'Libras' }).click();
+  await expect(languageSearch).toBeFocused();
+  await languageSearch.fill('Português');
+  await page.getByRole('button', { name: 'Português' }).click();
+  await expect(languageSearch).toBeFocused();
+  await page.getByText('Compartilhar pronomes futuramente?', { exact: true }).click();
+  await page.getByText('Compartilhar profissão futuramente?', { exact: true }).click();
+  await page.getByText('Compartilhar idiomas futuramente?', { exact: true }).click();
   const photoVisibility = page.getByRole('switch', {
     name: 'Quem poderá ver a foto futuramente?',
   });
@@ -54,6 +67,12 @@ test('perfil: convite, edição, prévia e adiamento por navegador', async ({
   await expect(page.getByRole('status')).toContainText('Perfil salvo');
   expect((await privateUpdate).postDataJSON()).toMatchObject({
     photoVisibility: 'private',
+    pronounSelection: 'ela_dela',
+    profession: 'Produtora cultural',
+    languageCodes: ['bzs', 'pt'],
+    pronounsVisibility: 'authenticated',
+    professionVisibility: 'authenticated',
+    languagesVisibility: 'authenticated',
   });
   await page.getByText('Quem poderá ver a foto futuramente?', { exact: true }).click();
   await expect(photoVisibility).toBeChecked();
@@ -76,6 +95,10 @@ test('perfil: convite, edição, prévia e adiamento por navegador', async ({
   await expect(
     page.getByText('Gosto de conhecer a cidade em atividades de grupo.'),
   ).toBeVisible();
+  await expect(page.getByText('Ela/dela')).toBeVisible();
+  await expect(page.getByText('Produtora cultural')).toBeVisible();
+  await expect(page.getByRole('list', { name: 'Idiomas' })).toContainText('Libras');
+  await expect(page.getByRole('list', { name: 'Idiomas' })).toContainText('Português');
   if (viewport?.width === 1440 || viewport?.width === 390)
     await page.screenshot({
       path: `.impeccable/review/perfil-previa-${viewport.width === 390 ? 'mobile' : 'desktop'}.png`,
@@ -100,6 +123,113 @@ test('perfil: convite, edição, prévia e adiamento por navegador', async ({
   await expect(page.getByRole('link', { name: 'Completar perfil' })).toBeVisible();
 });
 
+test('perfil: combobox de pronomes funciona integralmente por teclado', async ({ page }) => {
+  const email = await registerAccount(page, 'perfil-pronomes-teclado');
+  await page.goto('/entrar');
+  await signIn(page, email);
+  await expect(page).toHaveURL(/\/inicio$/);
+  await page.goto('/perfil');
+
+  const pronouns = page.getByRole('combobox', { name: 'Pronomes' });
+  await pronouns.focus();
+  await pronouns.press('ArrowDown');
+  await expect(pronouns).toHaveAttribute('aria-expanded', 'true');
+  await expect(pronouns).toHaveAttribute('aria-activedescendant', /option-1$/);
+  await pronouns.press('Enter');
+  await expect(pronouns).toContainText('Ela/dela');
+  await expect(pronouns).toBeFocused();
+
+  await pronouns.press('Enter');
+  await pronouns.press('End');
+  await expect(pronouns).toHaveAttribute('aria-activedescendant', /option-5$/);
+  await pronouns.press('Escape');
+  await expect(pronouns).toHaveAttribute('aria-expanded', 'false');
+  await expect(pronouns).toContainText('Ela/dela');
+
+  await pronouns.press('Space');
+  await pronouns.press('Home');
+  await pronouns.press('ArrowUp');
+  await expect(pronouns).toHaveAttribute('aria-activedescendant', /option-5$/);
+  await pronouns.press('ArrowDown');
+  await expect(pronouns).toHaveAttribute('aria-activedescendant', /option-0$/);
+  await pronouns.press('Space');
+  await expect(pronouns).toContainText('Não informado');
+  await expect(pronouns).toBeFocused();
+
+  const update = page.waitForRequest(
+    (request) => request.url().endsWith('/api/profile') && request.method() === 'PUT',
+  );
+  await page.getByRole('button', { name: 'Salvar perfil' }).click();
+  expect((await update).postDataJSON()).toMatchObject({
+    pronounSelection: null,
+    customPronouns: null,
+    pronounsVisibility: 'private',
+  });
+  await expect(page.getByRole('status')).toContainText('Perfil salvo');
+
+  const sharePronouns = page.getByRole('switch', { name: 'Compartilhar pronomes futuramente?' });
+  await page.getByText('Compartilhar pronomes futuramente?', { exact: true }).click();
+  await expect(sharePronouns).toBeChecked();
+  await pronouns.focus();
+  await pronouns.press('Space');
+  await pronouns.press('Home');
+  await pronouns.press('ArrowDown');
+  await pronouns.press('Space');
+  await expect(pronouns).toContainText('Ela/dela');
+  await expect(sharePronouns).toBeChecked();
+  await pronouns.press('Space');
+  await pronouns.press('End');
+  await pronouns.press('Space');
+  await expect(sharePronouns).toBeDisabled();
+  await expect(sharePronouns).not.toBeChecked();
+  await pronouns.press('Space');
+  await pronouns.press('Home');
+  await pronouns.press('ArrowDown');
+  await pronouns.press('Space');
+  await expect(pronouns).toContainText('Ela/dela');
+  await expect(sharePronouns).toBeEnabled();
+  await expect(sharePronouns).not.toBeChecked();
+
+  await pronouns.press('Space');
+  await pronouns.press('End');
+  await pronouns.press('ArrowUp');
+  await pronouns.press('Space');
+  await expect(pronouns).toContainText('Outro');
+  await page.getByRole('button', { name: 'Salvar perfil' }).click();
+  await expect(page.getByText('Informe seus pronomes.', { exact: true })).toHaveCount(1);
+  await expect(page.getByRole('textbox', { name: 'Como devemos escrever?' })).toHaveAccessibleDescription('Informe seus pronomes.');
+
+  await pronouns.focus();
+  await pronouns.press('Space');
+  await pronouns.press('End');
+  await pronouns.press('Space');
+  await expect(pronouns).toContainText('Prefiro não informar');
+  await expect(
+    page.getByRole('switch', { name: 'Compartilhar pronomes futuramente?' }),
+  ).toBeDisabled();
+
+  const languageSearch = page.getByRole('searchbox', { name: 'Buscar idioma' });
+  for (const label of ['Português', 'Inglês', 'Espanhol', 'Libras', 'Francês']) {
+    await languageSearch.fill(label);
+    await page.getByRole('button', { name: label, exact: true }).click();
+    await expect(languageSearch).toBeFocused();
+  }
+  await expect(page.getByText('5/5', { exact: true })).toBeVisible();
+  await expect(page.getByText('Limite de cinco idiomas atingido.')).toBeVisible();
+
+  const preferNotToSayUpdate = page.waitForRequest(
+    (request) => request.url().endsWith('/api/profile') && request.method() === 'PUT',
+  );
+  await page.getByRole('button', { name: 'Salvar perfil' }).click();
+  expect((await preferNotToSayUpdate).postDataJSON()).toMatchObject({
+    pronounSelection: 'prefer_not_to_say',
+    customPronouns: null,
+    pronounsVisibility: 'private',
+    languageCodes: ['pt', 'en', 'es', 'bzs', 'fr'],
+  });
+  await expect(page.getByRole('status')).toContainText('Perfil salvo');
+});
+
 test('perfil: falha de rede libera a ação e sessão expirada volta ao login', async ({
   page,
 }) => {
@@ -114,6 +244,19 @@ test('perfil: falha de rede libera a ação e sessão expirada volta ao login', 
     page.getByRole('alert').filter({ hasText: 'Não foi possível salvar' }),
   ).toContainText('Verifique sua conexão');
   await expect(page.getByRole('button', { name: 'Salvar perfil' })).toBeEnabled();
+  await page.unroute('**/api/profile');
+  await page.route('**/api/profile', (route) =>
+    route.fulfill({
+      status: 422,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: { reason: 'inactive_language' }, message: 'Unprocessable.', statusCode: 422 }),
+    }),
+  );
+  await page.getByRole('button', { name: 'Salvar perfil' }).click();
+  await expect(page.getByRole('alert').filter({ hasText: 'Revise os campos indicados' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Idiomas' })).toHaveAccessibleDescription(
+    /não está mais disponível para novas seleções/,
+  );
   await page.unroute('**/api/profile');
   await page.route('**/api/profile', (route) =>
     route.fulfill({

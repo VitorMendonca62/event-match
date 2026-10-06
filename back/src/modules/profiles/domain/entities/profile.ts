@@ -6,6 +6,9 @@ export type ProfileFieldVisibility = 'private' | 'authenticated' | 'public';
 export type EditableProfileVisibility = Exclude<ProfileFieldVisibility, 'public'>;
 export type ProfileInterest = Readonly<{ id: string; slug: string; label: string }>;
 export type ProfilePhoto = Readonly<{ deliveryUrl: string; width: 512; height: 512 }>;
+export const PRONOUN_SELECTIONS = ['ela_dela', 'ele_dele', 'elu_delu', 'other', 'prefer_not_to_say'] as const;
+export type PronounSelection = (typeof PRONOUN_SELECTIONS)[number];
+export type ProfileLanguage = Readonly<{ code: string; label: string; active: boolean }>;
 
 export type ProfileState = Readonly<{
   accountId: string;
@@ -18,6 +21,13 @@ export type ProfileState = Readonly<{
   photoVisibility: ProfileFieldVisibility;
   presentationVisibility: ProfileFieldVisibility;
   photo: ProfilePhoto | null;
+  pronounSelection: PronounSelection | null;
+  customPronouns: string | null;
+  pronounsVisibility: ProfileFieldVisibility;
+  profession: string | null;
+  professionVisibility: ProfileFieldVisibility;
+  languages: readonly ProfileLanguage[];
+  languagesVisibility: ProfileFieldVisibility;
 }>;
 
 const CONTACT_PATTERN = /(?:https?:\/\/|www\.|[\w.+-]+@[\w.-]+\.[a-z]{2,}|(?:\+?55\s*)?(?:\(?\d{2}\)?\s*)?9?\d{4}[-\s]?\d{4})/iu;
@@ -43,6 +53,8 @@ export class Profile {
     const displayName = normalizeText(input.displayName);
     const region = normalizeText(input.region);
     const presentation = input.presentation === null ? null : normalizeText(input.presentation);
+    const customPronouns = input.customPronouns === null ? null : normalizeText(input.customPronouns);
+    const profession = input.profession === null ? null : normalizeText(input.profession);
     const intents = [...new Set(input.usageIntents)];
     const interests = [...new Map(input.interests.map((interest) => [interest.id, interest])).values()];
     const allowedIntents = new Set<string>(USAGE_INTENTS);
@@ -54,7 +66,18 @@ export class Profile {
       (!presentation || (presentation.length <= 500 && !hasControlCharacter(presentation) && !CONTACT_PATTERN.test(presentation))) &&
       ['private', 'authenticated'].includes(input.photoVisibility) &&
       ['private', 'authenticated'].includes(input.presentationVisibility);
-    if (!valid) throw new ProfileError('INVALID_PROFILE_CONTENT');
+    const identityValid =
+      (input.pronounSelection === null || PRONOUN_SELECTIONS.includes(input.pronounSelection)) &&
+      (input.pronounSelection === 'other'
+        ? !!customPronouns && customPronouns.length <= 40 && !hasControlCharacter(customPronouns) && !CONTACT_PATTERN.test(customPronouns)
+        : customPronouns === null) &&
+      (input.pronounSelection !== 'prefer_not_to_say' || input.pronounsVisibility === 'private') &&
+      (!profession || (profession.length <= 80 && !hasControlCharacter(profession) && !CONTACT_PATTERN.test(profession))) &&
+      input.languages.length <= 5 && new Set(input.languages.map(({ code }) => code)).size === input.languages.length &&
+      ['private', 'authenticated'].includes(input.pronounsVisibility) &&
+      ['private', 'authenticated'].includes(input.professionVisibility) &&
+      ['private', 'authenticated'].includes(input.languagesVisibility);
+    if (!valid || !identityValid) throw new ProfileError('INVALID_PROFILE_CONTENT');
     return new Profile({
       ...this.state,
       displayName,
@@ -64,6 +87,13 @@ export class Profile {
       presentation: presentation || null,
       photoVisibility: input.photoVisibility,
       presentationVisibility: input.presentationVisibility,
+      pronounSelection: input.pronounSelection,
+      customPronouns,
+      pronounsVisibility: input.pronounsVisibility,
+      profession: profession || null,
+      professionVisibility: input.professionVisibility,
+      languages: [...input.languages],
+      languagesVisibility: input.languagesVisibility,
       revision: this.state.revision + 1,
     });
   }

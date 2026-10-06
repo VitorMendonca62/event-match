@@ -45,7 +45,9 @@ const REGISTRATION_TABLES = [
   'authentication_attempt',
   'contact_verification',
   'interest',
+  'language',
   'profile',
+  'profile_language',
   'profile_media_attempt',
   'profile_photo_asset',
   'profile_usage_intent',
@@ -213,7 +215,7 @@ describe('registration persistence (PostgreSQL integration)', () => {
       const [interests] = await query<{ count: string }>(`select count(*)::text as count from interest`);
       const [ledger] = await query<{ count: string }>(`select count(*)::text as count from drizzle.__drizzle_migrations`);
       expect(interests?.count).toBe('20');
-      expect(ledger?.count).toBe('8');
+      expect(ledger?.count).toBe('9');
     });
   });
 
@@ -321,14 +323,24 @@ describe('registration persistence (PostgreSQL integration)', () => {
       const accountId = await incompleteAccount(nodeA, 'profile-race@example.test');
       await nodeA.complete.execute({ accountId, birthDate: '1990-05-10', interestIds: INTEREST_IDS.slice(0, 3), documentIds: DOCUMENT_IDS });
       const current = await nodeA.getProfile.execute(accountId);
-      const input = { accountId, revision: current.revision, displayName: 'Ana Atualizada', region: 'Recife - PE', usageIntents: ['friendship'] as const, interestIds: INTEREST_IDS.slice(0, 3), presentation: 'Atividades culturais em grupo', photoVisibility: 'private' as const, presentationVisibility: 'authenticated' as const };
+      const common = { accountId, revision: current.revision, region: 'Recife - PE', usageIntents: ['friendship'] as const, interestIds: INTEREST_IDS.slice(0, 3), photoVisibility: 'private' as const, presentationVisibility: 'authenticated' as const, pronounSelection: null, customPronouns: null, pronounsVisibility: 'private' as const, profession: null, professionVisibility: 'private' as const, languagesVisibility: 'authenticated' as const };
+      const first = { ...common, displayName: 'Ana Português', presentation: 'Primeira edição concorrente', languageCodes: ['pt'] };
+      const second = { ...common, displayName: 'Ana Libras', presentation: 'Segunda edição concorrente', languageCodes: ['bzs'] };
 
-      const results = await Promise.allSettled([nodeA.updateProfile.execute(input), nodeB.updateProfile.execute(input)]);
+      const results = await Promise.allSettled([nodeA.updateProfile.execute(first), nodeB.updateProfile.execute(second)]);
 
       expect(results.filter(({ status }) => status === 'fulfilled')).toHaveLength(1);
       expect(results.find(({ status }) => status === 'rejected')).toMatchObject({ reason: { code: 'PROFILE_REVISION_CONFLICT' } });
       const [row] = await query<{ revision: number; display_name: string; presentation: string }>(`select revision, display_name, presentation from profile where account_id = $1`, [accountId]);
-      expect(row).toEqual({ revision: current.revision + 1, display_name: 'Ana Atualizada', presentation: 'Atividades culturais em grupo' });
+      const languageRows = await query<{ language_code: string }>(`select language_code from profile_language where account_id = $1`, [accountId]);
+      expect(row?.revision).toBe(current.revision + 1);
+      if (row?.display_name === first.displayName) {
+        expect(row.presentation).toBe(first.presentation);
+        expect(languageRows).toEqual([{ language_code: 'pt' }]);
+      } else {
+        expect(row).toMatchObject({ display_name: second.displayName, presentation: second.presentation });
+        expect(languageRows).toEqual([{ language_code: 'bzs' }]);
+      }
     });
 
     test('six concurrent wrong OTPs count exactly five failures and lock the challenge', async () => {
@@ -497,6 +509,8 @@ describe('registration persistence (PostgreSQL integration)', () => {
     test('a failure while replacing interests rolls the whole profile update back', async () => {
       const accountId = await incompleteAccount(nodeA, 'profile-rollback@example.test');
       await nodeA.complete.execute({ accountId, birthDate: '1990-05-10', interestIds: INTEREST_IDS.slice(0, 3), documentIds: DOCUMENT_IDS });
+      const initial = await nodeA.getProfile.execute(accountId);
+      await nodeA.updateProfile.execute({ accountId, revision: initial.revision, displayName: initial.displayName, region: initial.region, usageIntents: initial.usageIntents, interestIds: initial.interests.map(({ id }) => id), presentation: initial.presentation, photoVisibility: 'private', presentationVisibility: 'private', pronounSelection: null, customPronouns: null, pronounsVisibility: 'private', profession: null, professionVisibility: 'private', languageCodes: ['pt'], languagesVisibility: 'private' });
       const before = await nodeA.getProfile.execute(accountId);
       await database.pool.query(`
         create function fail_profile_interest() returns trigger language plpgsql as $$
@@ -504,13 +518,14 @@ describe('registration persistence (PostgreSQL integration)', () => {
         create trigger fail_profile_interest before insert on account_interest
         for each row execute function fail_profile_interest();`);
       try {
-        await expect(nodeA.updateProfile.execute({ accountId, revision: before.revision, displayName: 'Não deve persistir', region: before.region, usageIntents: ['explore_city'], interestIds: INTEREST_IDS.slice(1, 4), presentation: 'Também não persiste', photoVisibility: 'private', presentationVisibility: 'private' })).rejects.toThrow();
+        await expect(nodeA.updateProfile.execute({ accountId, revision: before.revision, displayName: 'Não deve persistir', region: before.region, usageIntents: ['explore_city'], interestIds: INTEREST_IDS.slice(1, 4), presentation: 'Também não persiste', photoVisibility: 'private', presentationVisibility: 'private', pronounSelection: null, customPronouns: null, pronounsVisibility: 'private', profession: null, professionVisibility: 'private', languageCodes: ['bzs'], languagesVisibility: 'private' })).rejects.toThrow();
       } finally {
         await database.pool.query(`drop trigger fail_profile_interest on account_interest; drop function fail_profile_interest();`);
       }
       const after = await nodeA.getProfile.execute(accountId);
       expect(after).toMatchObject({ revision: before.revision, displayName: before.displayName, presentation: before.presentation, usageIntents: before.usageIntents });
       expect(after.interests.map(({ id }) => id).sort()).toEqual(before.interests.map(({ id }) => id).sort());
+      expect(after.languages.map(({ code }) => code)).toEqual(['pt']);
     });
 
     test('a failure midway through activation leaves no partial effect', async () => {
@@ -556,6 +571,8 @@ describe('registration persistence (PostgreSQL integration)', () => {
 
     test('the batch expires stale incomplete accounts and nulls their personal data', async () => {
       const accountId = await incompleteAccount(nodeA, 'stale@example.test');
+      await query(`update profile set pronoun_selection = 'ela_dela', pronouns_visibility = 'authenticated', profession = 'Produtora', profession_visibility = 'authenticated', languages_visibility = 'authenticated' where account_id = $1`, [accountId]);
+      await query(`insert into profile_language (account_id, language_code, selected_at) values ($1, 'pt', now())`, [accountId]);
       clock.advance(15 * DAY);
 
       const result = await nodeA.expireStale.execute();
@@ -563,7 +580,9 @@ describe('registration persistence (PostgreSQL integration)', () => {
       expect(result.accounts).toBeGreaterThanOrEqual(1);
       const [row] = await query<Record<string, unknown>>(
         `select a.status, a.birth_date, c.contact_hash, c.holds_contact, k.password_hash, p.display_name, p.region,
-                (select count(*) from profile_usage_intent where account_id = a.id)::text as intents
+                p.pronoun_selection, p.pronouns_visibility, p.profession, p.profession_visibility, p.languages_visibility,
+                (select count(*) from profile_usage_intent where account_id = a.id)::text as intents,
+                (select count(*) from profile_language where account_id = a.id)::text as languages
          from account a
          join account_contact c on c.account_id = a.id
          join account_credential k on k.account_id = a.id
@@ -579,7 +598,13 @@ describe('registration persistence (PostgreSQL integration)', () => {
         password_hash: null,
         display_name: null,
         region: null,
+        pronoun_selection: null,
+        pronouns_visibility: 'private',
+        profession: null,
+        profession_visibility: 'private',
+        languages_visibility: 'private',
         intents: '0',
+        languages: '0',
       });
     });
   });
