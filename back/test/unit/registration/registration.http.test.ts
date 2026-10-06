@@ -5,6 +5,7 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 
 import { ListActiveInterests } from '../../../src/modules/catalog/application/use-cases/list-active-interests.use-case';
+import { ListActiveLanguages } from '../../../src/modules/catalog/application/use-cases/list-active-languages.use-case';
 import { CatalogModule } from '../../../src/modules/catalog/catalog.module';
 import { ProfilesModule } from '../../../src/modules/profiles/profiles.module';
 import { CheckRegistrationEligibility } from '../../../src/modules/registration/application/use-cases/check-registration-eligibility.use-case';
@@ -67,6 +68,8 @@ async function createApp(overrides: Record<string, string> = {}): Promise<INestA
     .useValue({ execute: async () => legalDocuments })
     .overrideProvider(ListActiveInterests)
     .useValue({ execute: async () => [{ id: '00000000-0000-7000-8000-000000000001', slug: 'cinema', label: 'Cinema' }] })
+    .overrideProvider(ListActiveLanguages)
+    .useValue({ execute: async () => [{ code: 'pt', label: 'Português', active: true }, { code: 'bzs', label: 'Libras', active: true }] })
     .compile();
   const app = module.createNestApplication();
   configureApplication(app);
@@ -315,9 +318,14 @@ describe('registration HTTP contract v1', () => {
       }
     });
 
-    test('the interest catalog is public', async () => {
+    test('the public catalogs are never cached', async () => {
       const response = await http().get('/api/v1/catalog/interests?locale=pt-BR').expect(200);
       expect(response.body.data.interests).toHaveLength(1);
+      expect(response.headers['cache-control']).toBe('no-store');
+
+      const languages = await http().get('/api/v1/catalog/languages?locale=pt-BR').expect(200);
+      expect(languages.body.data.languages).toEqual([{ code: 'pt', label: 'Português' }, { code: 'bzs', label: 'Libras' }]);
+      expect(languages.headers['cache-control']).toBe('no-store');
     });
   });
 
@@ -341,9 +349,10 @@ describe('registration HTTP contract v1', () => {
     const document = response.body as {
       info: { version: string };
       paths: Record<string, Record<string, { parameters?: { name: string; in: string; required?: boolean }[] }>>;
+      components?: { schemas?: Record<string, { required?: string[]; properties?: Record<string, { nullable?: boolean; maxLength?: number; maxItems?: number }> }> };
     };
 
-    expect(document.info.version).toBe('0.12.0');
+    expect(document.info.version).toBe('0.13.0');
     const contract = Object.fromEntries(
       Object.entries(document.paths)
         .filter(([path]) => path.startsWith('/api/v1/'))
@@ -360,7 +369,24 @@ describe('registration HTTP contract v1', () => {
           ),
         ]),
     );
-    expect(contract).toMatchSnapshot();
+    const schemas = document.components?.schemas ?? {};
+    const update = schemas.UpdateProfileDto ?? {};
+    const own = schemas.OwnProfileResponseDto ?? {};
+    const preview = schemas.ProfilePreviewResponseDto ?? {};
+    const identityFields = ['presentation', 'pronounSelection', 'customPronouns', 'pronounsVisibility', 'profession', 'professionVisibility', 'languageCodes', 'languagesVisibility'];
+    const ownNullableFields = ['presentation', 'photo', 'pronounSelection', 'customPronouns', 'profession'];
+    const identityContract = {
+      updateRequired: identityFields.filter((field) => update.required?.includes(field)),
+      updateNullable: identityFields.filter((field) => update.properties?.[field]?.nullable === true),
+      customPronounsMaxLength: update.properties?.customPronouns?.maxLength,
+      professionMaxLength: update.properties?.profession?.maxLength,
+      languageCodesMaxItems: update.properties?.languageCodes?.maxItems,
+      ownRequired: [...identityFields.filter((field) => field !== 'languageCodes'), 'languages', 'photo'].filter((field) => own.required?.includes(field)),
+      ownNullable: ownNullableFields.filter((field) => own.properties?.[field]?.nullable === true),
+      previewOptional: ['pronouns', 'profession', 'languages'].filter((field) => !preview.required?.includes(field)),
+      languageListRequired: schemas.LanguageListDto?.required ?? [],
+    };
+    expect({ __identity: identityContract, ...contract }).toMatchSnapshot();
     expect(JSON.stringify(document)).not.toContain(process.env.BFF_INTERNAL_TOKEN!);
   });
 });

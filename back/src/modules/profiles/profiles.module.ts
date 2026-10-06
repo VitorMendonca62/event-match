@@ -6,6 +6,7 @@ import { PersistenceModule } from '../../shared/infrastructure/persistence/persi
 import { NoStoreMiddleware } from '../../shared/presentation/http/no-store.middleware';
 import { CatalogModule } from '../catalog/catalog.module';
 import { INTEREST_CATALOG_READER_PORT } from '../catalog/domain/ports/interest-catalog-reader.port';
+import { LANGUAGE_CATALOG_READER_PORT } from '../catalog/domain/ports/language-catalog-reader.port';
 import { IdentityAccessModule } from '../identity-access/identity-access.module';
 import { GetOwnProfile, PreviewOwnProfile, UpdateOwnProfile } from './application/use-cases/profile.use-cases';
 import { PROFILE_REPOSITORY_PORT } from './domain/ports/outbound/profile-repository.port';
@@ -42,9 +43,9 @@ import { ProfileBffGuard, ProfileMediaGuard, ProfileReadGuard, ProfileWriteGuard
     { provide: PROFILE_MEDIA_REPOSITORY_PORT, useClass: DrizzleProfileMediaRepository },
     { provide: PROFILE_TELEMETRY_PORT, useClass: LoggerProfileTelemetryAdapter },
     { provide: PROFILE_MEDIA_POLICY, inject: [ConfigService], useFactory: (config: ConfigService<BackendEnv, true>) => ({ enabled: config.getOrThrow<boolean>('PROFILE_MEDIA_ENABLED'), uploadTtlMs: config.getOrThrow<number>('PROFILE_PHOTO_UPLOAD_TTL_SECONDS') * 1000, accountLimit: config.getOrThrow<number>('PROFILE_PHOTO_ACCOUNT_DAILY_LIMIT'), originLimit: config.getOrThrow<number>('PROFILE_PHOTO_ORIGIN_15M_LIMIT') }) },
-    useCaseProvider(GetOwnProfile, [UNIT_OF_WORK_PORT, PROFILE_REPOSITORY_PORT, PROFILE_INVITATION_SUBJECT_PORT, INTEREST_CATALOG_READER_PORT, PROFILE_MEDIA_REPOSITORY_PORT, PROFILE_IMAGE_STORE_PORT, PROFILE_TELEMETRY_PORT, PROFILE_MEDIA_POLICY]),
-    useCaseProvider(UpdateOwnProfile, [UNIT_OF_WORK_PORT, PROFILE_REPOSITORY_PORT, INTEREST_CATALOG_READER_PORT, PROFILE_MEDIA_REPOSITORY_PORT, PROFILE_IMAGE_STORE_PORT, PROFILE_TELEMETRY_PORT, PROFILE_MEDIA_POLICY]),
-    useCaseProvider(PreviewOwnProfile, [UNIT_OF_WORK_PORT, PROFILE_REPOSITORY_PORT, INTEREST_CATALOG_READER_PORT, PROFILE_MEDIA_REPOSITORY_PORT, PROFILE_IMAGE_STORE_PORT, PROFILE_TELEMETRY_PORT, PROFILE_MEDIA_POLICY]),
+    useCaseProvider(GetOwnProfile, [UNIT_OF_WORK_PORT, PROFILE_REPOSITORY_PORT, PROFILE_INVITATION_SUBJECT_PORT, INTEREST_CATALOG_READER_PORT, LANGUAGE_CATALOG_READER_PORT, PROFILE_MEDIA_REPOSITORY_PORT, PROFILE_IMAGE_STORE_PORT, PROFILE_TELEMETRY_PORT, PROFILE_MEDIA_POLICY]),
+    useCaseProvider(UpdateOwnProfile, [UNIT_OF_WORK_PORT, PROFILE_REPOSITORY_PORT, INTEREST_CATALOG_READER_PORT, LANGUAGE_CATALOG_READER_PORT, PROFILE_MEDIA_REPOSITORY_PORT, PROFILE_IMAGE_STORE_PORT, PROFILE_TELEMETRY_PORT, PROFILE_MEDIA_POLICY]),
+    useCaseProvider(PreviewOwnProfile, [UNIT_OF_WORK_PORT, PROFILE_REPOSITORY_PORT, INTEREST_CATALOG_READER_PORT, LANGUAGE_CATALOG_READER_PORT, PROFILE_MEDIA_REPOSITORY_PORT, PROFILE_IMAGE_STORE_PORT, PROFILE_TELEMETRY_PORT, PROFILE_MEDIA_POLICY]),
     useCaseProvider(CleanupProfileMedia, [UNIT_OF_WORK_PORT, PROFILE_MEDIA_REPOSITORY_PORT, PROFILE_IMAGE_STORE_PORT, PROFILE_TELEMETRY_PORT]),
     useCaseProvider(CreateProfilePhotoUpload, [UNIT_OF_WORK_PORT, PROFILE_MEDIA_REPOSITORY_PORT, PROFILE_IMAGE_STORE_PORT, PROFILE_MEDIA_SUBJECT_PORT, PROFILE_MEDIA_POLICY, PROFILE_REPOSITORY_PORT, PROFILE_TELEMETRY_PORT, CleanupProfileMedia]),
     useCaseProvider(FinalizeProfilePhotoUpload, [UNIT_OF_WORK_PORT, PROFILE_MEDIA_REPOSITORY_PORT, PROFILE_IMAGE_STORE_PORT, PROFILE_TELEMETRY_PORT, CleanupProfileMedia]),

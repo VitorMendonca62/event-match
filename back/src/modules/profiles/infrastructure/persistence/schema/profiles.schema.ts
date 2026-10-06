@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { check, customType, index, integer, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { account } from '../../../../registration/infrastructure/persistence/schema/registration.schema';
-import { interest } from '../../../../catalog/infrastructure/persistence/schema/catalog.schema';
+import { interest, language } from '../../../../catalog/infrastructure/persistence/schema/catalog.schema';
 const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => 'bytea' });
 
 export const profile = pgTable('profile', {
@@ -11,6 +11,12 @@ export const profile = pgTable('profile', {
   presentation: text('presentation'),
   photoVisibility: text('photo_visibility').notNull().default('private'),
   presentationVisibility: text('presentation_visibility').notNull().default('private'),
+  pronounSelection: text('pronoun_selection'),
+  customPronouns: text('custom_pronouns'),
+  pronounsVisibility: text('pronouns_visibility').notNull().default('private'),
+  profession: text('profession'),
+  professionVisibility: text('profession_visibility').notNull().default('private'),
+  languagesVisibility: text('languages_visibility').notNull().default('private'),
   revision: integer('revision').notNull().default(1),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -21,6 +27,13 @@ export const profile = pgTable('profile', {
   check('profile_photo_visibility_check', sql`${table.photoVisibility} in ('private', 'authenticated', 'public')`),
   check('profile_presentation_visibility_check', sql`${table.presentationVisibility} in ('private', 'authenticated', 'public')`),
   check('profile_revision_check', sql`${table.revision} > 0`),
+  check('profile_pronoun_selection_check', sql`${table.pronounSelection} is null or ${table.pronounSelection} in ('ela_dela', 'ele_dele', 'elu_delu', 'other', 'prefer_not_to_say')`),
+  check('profile_custom_pronouns_check', sql`(${table.pronounSelection} = 'other' and ${table.customPronouns} is not null and char_length(${table.customPronouns}) between 1 and 40) or (${table.pronounSelection} is distinct from 'other' and ${table.customPronouns} is null)`),
+  check('profile_pronouns_visibility_check', sql`${table.pronounsVisibility} in ('private', 'authenticated', 'public')`),
+  check('profile_profession_length_check', sql`${table.profession} is null or char_length(${table.profession}) between 1 and 80`),
+  check('profile_profession_visibility_check', sql`${table.professionVisibility} in ('private', 'authenticated', 'public')`),
+  check('profile_languages_visibility_check', sql`${table.languagesVisibility} in ('private', 'authenticated', 'public')`),
+  check('profile_pronouns_prefer_private_check', sql`${table.pronounSelection} is distinct from 'prefer_not_to_say' or ${table.pronounsVisibility} = 'private'`),
 ]);
 
 export const profileUsageIntent = pgTable('profile_usage_intent', {
@@ -37,6 +50,15 @@ export const accountInterest = pgTable('account_interest', {
   interestId: uuid('interest_id').notNull().references(() => interest.id),
   selectedAt: timestamp('selected_at', { withTimezone: true }).notNull(),
 }, (table) => [primaryKey({ columns: [table.accountId, table.interestId] })]);
+
+export const profileLanguage = pgTable('profile_language', {
+  accountId: uuid('account_id').notNull().references(() => account.id, { onDelete: 'cascade' }),
+  languageCode: text('language_code').notNull().references(() => language.code),
+  selectedAt: timestamp('selected_at', { withTimezone: true }).notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.accountId, table.languageCode] }),
+  index('profile_language_language_index').on(table.languageCode),
+]);
 
 export const profilePhotoAsset = pgTable('profile_photo_asset', {
   id: uuid('id').primaryKey(),

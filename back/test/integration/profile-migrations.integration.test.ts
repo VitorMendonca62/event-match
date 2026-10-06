@@ -18,7 +18,22 @@ function migrationsThrough0006(): string {
   return folder;
 }
 
-describe('migration 0007 over existing 0006 profile data', () => {
+function languageSeedStatement(): string {
+  const migration = readFileSync(
+    join(MIGRATIONS_CONFIG.migrationsFolder, '0008_profile_optional_identity.sql'),
+    'utf8',
+  );
+  const migrationBlock = migration
+    .split('--> statement-breakpoint')
+    .find((candidate) => candidate.includes('INSERT INTO "language"'))
+    ?.trim();
+  const seedStart = migrationBlock?.indexOf('INSERT INTO "language"') ?? -1;
+  if (!migrationBlock || seedStart < 0)
+    throw new Error('language seed statement not found in migration 0008');
+  return migrationBlock.slice(seedStart);
+}
+
+describe('migrations 0007 and 0008 over existing 0006 profile data', () => {
   let database: EphemeralDatabase;
   let folder: string;
 
@@ -110,5 +125,34 @@ describe('migration 0007 over existing 0006 profile data', () => {
       update profile set presentation = ''
       where account_id = '30000000-0000-7000-8000-000000000007'
     `)).rejects.toMatchObject({ code: '23514' });
+  });
+
+  test('adds private optional identity and an idempotent language catalog', async () => {
+    const profile = await database.pool.query(`select pronoun_selection, custom_pronouns, pronouns_visibility, profession, profession_visibility, languages_visibility from profile where account_id = '30000000-0000-7000-8000-000000000007'`);
+    expect(profile.rows).toEqual([{ pronoun_selection: null, custom_pronouns: null, pronouns_visibility: 'private', profession: null, profession_visibility: 'private', languages_visibility: 'private' }]);
+    const catalog = await database.pool.query(`select code, label_pt_br from language order by sort_order`);
+    expect(catalog.rows).toHaveLength(13);
+    expect(catalog.rows).toContainEqual({ code: 'bzs', label_pt_br: 'Libras' });
+    await expect(database.pool.query(`update profile set pronoun_selection = 'other', custom_pronouns = null where account_id = '30000000-0000-7000-8000-000000000007'`)).rejects.toMatchObject({ code: '23514' });
+    await database.pool.query(`insert into profile_language (account_id, language_code, selected_at) values ('30000000-0000-7000-8000-000000000007', 'pt', now())`);
+    await expect(database.pool.query(`insert into profile_language (account_id, language_code, selected_at) values ('30000000-0000-7000-8000-000000000007', 'pt', now())`)).rejects.toMatchObject({ code: '23505' });
+    await expect(database.pool.query(`insert into profile_language (account_id, language_code, selected_at) values ('30000000-0000-7000-8000-000000000007', 'xx', now())`)).rejects.toMatchObject({ code: '23503' });
+    await expect(database.pool.query(`insert into profile_language (account_id, language_code, selected_at) values ('30000000-0000-7000-8000-000000000099', 'pt', now())`)).rejects.toMatchObject({ code: '23503' });
+
+    await database.pool.query(languageSeedStatement());
+    await database.migrate();
+    const catalogAfterRerun = await database.pool.query(`select code from language order by sort_order`);
+    expect(catalogAfterRerun.rows).toHaveLength(13);
+
+    const client = await database.pool.connect();
+    try {
+      await client.query('begin');
+      await client.query(`delete from account where id = '30000000-0000-7000-8000-000000000007'`);
+      const relationAfterAccountDeletion = await client.query(`select count(*)::int as count from profile_language where account_id = '30000000-0000-7000-8000-000000000007'`);
+      expect(relationAfterAccountDeletion.rows).toEqual([{ count: 0 }]);
+    } finally {
+      await client.query('rollback');
+      client.release();
+    }
   });
 });

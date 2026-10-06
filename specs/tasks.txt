@@ -1,3 +1,46 @@
+TASK 20 — Região estruturada por estado e município
+
+Objetivo:
+Substituir a região aproximada em texto livre por uma seleção estruturada de Unidade da Federação e município, sem depender do IBGE em tempo de execução nem apagar regiões legadas.
+
+Valor para a pessoa usuária:
+Como participante, quero escolher meu estado e minha cidade em listas confiáveis, para evitar erros de digitação e receber futuramente encontros compatíveis com minha região.
+
+Requisitos de origem e dependências:
+- Depende da TASK 13 para edição autenticada e revisão otimista do perfil.
+- Rastreia RF004, RF012, RF015, RF017, RF022–RF023, RN011–RN014 e RNF001.
+- Usa como fonte oficial a tabela de códigos de municípios do IBGE, importada e versionada no EventMatch.
+
+Escopo:
+- Disponibilizar as 27 UFs e os municípios ativos de cada UF, com código IBGE estável, nome e estado.
+- No cadastro e no perfil, selecionar primeiro a UF e depois pesquisar/selecionar o município correspondente.
+- Manter o catálogo no backend/PostgreSQL e servi-lo por contratos próprios; o frontend não acessa o IBGE nem embute a lista inteira no bundle.
+- Preservar regiões legadas em texto até que a própria pessoa escolha UF e município, sem inferência automática ambígua.
+- Preparar atualização versionada do catálogo para criação, renomeação, fusão ou desativação de município.
+- Atualizar cadastro, perfil, prévia, documentação, observabilidade segura e testes.
+
+Fora de escopo:
+- Bairro, endereço, CEP, coordenada, localização em tempo real, geocodificação ou cálculo de distância.
+- Consumir a API do IBGE durante uma requisição da pessoa usuária.
+- Corrigir automaticamente textos legados ou usar município para recomendação nesta entrega.
+
+Critérios de aceite:
+- A lista de municípios depende da UF selecionada e aceita somente código ativo pertencente àquela UF.
+- Cadastro novo não conclui sem UF e município válidos; negar localização do aparelho não impede a seleção manual.
+- Perfil legado continua legível e editável até a pessoa substituir o texto por uma seleção estruturada.
+- O contrato persiste o código IBGE e projeta nome/UF; nomes não são usados como identidade do município.
+- O catálogo não torna endereço, bairro ou posição exata disponíveis em respostas ou logs.
+
+Dúvidas e bloqueios para o planejamento:
+- Definir periodicidade e processo operacional de atualização do catálogo IBGE.
+- Definir a apresentação de Brasília/Distrito Federal e o tratamento de municípios desativados já referenciados.
+
+Estimativa inicial:
+- Complexidade Fibonacci: 8.
+- Risco de deploy: médio/alto, por alterar um campo obrigatório compartilhado entre cadastro e perfil e exigir compatibilidade com texto legado.
+
+---
+
 TASK 19 — Acessibilidade e alimentação com privacidade contextual
 
 Objetivo:
@@ -224,7 +267,10 @@ Critérios de aceite:
 - Conteúdo e valores não aparecem em logs, métricas ou respostas sem autorização.
 
 Dúvidas e bloqueios para o planejamento:
-- Pendente de definição: texto livre/lista para pronomes, limite/formato de profissão, catálogo de idiomas e proficiência.
+- Decidido: pronomes usam lista inicial `ela/dela`, `ele/dele` e `elu/delu`, mais `Outro` com texto livre e `Prefiro não informar`.
+- Decidido: profissão é texto livre opcional, sem catálogo nem verificação.
+- Decidido: idiomas usam catálogo pesquisável e extensível, no máximo cinco, incluindo Libras e sem nível de proficiência nesta entrega.
+- Decidido: cada grupo possui visibilidade própria, privada por padrão; somente `private | authenticated` fica editável enquanto não houver perfil público e moderação.
 
 Estimativa inicial:
 - Complexidade Fibonacci: 8.

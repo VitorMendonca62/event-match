@@ -188,3 +188,11 @@ Exportação de dados, documentos excepcionais e retenção permanecem condicion
 - O grant retorna somente URL oficial, cloud name, API key pública, preset e parâmetros efêmeros assinados. O browser envia direto ao Cloudinary; a finalização revalida assinatura e consulta o recurso antes da transação curta de ativação.
 - A foto retornada contém somente `deliveryUrl`, `width` e `height`. A URL do derivado é assinada, mas não possui nem promete expiração temporal; `expiresAt` existe somente no grant de upload (ADR-042).
 - `POST /api/profile/invitation/dismiss` consulta o perfil e grava cookie HttpOnly de sete dias, por sujeito HMAC; não grava preferência de onboarding no banco.
+
+### Identidade opcional do perfil (SDD-016, backend 0.13.0; frontend 0.14.0)
+
+- `GET /api/v1/catalog/languages?locale=pt-BR` lista `{ code, label }` ativos em ordem estável, é público (sem sessão nem token BFF, como `/catalog/interests`) e, como ele, responde `Cache-Control: no-store`; `GET /api/catalog/languages` é o proxy Next.js filtrado.
+- `GET/PUT /api/v1/profiles/me` acrescenta seleção de pronome, texto personalizado, profissão, idiomas e três visibilidades. O PUT recebe snapshot completo, no máximo cinco códigos únicos e responde `422` com somente `unknown_language` ou `inactive_language` em `data.reason`.
+- Snapshot completo vale também para `presentation`: a chave passa a ser obrigatória no PUT (valor `string` de 1–500 ou `null`); omiti-la responde `400`. Antes o campo era opcional e, quando ausente, chegava indefinido ao domínio e resultava em `500`. Remover a apresentação continua sendo enviar `null`. No OpenAPI, `presentation` e `photo` de `OwnProfileResponseDto` passam a constar como obrigatórios e anuláveis, refletindo o que a API já devolvia.
+- `GET /api/v1/profiles/me/preview` devolve apenas `pronouns`, `profession` e `languages` autorizados; não expõe seleção interna, recusa explícita, visibilidades ou estado do catálogo.
+- Todas as respostas permanecem `no-store`; BFFs validam sessão/origem/JSON e nunca registram conteúdo dos novos campos.

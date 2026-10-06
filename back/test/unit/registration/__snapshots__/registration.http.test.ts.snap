@@ -21,6 +21,9 @@ exports[`registration HTTP contract v1 the OpenAPI contract is versioned and doc
   "/api/v1/catalog/interests": {
     "get": [],
   },
+  "/api/v1/catalog/languages": {
+    "get": [],
+  },
   "/api/v1/profiles/me": {
     "get": [
       "x-eventmatch-bff-token*",
@@ -115,6 +118,53 @@ exports[`registration HTTP contract v1 the OpenAPI contract is versioned and doc
     "put": [
       "Idempotency-Key*",
       "x-eventmatch-bff-token*",
+    ],
+  },
+  "__identity": {
+    "customPronounsMaxLength": 40,
+    "languageCodesMaxItems": 5,
+    "languageListRequired": [
+      "languages",
+    ],
+    "ownNullable": [
+      "presentation",
+      "photo",
+      "pronounSelection",
+      "customPronouns",
+      "profession",
+    ],
+    "ownRequired": [
+      "presentation",
+      "pronounSelection",
+      "customPronouns",
+      "pronounsVisibility",
+      "profession",
+      "professionVisibility",
+      "languagesVisibility",
+      "languages",
+      "photo",
+    ],
+    "previewOptional": [
+      "pronouns",
+      "profession",
+      "languages",
+    ],
+    "professionMaxLength": 80,
+    "updateNullable": [
+      "presentation",
+      "pronounSelection",
+      "customPronouns",
+      "profession",
+    ],
+    "updateRequired": [
+      "presentation",
+      "pronounSelection",
+      "customPronouns",
+      "pronounsVisibility",
+      "profession",
+      "professionVisibility",
+      "languageCodes",
+      "languagesVisibility",
     ],
   },
 }

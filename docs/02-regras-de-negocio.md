@@ -45,6 +45,14 @@ As regras normativas completas são RN001–RN168 em [`DER-EventMatch-MVP.md`](D
 - “Agora não” adia o convite por sete dias naquele navegador e conta; o cookie não altera dados, completude ou autorização.
 - Foto aceita JPEG/PNG/WebP estático até 5 MiB e mínimo 320×320. Upload incompleto/forjado não ativa asset; substituição e remoção convergem por cleanup idempotente.
 
+### Identidade opcional do perfil (SDD-016)
+
+- Pronomes, profissão e idiomas são opcionais, removíveis, privados por padrão e não alteram os seis itens de completude nem concedem capacidades.
+- Pronomes usam `ela_dela`, `ele_dele`, `elu_delu`, `other` ou `prefer_not_to_say`. `other` exige texto de até 40 caracteres; `prefer_not_to_say` força audiência privada e nunca aparece na prévia. Trocar entre as demais opções preserva a escolha de compartilhamento; sair de `prefer_not_to_say` sempre reabre o grupo como `private`, nunca restaura um compartilhamento anterior.
+- Profissão é autodeclaração textual de até 80 caracteres, sem selo ou verificação. Textos livres rejeitam controles e contato evidente.
+- A pessoa escolhe até cinco códigos únicos do catálogo de idiomas, sem proficiência. Idioma inativo já selecionado pode ser preservado, mas não readicionado após remoção.
+- Pronomes, profissão e idiomas possuem controles independentes entre `private` e `authenticated`; `public` continua reservado.
+
 ## 3. Eventos e anfitriões
 
 - Apenas encontros presenciais, informais, gratuitos e em local público/estabelecimento identificável podem ser publicados (RN019–RN020).

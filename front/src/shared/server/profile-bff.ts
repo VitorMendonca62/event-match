@@ -44,6 +44,10 @@ export async function proxyProfile(request: Request, deps: Deps): Promise<Respon
   const profile = ownProfileSchema.safeParse(dataOf(upstream.body));
   if (upstream.status === 200 && profile.success) return response(200, profile.data);
   if (upstream.status === 401) return response(401, {}, [expiredSessionCookie(deps.env)]);
+  if (upstream.status === 422) {
+    const reason = z.object({ reason: z.enum(['unknown_language', 'inactive_language']) }).strict().safeParse(dataOf(upstream.body));
+    return response(422, reason.success ? reason.data : {});
+  }
   if ([400, 403, 409].includes(upstream.status)) return response(upstream.status);
   return response(503);
 }

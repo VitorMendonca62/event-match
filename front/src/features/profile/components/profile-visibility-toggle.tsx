@@ -1,10 +1,11 @@
 'use client';
 
 type ProfileVisibilityToggleProps = Readonly<{
-  name: 'photoVisibility' | 'presentationVisibility';
+  name: 'photoVisibility' | 'presentationVisibility' | 'pronounsVisibility' | 'professionVisibility' | 'languagesVisibility';
   question: string;
   description: string;
   defaultChecked: boolean;
+  disabled?: boolean;
 }>;
 
 export function ProfileVisibilityToggle({
@@ -12,6 +13,7 @@ export function ProfileVisibilityToggle({
   question,
   description,
   defaultChecked,
+  disabled = false,
 }: ProfileVisibilityToggleProps) {
   return (
     <div className="rounded-2xl border-2 border-border bg-surface p-4 transition-colors has-[:checked]:border-foreground has-[:checked]:bg-primary-muted has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-3 has-[:focus-visible]:outline-warning">
@@ -22,6 +24,7 @@ export function ProfileVisibilityToggle({
           name={name}
           value="authenticated"
           defaultChecked={defaultChecked}
+          disabled={disabled}
           className="peer sr-only"
         />
         <span className="min-w-0">

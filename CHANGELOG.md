@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.14.0 — 2026-10-03
+
+Identidade opcional no perfil (SDD-016; ADR-043). Mudança aditiva: frontend/workspace `0.14.0`, backend `0.13.0`. Rollout coordenado: desligar `PROFILE_UI_ENABLED`, aplicar `0008_profile_optional_identity`, publicar o backend e depois o frontend, executar o smoke conjunto e somente então religar a UI; não há compatibilidade cruzada durante essa janela controlada.
+
+- Pronomes controlados/personalizados, profissão textual e até cinco idiomas, todos opcionais, removíveis e com visibilidade independente privada por padrão; completude e capacidades permanecem inalteradas.
+- Novo catálogo versionado de idiomas com endpoint público, seed de 13 itens incluindo Libras (`bzs`) e preservação de seleção histórica inativa.
+- `GET /api/v1/catalog/interests` e `GET /api/v1/catalog/languages` passam a responder `Cache-Control: no-store`, como as rotas de perfil.
+- Atualização do perfil mantém revisão otimista e substitui campos/relação `profile_language` atomicamente; prévia omite campos privados e `prefer_not_to_say`.
+- **Contrato mais estrito:** `PUT /api/v1/profiles/me` passa a exigir a chave `presentation` (`string` ou `null`) como parte do snapshot completo; omiti-la responde `400` em vez do `500` anterior. O BFF já enviava a chave, então não há impacto no frontend. OpenAPI marca `presentation` e `photo` da visão própria como obrigatórios e anuláveis.
+- `/perfil` carrega perfil, interesses e idiomas em paralelo e adiciona seção acessível “Identidade e comunicação”; `/perfil/previa` mostra somente a projeção autorizada.
+- Migration `0008` é aditiva e forward-only. Rollback operacional remove a UI/rotas da publicação anterior e preserva schema/dados.
+- OpenAPI versionada inclui o catálogo de idiomas; integração PostgreSQL cobre as novas tabelas, as nove migrations e a reaplicação idempotente do migrator.
+
 ## 0.13.0 — 2026-10-01
 
 Primeiro acesso com convite e edição do perfil (SDD-015; ADR-038 a ADR-040). Mudança aditiva: frontend/workspace `0.13.0`, backend `0.12.0`; aplicar `0007_profile_completion` e publicar inicialmente com `PROFILE_HTTP_ENABLED=false`, `PROFILE_MEDIA_ENABLED=false` e `PROFILE_UI_ENABLED=false`.

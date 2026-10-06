@@ -1,5 +1,6 @@
 import type { UnitOfWorkPort } from '../../../../shared/application/ports/unit-of-work.port';
 import type { InterestCatalogReaderPort } from '../../../catalog/domain/ports/interest-catalog-reader.port';
+import type { LanguageCatalogReaderPort } from '../../../catalog/domain/ports/language-catalog-reader.port';
 import { Profile, type EditableProfileVisibility, type UsageIntent } from '../../domain/entities/profile';
 import { ProfileError } from '../../domain/errors/profile.error';
 import type { ProfileRepositoryPort } from '../../domain/ports/outbound/profile-repository.port';
@@ -11,11 +12,29 @@ import type { ProfileTelemetryPort } from '../../domain/ports/outbound/profile-t
 import { observed } from '../services/profile-telemetry';
 import type { ProfileMediaPolicy } from './profile-media.use-cases';
 
+const PRONOUN_LABELS_PT_BR = { ela_dela: 'Ela/dela', ele_dele: 'Ele/dele', elu_delu: 'Elu/delu' } as const;
+
+async function hydrateProfile(
+  context: Parameters<LanguageCatalogReaderPort['findByCodes']>[0],
+  profile: Awaited<ReturnType<ProfileRepositoryPort['findOwn']>> & {},
+  languages: LanguageCatalogReaderPort,
+) {
+  const entries = await languages.findByCodes(context, profile.languageCodes);
+  const byCode = new Map(entries.map((entry) => [entry.code, entry]));
+  return {
+    ...profile,
+    languages: profile.languageCodes.map((code) => byCode.get(code)).filter((entry): entry is NonNullable<typeof entry> => Boolean(entry)),
+  };
+}
+
 function ownView(profile: ReturnType<Profile['snapshot']>, hasActivePhoto = profile.photo !== null) {
   return {
     revision: profile.revision, displayName: profile.displayName, region: profile.region,
     usageIntents: profile.usageIntents, interests: profile.interests, presentation: profile.presentation,
     photoVisibility: profile.photoVisibility, presentationVisibility: profile.presentationVisibility, photo: profile.photo,
+    pronounSelection: profile.pronounSelection, customPronouns: profile.customPronouns, pronounsVisibility: profile.pronounsVisibility,
+    profession: profile.profession, professionVisibility: profile.professionVisibility,
+    languages: profile.languages, languagesVisibility: profile.languagesVisibility,
     completion: new ProfileCompletion().calculate(profile, hasActivePhoto),
   };
 }
@@ -24,18 +43,25 @@ export type UpdateOwnProfileInput = Readonly<{
   accountId: string; revision: number; displayName: string; region: string;
   usageIntents: readonly UsageIntent[]; interestIds: readonly string[]; presentation: string | null;
   photoVisibility: EditableProfileVisibility; presentationVisibility: EditableProfileVisibility;
+  pronounSelection: import('../../domain/entities/profile').PronounSelection | null; customPronouns: string | null;
+  pronounsVisibility: EditableProfileVisibility; profession: string | null; professionVisibility: EditableProfileVisibility;
+  languageCodes: readonly string[]; languagesVisibility: EditableProfileVisibility;
 }>;
 
 export class GetOwnProfile {
-  constructor(private readonly uow: UnitOfWorkPort, private readonly profiles: ProfileRepositoryPort, private readonly subjects: ProfileInvitationSubjectPort, private readonly catalog: InterestCatalogReaderPort, private readonly media: ProfileMediaRepositoryPort, private readonly images: ProfileImageStorePort, private readonly telemetry: ProfileTelemetryPort, private readonly mediaPolicy: ProfileMediaPolicy) {}
+  constructor(private readonly uow: UnitOfWorkPort, private readonly profiles: ProfileRepositoryPort, private readonly subjects: ProfileInvitationSubjectPort, private readonly catalog: InterestCatalogReaderPort, private readonly languages: LanguageCatalogReaderPort, private readonly media: ProfileMediaRepositoryPort, private readonly images: ProfileImageStorePort, private readonly telemetry: ProfileTelemetryPort, private readonly mediaPolicy: ProfileMediaPolicy) {}
   async execute(accountId: string) {
     return observed(this.telemetry, 'profile.read', async () => {
     const loaded = await this.uow.execute(async (context) => {
       const found = await this.profiles.findOwn(context, accountId);
       if (!found) return null;
-      const active = await this.catalog.listActive(context);
+      const [active, hydrated, photo] = await Promise.all([
+        this.catalog.listActive(context),
+        hydrateProfile(context, found, this.languages),
+        this.mediaPolicy.enabled ? this.media.findActive(context, accountId) : null,
+      ]);
       const selected = new Set(found.interests.map(({ id }) => id));
-      return { profile: { ...found, interests: active.filter(({ id }) => selected.has(id)) }, photo: this.mediaPolicy.enabled ? await this.media.findActive(context, accountId) : null };
+      return { profile: { ...hydrated, interests: active.filter(({ id }) => selected.has(id)) }, photo };
     });
     if (!loaded) throw new ProfileError('PROFILE_NOT_FOUND');
     const delivery = loaded.photo ? await this.images.createSignedDelivery(loaded.photo) : null;
@@ -46,7 +72,7 @@ export class GetOwnProfile {
 }
 
 export class UpdateOwnProfile {
-  constructor(private readonly uow: UnitOfWorkPort, private readonly profiles: ProfileRepositoryPort, private readonly catalog: InterestCatalogReaderPort, private readonly media: ProfileMediaRepositoryPort, private readonly images: ProfileImageStorePort, private readonly telemetry: ProfileTelemetryPort, private readonly mediaPolicy: ProfileMediaPolicy) {}
+  constructor(private readonly uow: UnitOfWorkPort, private readonly profiles: ProfileRepositoryPort, private readonly catalog: InterestCatalogReaderPort, private readonly languages: LanguageCatalogReaderPort, private readonly media: ProfileMediaRepositoryPort, private readonly images: ProfileImageStorePort, private readonly telemetry: ProfileTelemetryPort, private readonly mediaPolicy: ProfileMediaPolicy) {}
   async execute(input: UpdateOwnProfileInput) {
     return observed(this.telemetry, 'profile.update', async () => {
     const updated = await this.uow.execute(async (context) => {
@@ -56,11 +82,25 @@ export class UpdateOwnProfile {
       const interests = await this.catalog.findActiveByIds(context, input.interestIds);
       if (interests.length !== new Set(input.interestIds).size) throw new ProfileError('INACTIVE_INTEREST');
       const summaries = await this.catalog.listActive(context);
+      const catalogLanguages = await this.languages.findByCodes(context, [...new Set([...input.languageCodes, ...current.languageCodes])]);
+      const requestedCodes = new Set(input.languageCodes);
+      const foundLanguages = catalogLanguages.filter(({ code }) => requestedCodes.has(code));
+      if (foundLanguages.length !== requestedCodes.size) throw new ProfileError('UNKNOWN_LANGUAGE', 'unknown_language');
+      const currentCodes = new Set(current.languageCodes);
+      if (foundLanguages.some(({ code, active }) => !active && !currentCodes.has(code))) throw new ProfileError('INACTIVE_LANGUAGE', 'inactive_language');
+      const languagesByCode = new Map(foundLanguages.map((item) => [item.code, item]));
+      const languageEntries = input.languageCodes.map((code) => languagesByCode.get(code)!);
       const selected = new Set(input.interestIds);
-      const next = Profile.restore(current).update({
+      const currentByCode = new Map(catalogLanguages.map((item) => [item.code, item]));
+      const hydratedCurrent = { ...current, languages: current.languageCodes.map((code) => currentByCode.get(code)).filter((entry): entry is NonNullable<typeof entry> => Boolean(entry)) };
+      const next = Profile.restore(hydratedCurrent).update({
         displayName: input.displayName, region: input.region, usageIntents: input.usageIntents,
         interests: summaries.filter((item) => selected.has(item.id)), presentation: input.presentation,
         photoVisibility: input.photoVisibility, presentationVisibility: input.presentationVisibility,
+        pronounSelection: input.pronounSelection, customPronouns: input.customPronouns,
+        pronounsVisibility: input.pronounsVisibility, profession: input.profession,
+        professionVisibility: input.professionVisibility, languages: languageEntries,
+        languagesVisibility: input.languagesVisibility,
       });
       if (await this.profiles.updateIfRevision(context, next, input.revision) === 'conflict') throw new ProfileError('PROFILE_REVISION_CONFLICT');
       return { profile: next.snapshot(), photo: this.mediaPolicy.enabled ? await this.media.findActive(context, input.accountId) : null };
@@ -75,20 +115,24 @@ export class UpdateOwnProfile {
 }
 
 export class PreviewOwnProfile {
-  constructor(private readonly uow: UnitOfWorkPort, private readonly profiles: ProfileRepositoryPort, private readonly catalog: InterestCatalogReaderPort, private readonly media: ProfileMediaRepositoryPort, private readonly images: ProfileImageStorePort, private readonly telemetry: ProfileTelemetryPort, private readonly mediaPolicy: ProfileMediaPolicy) {}
+  constructor(private readonly uow: UnitOfWorkPort, private readonly profiles: ProfileRepositoryPort, private readonly catalog: InterestCatalogReaderPort, private readonly languages: LanguageCatalogReaderPort, private readonly media: ProfileMediaRepositoryPort, private readonly images: ProfileImageStorePort, private readonly telemetry: ProfileTelemetryPort, private readonly mediaPolicy: ProfileMediaPolicy) {}
   async execute(accountId: string) {
     return observed(this.telemetry, 'profile.preview', async () => {
     const loaded = await this.uow.execute(async (context) => {
       const found = await this.profiles.findOwn(context, accountId);
       if (!found) return null;
-      const active = await this.catalog.listActive(context);
+      const [active, hydrated, photo] = await Promise.all([
+        this.catalog.listActive(context),
+        hydrateProfile(context, found, this.languages),
+        this.mediaPolicy.enabled ? this.media.findActive(context, accountId) : null,
+      ]);
       const selected = new Set(found.interests.map(({ id }) => id));
-      return { profile: { ...found, interests: active.filter(({ id }) => selected.has(id)) }, photo: this.mediaPolicy.enabled ? await this.media.findActive(context, accountId) : null };
+      return { profile: { ...hydrated, interests: active.filter(({ id }) => selected.has(id)) }, photo };
     });
     if (!loaded) throw new ProfileError('PROFILE_NOT_FOUND');
     const delivery = loaded.photo ? await this.images.createSignedDelivery(loaded.photo) : null;
     const profile = { ...loaded.profile, photo: delivery ? { deliveryUrl: delivery.url, width: 512 as const, height: 512 as const } : null };
-    return new ProfilePreviewProjector().project(profile);
+    return new ProfilePreviewProjector().project(profile, PRONOUN_LABELS_PT_BR);
     });
   }
 }
