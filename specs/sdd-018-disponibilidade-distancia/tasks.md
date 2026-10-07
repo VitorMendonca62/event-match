@@ -31,13 +31,13 @@ Rastreabilidade: `docs/DER-EventMatch-MVP.md` RF015, RF023, RF081; RN011–RN014
 
 ### Inclui
 
-- [ ] Value objects de domínio `AvailabilitySlot` (28 códigos `<weekday>_<period>`) e `PreferredDistance` (5 faixas), fechados e versionados no código.
-- [ ] Seleção de 0–28 slots únicos e de uma faixa de distância ou `null`, removíveis.
-- [ ] Ampliar agregado, repositório, purga de expiração, visão própria e update atômico com revisão.
-- [ ] Garantir que a prévia e a telemetria **nunca** contenham os campos.
-- [ ] Migration aditiva `0010` com tabela de slots, coluna de distância, CHECKs, FK em cascata e índice.
-- [ ] Nova seção em `/perfil`, logo após "Como você gosta dos encontros": grade acessível de disponibilidade e grupo de rádios de distância.
-- [ ] Atualizar docs 02–04, OpenAPI, `CHANGELOG.md`, versões, surface brief e testes.
+- [x] Value objects de domínio `AvailabilitySlot` (28 códigos `<weekday>_<period>`) e `PreferredDistance` (5 faixas), fechados e versionados no código.
+- [x] Seleção de 0–28 slots únicos e de uma faixa de distância ou `null`, removíveis.
+- [x] Ampliar agregado, repositório, purga de expiração, visão própria e update atômico com revisão.
+- [x] Garantir que a prévia e a telemetria **nunca** contenham os campos.
+- [x] Migration aditiva `0010` com tabela de slots, coluna de distância, CHECKs, FK em cascata e índice.
+- [x] Nova seção em `/perfil`, logo após "Como você gosta dos encontros": grade acessível de disponibilidade e grupo de rádios de distância.
+- [x] Atualizar docs 02–04, OpenAPI, `CHANGELOG.md`, versões, surface brief e testes.
 - [ ] Revisão visual Impeccable delimitada (desktop, mobile, zoom 200%) e finish review.
 
 ### Exclui
@@ -191,7 +191,7 @@ Compatibilidade: aditiva na leitura. No `PUT`, a ausência das chaves responde `
 - Seção sem card **"Quando e até onde você costuma ir"** logo após "Como você gosta dos encontros". A frase de apoio diz que é opcional, privado e que só será usado para sugerir encontros quando esse recurso existir, sem prometer recomendação.
 - **Disponibilidade:** `<table>` com `<caption>`, cabeçalhos de linha (dias) e de coluna na ordem do relógio ("Madrugada 0h–6h", "Manhã 6h–12h", "Tarde 12h–18h", "Noite 18h–24h"). Cada célula tem um checkbox nativo ≥ 44 px com nome acessível completo ("Sábado à noite", "Sexta de madrugada (0h–6h)"). Uma nota curta sob a tabela esclarece que "a madrugada de sexta vai da 0h às 6h de sexta". A mesma tabela serve desktop e 390 px (dia + 4 colunas de 44 px), sem layout alternativo; se o zoom 200% não comportar, o cabeçalho da madrugada abrevia para "Madrug." com o texto completo no nome acessível.
 - Presets como botões (`type="button"`): "Dias úteis à noite" e "Fins de semana" **acrescentam** slots; "Limpar" remove todos. Contador "n períodos marcados" em `aria-live="polite"`.
-- **Distância:** `radiogroup` com `Choice type="radio" appearance="chip"`: "Não informar" (padrão), "Até 2 km (dá para ir a pé)", "Até 5 km", "Até 10 km", "Até 25 km", "Qualquer lugar na minha cidade". A nota diz que a distância é contada a partir da região informada e que o EventMatch não pede a localização do aparelho.
+- **Distância:** um `<input type="range">` nativo, discreto e linear, com `min=0`, `max=5` e `step=1`. A posição 0 significa "Não informar"; as posições 1–5 representam, nesta ordem, "Até 2 km", "Até 5 km", "Até 10 km", "Até 25 km" e visualmente "Toda a cidade" (nome acessível: "Qualquer lugar na minha cidade"). Um grupo de botões com as mesmas seis faixas dá uma alternativa explícita de clique para navegadores que tratam o trilho nativo de forma diferente; o botão selecionado usa `aria-pressed`. Um texto vivo com `aria-live="polite"` e o `aria-valuetext` do range anunciam a faixa atual; o formulário submete o enum estável em campo oculto, sem alterar o contrato. A nota diz que a distância é contada a partir da região informada e que o EventMatch não pede a localização do aparelho.
 - Não há toggle de visibilidade. Uma linha fixa diz "Só você vê estas informações."
 - A prévia não mostra nada destes campos e não exibe placeholder de "privado" para eles.
 - Erros de `400` no salvamento usam o resumo existente; a validação Zod no cliente impede estados inválidos.
@@ -305,7 +305,7 @@ bun run --cwd front build
 
 - [x] Decisões citam `docs/` e ADRs.
 - [x] Um ADR foi criado e aceito para cada decisão material.
-- [x] Nenhum código de produção foi escrito.
+- [x] Código de produção, migration e testes foram implementados; a revisão visual E2E aguarda apenas o runner Docker disponível.
 - [x] Contratos front/back, OpenAPI e PostgreSQL estão explícitos.
 - [x] Performance, segurança e observabilidade foram tratadas.
 - [x] `vercel-react-best-practices`, `impeccable` e `nestjs-expert` foram aplicadas conforme o escopo.

@@ -5,12 +5,13 @@ import { CleanupProfileMedia, CreateProfilePhotoUpload, FinalizeProfilePhotoUplo
 import { ProfileError } from '../../../src/modules/profiles/domain/errors/profile.error';
 import { FakeProfileImageStoreAdapter } from '../../../src/modules/profiles/infrastructure/media/fake-profile-image-store.adapter';
 import { LoggerProfileTelemetryAdapter } from '../../../src/modules/profiles/infrastructure/observability/logger-profile-telemetry.adapter';
+import type { Profile } from '../../../src/modules/profiles/domain/entities/profile';
 import type { ProfileEvent, ProfileTelemetryPort } from '../../../src/modules/profiles/domain/ports/outbound/profile-telemetry.port';
 
 const context = {};
 const uow = { execute: async <T>(work: (value: object) => Promise<T>) => work(context) };
 const interests = [1, 2, 3].map((number) => ({ id: String(number), slug: `interest-${number}`, label: `Interest ${number}` }));
-const state = { accountId: 'account', revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'] as const, interests, presentation: null, photoVisibility: 'private' as const, presentationVisibility: 'private' as const, photo: null, pronounSelection: null, customPronouns: null, pronounsVisibility: 'private' as const, profession: null, professionVisibility: 'private' as const, languageCodes: [] as readonly string[], languagesVisibility: 'private' as const, activityPreferenceCodes: [] as readonly string[], activityPreferencesVisibility: 'private' as const };
+const state = { accountId: 'account', revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'] as const, interests, presentation: null, photoVisibility: 'private' as const, presentationVisibility: 'private' as const, photo: null, pronounSelection: null, customPronouns: null, pronounsVisibility: 'private' as const, profession: null, professionVisibility: 'private' as const, languageCodes: [] as readonly string[], languagesVisibility: 'private' as const, activityPreferenceCodes: [] as readonly string[], activityPreferencesVisibility: 'private' as const, availabilitySlots: [], preferredDistance: null };
 const catalog = { listActive: mock(async () => interests), findActiveByIds: mock(async () => interests) };
 const languages = { listActive: mock(async () => [{ code: 'pt', label: 'Português', active: true }]), findByCodes: mock(async (_context: object, codes: readonly string[]) => codes.map((code) => ({ code, label: code === 'pt' ? 'Português' : code, active: true }))) };
 const preferences = { listActive: mock(async () => []), findByCodes: mock(async (_context: object, codes: readonly string[]) => codes.map((code) => ({ code, label: code, active: true }))) };
@@ -40,12 +41,33 @@ describe('profile application use cases', () => {
     };
     const media = { findActive: mock(async () => null) };
     const useCase = new UpdateOwnProfile(uow, profiles, catalog, languages, preferences, media as never, imageStore, telemetry, mediaPolicy);
-    const input = { accountId: 'account', revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'] as const, interestIds: ['1', '2', '3'], presentation: 'Atividades em grupo', photoVisibility: 'private' as const, presentationVisibility: 'authenticated' as const, pronounSelection: null, customPronouns: null, pronounsVisibility: 'private' as const, profession: null, professionVisibility: 'private' as const, languageCodes: [], languagesVisibility: 'private' as const, activityPreferenceCodes: [] as readonly string[], activityPreferencesVisibility: 'private' as const };
+    const input = { accountId: 'account', revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'] as const, interestIds: ['1', '2', '3'], presentation: 'Atividades em grupo', photoVisibility: 'private' as const, presentationVisibility: 'authenticated' as const, pronounSelection: null, customPronouns: null, pronounsVisibility: 'private' as const, profession: null, professionVisibility: 'private' as const, languageCodes: [], languagesVisibility: 'private' as const, activityPreferenceCodes: [] as readonly string[], activityPreferencesVisibility: 'private' as const, availabilitySlots: [], preferredDistance: null };
     const settled = await Promise.allSettled([useCase.execute(input), useCase.execute(input)]);
     expect(settled.filter(({ status }) => status === 'fulfilled')).toHaveLength(1);
     const rejected = settled.find(({ status }) => status === 'rejected');
     expect(rejected).toMatchObject({ reason: { code: 'PROFILE_REVISION_CONFLICT' } });
     expect(telemetryEvents.some(({ name, outcome }) => name === 'profile.conflict' && outcome === 'conflict')).toBeTrue();
+  });
+
+  test('updates availability atomically and returns its canonical private view', async () => {
+    const profiles = {
+      findOwn: mock(async () => state),
+      updateIfRevision: mock(async (_context: object, aggregate: { snapshot: () => ReturnType<Profile['snapshot']> }, expectedRevision: number) => {
+        void expectedRevision;
+        expect(aggregate.snapshot().availabilitySlots).toEqual(['mon_morning', 'fri_early_hours']);
+        expect(aggregate.snapshot().preferredDistance).toBe('up_to_5km');
+        return 'updated' as const;
+      }),
+    };
+    const media = { findActive: mock(async () => null) };
+    const result = await new UpdateOwnProfile(uow, profiles, catalog, languages, preferences, media as never, imageStore, telemetry, mediaPolicy).execute({
+      accountId: 'account', revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'], interestIds: ['1', '2', '3'],
+      presentation: null, photoVisibility: 'private', presentationVisibility: 'private', pronounSelection: null, customPronouns: null,
+      pronounsVisibility: 'private', profession: null, professionVisibility: 'private', languageCodes: [], languagesVisibility: 'private',
+      activityPreferenceCodes: [], activityPreferencesVisibility: 'private', availabilitySlots: ['fri_early_hours', 'mon_morning'], preferredDistance: 'up_to_5km',
+    });
+    expect(result.availabilitySlots).toEqual(['mon_morning', 'fri_early_hours']);
+    expect(result.preferredDistance).toBe('up_to_5km');
   });
 
   test('media rollback keeps persisted photo completion without touching the provider', async () => {
@@ -100,7 +122,7 @@ describe('profile application use cases', () => {
       presentationVisibility: 'private',
       pronounSelection: null, customPronouns: null, pronounsVisibility: 'private', profession: null,
       professionVisibility: 'private', languageCodes: [], languagesVisibility: 'private',
-      activityPreferenceCodes: [], activityPreferencesVisibility: 'private',
+      activityPreferenceCodes: [], activityPreferencesVisibility: 'private', availabilitySlots: [], preferredDistance: null,
     });
 
     expect(result.photo).toBeNull();
@@ -114,7 +136,7 @@ describe('profile application use cases', () => {
     const inactiveCatalog = { listActive: mock(async () => []), findByCodes: mock(async () => [inactive]) };
     const media = { findActive: mock(async () => null) };
     const useCase = new UpdateOwnProfile(uow, profiles, catalog, inactiveCatalog, preferences, media as never, imageStore, telemetry, mediaPolicy);
-    const input = { accountId: 'account', revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'] as const, interestIds: ['1', '2', '3'], presentation: null, photoVisibility: 'private' as const, presentationVisibility: 'private' as const, pronounSelection: null, customPronouns: null, pronounsVisibility: 'private' as const, profession: null, professionVisibility: 'private' as const, languageCodes: ['eo'], languagesVisibility: 'private' as const, activityPreferenceCodes: [] as readonly string[], activityPreferencesVisibility: 'private' as const };
+    const input = { accountId: 'account', revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'] as const, interestIds: ['1', '2', '3'], presentation: null, photoVisibility: 'private' as const, presentationVisibility: 'private' as const, pronounSelection: null, customPronouns: null, pronounsVisibility: 'private' as const, profession: null, professionVisibility: 'private' as const, languageCodes: ['eo'], languagesVisibility: 'private' as const, activityPreferenceCodes: [] as readonly string[], activityPreferencesVisibility: 'private' as const, availabilitySlots: [], preferredDistance: null };
     await expect(useCase.execute(input)).resolves.toMatchObject({ languages: [inactive] });
     profiles.findOwn = mock(async () => ({ ...state, languageCodes: [] }));
     await expect(useCase.execute(input)).rejects.toMatchObject({ code: 'INACTIVE_LANGUAGE', reason: 'inactive_language' });
@@ -126,7 +148,7 @@ describe('profile application use cases', () => {
       listActive: mock(async () => []),
       findByCodes: mock(async (_context: object, codes: readonly string[]) => codes.filter((code) => known.includes(code)).map((code) => ({ code, label: code, active: true }))),
     });
-    const inputWith = (languageCodes: readonly string[]) => ({ accountId: 'account', revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'] as const, interestIds: ['1', '2', '3'], presentation: null, photoVisibility: 'private' as const, presentationVisibility: 'private' as const, pronounSelection: null, customPronouns: null, pronounsVisibility: 'private' as const, profession: null, professionVisibility: 'private' as const, languageCodes, languagesVisibility: 'private' as const, activityPreferenceCodes: [] as readonly string[], activityPreferencesVisibility: 'private' as const });
+    const inputWith = (languageCodes: readonly string[]) => ({ accountId: 'account', revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'] as const, interestIds: ['1', '2', '3'], presentation: null, photoVisibility: 'private' as const, presentationVisibility: 'private' as const, pronounSelection: null, customPronouns: null, pronounsVisibility: 'private' as const, profession: null, professionVisibility: 'private' as const, languageCodes, languagesVisibility: 'private' as const, activityPreferenceCodes: [] as readonly string[], activityPreferencesVisibility: 'private' as const, availabilitySlots: [], preferredDistance: null });
     const setup = (known: readonly string[] = CODES) => {
       const profiles = { findOwn: mock(async () => state), updateIfRevision: mock(async () => 'updated' as const) };
       const useCase = new UpdateOwnProfile(uow, profiles, catalog, catalogOf(known), preferences, { findActive: mock(async () => null) } as never, imageStore, telemetry, mediaPolicy);
@@ -163,7 +185,7 @@ describe('profile application use cases', () => {
         .filter((code) => codes.includes(code))
         .map((code) => ({ code, label: `Rótulo ${code}`, active: !inactive.includes(code) }))),
     });
-    const inputWith = (activityPreferenceCodes: readonly string[], activityPreferencesVisibility: 'private' | 'authenticated' = 'private') => ({ accountId: 'account', revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'] as const, interestIds: ['1', '2', '3'], presentation: null, photoVisibility: 'private' as const, presentationVisibility: 'private' as const, pronounSelection: null, customPronouns: null, pronounsVisibility: 'private' as const, profession: null, professionVisibility: 'private' as const, languageCodes: [] as readonly string[], languagesVisibility: 'private' as const, activityPreferenceCodes, activityPreferencesVisibility });
+    const inputWith = (activityPreferenceCodes: readonly string[], activityPreferencesVisibility: 'private' | 'authenticated' = 'private') => ({ accountId: 'account', revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'] as const, interestIds: ['1', '2', '3'], presentation: null, photoVisibility: 'private' as const, presentationVisibility: 'private' as const, pronounSelection: null, customPronouns: null, pronounsVisibility: 'private' as const, profession: null, professionVisibility: 'private' as const, languageCodes: [] as readonly string[], languagesVisibility: 'private' as const, activityPreferenceCodes, activityPreferencesVisibility, availabilitySlots: [], preferredDistance: null });
     const setup = (persistedCodes: readonly string[] = [], inactive: readonly string[] = []) => {
       const profiles = { findOwn: mock(async () => ({ ...state, activityPreferenceCodes: persistedCodes })), updateIfRevision: mock(async () => 'updated' as const) };
       const useCase = new UpdateOwnProfile(uow, profiles, catalog, languages, preferenceCatalog(inactive), { findActive: mock(async () => null) } as never, imageStore, telemetry, mediaPolicy);

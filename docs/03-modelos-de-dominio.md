@@ -89,6 +89,7 @@ A `0006_authenticated_session` (aditiva) amplia `account_status_check` para os d
 
 - `profileId`, `accountId`, `displayName`, foto, apresentação, região aproximada e intenção.
 - Interesses (mínimo três), campos opcionais e uma política de visibilidade por campo.
+- Disponibilidade opcional como conjunto normalizado de `weekday × period` e distância preferida opcional, ambos privados e fora da projeção.
 - Nascimento completo, e-mail e celular nunca integram a visão pública.
 - Habilitação de anfitrião é capacidade derivada, não papel permanente.
 
@@ -175,6 +176,7 @@ Referências: RF066–RF067, RF082–RF083, RF095–RF101; RN089–RN090, RN114,
 - `Language(code, labelPtBr, sortOrder, active)` pertence a Catálogos; `code` é uma subtag BCP 47 estável. O seed inicial inclui `pt`, `en`, `es`, `bzs` (Libras), `fr`, `it`, `de`, `cmn`, `ja`, `ko`, `ar`, `ru` e `hi`.
 - `Profile` mantém o conjunto `activityPreferences` (0–5, sem ordem própria) na relação normalizada `profile_activity_preference(account_id, preference_code, selected_at)` e `activityPreferencesVisibility` (default `private`). `selected_at` é auditoria técnica.
 - `ActivityPreference(code, labelPtBr, sortOrder, active)` pertence a Catálogos; `code` é `snake_case` ASCII estável (`^[a-z][a-z0-9_]{1,39}$`). Seed: `outdoor`, `indoor`, `quiet_setting`, `lively_setting`, `small_group`, `medium_group`, `light_physical_activity`, `moderate_physical_activity`, `cultural_experience`, `conversation_and_socializing`, `structured_activity`, `spontaneous_activity` (migration `0009`, ADR-044).
+- `Profile` mantém `availabilitySlots` na relação normalizada `profile_availability_slot(account_id, weekday, period, selected_at)` e `preferredDistance` na coluna nullable `profile.preferred_distance`. Os 28 slots são `mon|tue|wed|thu|fri|sat|sun` combinados com `early_hours|morning|afternoon|evening`; os cinco valores de distância são `up_to_2km`, `up_to_5km`, `up_to_10km`, `up_to_25km` e `same_city` (migration `0010`, ADR-045). Ambos são sempre privados e não são projetados.
 
 ### 2.12 DataRequest e RetentionHold
 
@@ -229,7 +231,7 @@ Referências: RF057–RF062, RF068, RF073–RF078; RN080–RN106, RN115–RN123.
 ## 6. Retenção e ressalva jurídica
 
 Implemente retenção por categoria conforme `docs/02-regras-de-negocio.md §9`, com eliminação verificável, anonimização quando prevista e legal hold granular. RF068, RF073, RF074, RN068, RN080–RN083, RN093, RN096, RN100–RN104, RN115–RN122 e RNF023 não podem ter política final liberada sem validação jurídica brasileira.
-- **Agregado `Profile` (SDD-015):** `displayName`, `region`, intenções, interesses ativos, apresentação opcional, visibilidades de foto/apresentação e `revision` positiva. `ProfileCompletion` deriva seis itens; `ProfilePreviewProjector` materializa somente a audiência solicitada.
+- **Agregado `Profile` (SDD-015, SDD-018):** `displayName`, `region`, intenções, interesses ativos, apresentação opcional, disponibilidade opcional, distância preferida opcional, visibilidades de foto/apresentação e `revision` positiva. `ProfileCompletion` deriva seis itens; `ProfilePreviewProjector` materializa somente a audiência solicitada e nunca inclui disponibilidade ou distância.
 - **Concorrência:** alterações usam compare-and-set por `revision`; intenções e interesses são substituídos na mesma unidade de trabalho.
 - **Mídia:** `ProfilePhotoAsset` percorre `pending → active → delete_pending`; há no máximo um pending e um active por conta. Identidade do provedor e metadados validados ficam no asset; URL assinada nunca é persistida. `ProfileMediaAttempt` guarda apenas subject HMAC e instante para limites compartilhados.
 - **Privacidade:** foto/apresentação começam `private`; o schema conhece `authenticated` e `public`, mas o contrato SDD-015 rejeita `public`.

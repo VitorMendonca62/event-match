@@ -4,8 +4,9 @@ import { and, eq } from 'drizzle-orm';
 import type { TransactionContext } from '../../../../shared/application/ports/unit-of-work.port';
 import { resolveExecutor } from '../../../../shared/infrastructure/persistence/resolve-executor';
 import type { Profile, ProfileState, UsageIntent } from '../../domain/entities/profile';
+import { toCanonicalOrder, type AvailabilitySlot } from '../../domain/value-objects/availability';
 import type { PersistedProfileState, ProfileRepositoryPort } from '../../domain/ports/outbound/profile-repository.port';
-import { accountInterest, profile, profileActivityPreference, profileLanguage, profilePhotoAsset, profileUsageIntent } from './schema/profiles.schema';
+import { accountInterest, profile, profileActivityPreference, profileAvailabilitySlot, profileLanguage, profilePhotoAsset, profileUsageIntent } from './schema/profiles.schema';
 
 @Injectable()
 export class DrizzleProfileRepositoryAdapter implements ProfileRepositoryPort {
@@ -13,7 +14,7 @@ export class DrizzleProfileRepositoryAdapter implements ProfileRepositoryPort {
     const database = resolveExecutor(context);
     const [row] = await database.select().from(profile).where(eq(profile.accountId, accountId)).limit(1);
     if (!row?.displayName || !row.region) return null;
-    const [intents, interests, languages, preferences, photos] = await Promise.all([
+    const [intents, interests, languages, preferences, availability, photos] = await Promise.all([
       database.select({ value: profileUsageIntent.usageIntent }).from(profileUsageIntent).where(eq(profileUsageIntent.accountId, accountId)),
       database.select({ id: accountInterest.interestId }).from(accountInterest).where(eq(accountInterest.accountId, accountId)),
       database.select({ code: profileLanguage.languageCode })
@@ -21,6 +22,9 @@ export class DrizzleProfileRepositoryAdapter implements ProfileRepositoryPort {
         .where(eq(profileLanguage.accountId, accountId)).orderBy(profileLanguage.selectedAt),
       database.select({ code: profileActivityPreference.preferenceCode }).from(profileActivityPreference)
         .where(eq(profileActivityPreference.accountId, accountId)),
+      database.select({ weekday: profileAvailabilitySlot.weekday, period: profileAvailabilitySlot.period })
+        .from(profileAvailabilitySlot)
+        .where(eq(profileAvailabilitySlot.accountId, accountId)),
       database.select({ publicId: profilePhotoAsset.publicId }).from(profilePhotoAsset)
         .where(and(eq(profilePhotoAsset.accountId, accountId), eq(profilePhotoAsset.state, 'active'))).limit(1),
     ]);
@@ -36,6 +40,8 @@ export class DrizzleProfileRepositoryAdapter implements ProfileRepositoryPort {
       languagesVisibility: row.languagesVisibility as ProfileState['languagesVisibility'],
       activityPreferenceCodes: preferences.map(({ code }) => code),
       activityPreferencesVisibility: row.activityPreferencesVisibility as ProfileState['activityPreferencesVisibility'],
+      availabilitySlots: toCanonicalOrder(availability.map(({ weekday, period }) => `${weekday}_${period}` as AvailabilitySlot)),
+      preferredDistance: row.preferredDistance as ProfileState['preferredDistance'],
       // Delivery URLs are attached by the media use case/adapter; persistence never invents one.
       photo: photos.length > 0 ? { deliveryUrl: '', width: 512, height: 512 } : null,
     };
@@ -51,6 +57,7 @@ export class DrizzleProfileRepositoryAdapter implements ProfileRepositoryPort {
       pronounsVisibility: value.pronounsVisibility, profession: value.profession,
       professionVisibility: value.professionVisibility, languagesVisibility: value.languagesVisibility,
       activityPreferencesVisibility: value.activityPreferencesVisibility,
+      preferredDistance: value.preferredDistance,
       revision: value.revision, updatedAt: new Date(),
     }).where(and(eq(profile.accountId, value.accountId), eq(profile.revision, expectedRevision))).returning({ accountId: profile.accountId });
     if (changed.length === 0) return 'conflict';
@@ -63,6 +70,14 @@ export class DrizzleProfileRepositoryAdapter implements ProfileRepositoryPort {
     if (value.languages.length > 0) await database.insert(profileLanguage).values(value.languages.map(({ code }, index) => ({ accountId: value.accountId, languageCode: code, selectedAt: new Date(selectedAt + index) })));
     await database.delete(profileActivityPreference).where(eq(profileActivityPreference.accountId, value.accountId));
     if (value.activityPreferences.length > 0) await database.insert(profileActivityPreference).values(value.activityPreferences.map(({ code }) => ({ accountId: value.accountId, preferenceCode: code, selectedAt: new Date(selectedAt) })));
+    await database.delete(profileAvailabilitySlot).where(eq(profileAvailabilitySlot.accountId, value.accountId));
+    if (value.availabilitySlots.length > 0) {
+      const selectedAtDate = new Date(selectedAt);
+      await database.insert(profileAvailabilitySlot).values(value.availabilitySlots.map((slot) => {
+        const separator = slot.indexOf('_');
+        return { accountId: value.accountId, weekday: slot.slice(0, separator), period: slot.slice(separator + 1), selectedAt: selectedAtDate };
+      }));
+    }
     return 'updated';
   }
 }

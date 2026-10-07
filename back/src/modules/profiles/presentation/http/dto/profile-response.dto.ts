@@ -1,6 +1,7 @@
 import { HttpStatus } from '@nestjs/common';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { apiEnvelope } from '../../../../../shared/presentation/http/api-envelope';
+import { AVAILABILITY_SLOTS, PREFERRED_DISTANCES } from '../../../domain/value-objects/availability';
 
 export class ProfileCompletionDto {
   @ApiProperty() complete!: boolean;
@@ -38,6 +39,8 @@ export class OwnProfileResponseDto {
   @ApiProperty({ enum: ['private', 'authenticated', 'public'] }) languagesVisibility!: string;
   @ApiProperty({ type: [ProfileActivityPreferenceDto], maxItems: 5 }) activityPreferences!: ProfileActivityPreferenceDto[];
   @ApiProperty({ enum: ['private', 'authenticated', 'public'] }) activityPreferencesVisibility!: string;
+  @ApiProperty({ enum: AVAILABILITY_SLOTS, isArray: true, maxItems: 28, uniqueItems: true }) availabilitySlots!: string[];
+  @ApiProperty({ enum: PREFERRED_DISTANCES, nullable: true }) preferredDistance!: string | null;
 }
 export class InternalOwnProfileResponseDto extends OwnProfileResponseDto {
   @ApiProperty({ example: `v1.${'A'.repeat(43)}` }) invitationSubject!: string;

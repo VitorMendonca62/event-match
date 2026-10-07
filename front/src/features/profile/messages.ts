@@ -11,3 +11,18 @@ export const ACTIVITY_PREFERENCE_REJECTION_MESSAGES = {
   unknown_activity_preference: 'Uma das preferências escolhidas não existe mais. Recarregue a página e escolha outra.',
   inactive_activity_preference: 'Uma das preferências escolhidas foi descontinuada e não pode ser adicionada de novo. Escolha outra.',
 } as const;
+export const AVAILABILITY_WEEKDAY_LABELS = {
+  mon: 'Segunda-feira', tue: 'Terça-feira', wed: 'Quarta-feira', thu: 'Quinta-feira',
+  fri: 'Sexta-feira', sat: 'Sábado', sun: 'Domingo',
+} as const;
+export const AVAILABILITY_PERIOD_LABELS = {
+  early_hours: 'Madrugada 0h–6h', morning: 'Manhã 6h–12h', afternoon: 'Tarde 12h–18h', evening: 'Noite 18h–24h',
+} as const;
+export const PREFERRED_DISTANCE_LABELS = {
+  up_to_2km: 'Até 2 km', up_to_5km: 'Até 5 km', up_to_10km: 'Até 10 km',
+  up_to_25km: 'Até 25 km', same_city: 'Qualquer lugar na minha cidade',
+} as const;
+export const PREFERRED_DISTANCE_SHORT_LABELS = {
+  up_to_2km: 'Até 2 km', up_to_5km: 'Até 5 km', up_to_10km: 'Até 10 km',
+  up_to_25km: 'Até 25 km', same_city: 'Toda a cidade',
+} as const;

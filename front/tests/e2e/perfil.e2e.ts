@@ -1,12 +1,36 @@
 /** @format */
 
 import { registerAccount, signIn } from './support/auth';
+import { openProfile } from './support/profile';
+import type { Page } from '@playwright/test';
 import {
   expect,
   expectNoHorizontalScroll,
   expectNoSeriousA11yViolations,
   test,
 } from './support/test';
+
+type Point = Readonly<{ x: number; y: number }>;
+
+async function dragWithTouch(page: Page, from: Point, to: Point): Promise<void> {
+  const session = await page.context().newCDPSession(page);
+  const touchPoint = ({ x, y }: Point) => ({ x, y, id: 0, radiusX: 6, radiusY: 6, force: 1 });
+  try {
+    await session.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [touchPoint(from)] });
+    for (let step = 1; step <= 5; step += 1) {
+      await session.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [touchPoint({
+          x: from.x + ((to.x - from.x) * step) / 5,
+          y: from.y + ((to.y - from.y) * step) / 5,
+        })],
+      });
+    }
+    await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  } finally {
+    await session.detach();
+  }
+}
 
 test('perfil: convite, edição, prévia e adiamento por navegador', async ({
   page,
@@ -188,6 +212,88 @@ test('perfil: preferências de atividades com limite, privacidade e prévia', as
   await expect(page.getByRole('status')).toContainText('Perfil salvo');
   await page.goto('/perfil/previa');
   await expect(page.getByRole('list', { name: 'Preferências de atividades' })).toHaveCount(0);
+});
+
+test('perfil: disponibilidade e distância são privadas, persistem e são removíveis', async ({ page }, testInfo) => {
+  await openProfile(page, 'perfil-disponibilidade');
+  const section = page.getByRole('region', { name: 'Quando e até onde você costuma ir' });
+  await expect(section).toBeVisible();
+
+  await section.getByRole('checkbox', { name: 'Sexta-feira madrugada 0h–6h' }).check();
+  await section.getByRole('button', { name: 'Fins de semana' }).click();
+  await expect(section).toContainText('9 períodos marcados');
+  const distance = section.getByRole('slider', { name: 'Até onde você costuma se deslocar?' });
+  await distance.scrollIntoViewIfNeeded();
+  const distanceBox = await distance.boundingBox();
+  if (!distanceBox) throw new Error('Range de distância sem geometria visível.');
+  const pointerPoint = {
+    x: distanceBox.x + distanceBox.width * 0.8,
+    y: distanceBox.y + distanceBox.height / 2,
+  };
+  if (testInfo.project.name === 'chromium-mobile') {
+    await dragWithTouch(
+      page,
+      { x: distanceBox.x + distanceBox.width * 0.03, y: pointerPoint.y },
+      pointerPoint,
+    );
+  } else
+    await page.mouse.click(pointerPoint.x, pointerPoint.y);
+  await expect.poll(async () => Number(await distance.inputValue())).toBeGreaterThan(0);
+  if (testInfo.project.name !== 'chromium-mobile') {
+    const distanceBeforeDrag = Number(await distance.inputValue());
+    await page.mouse.move(pointerPoint.x, pointerPoint.y);
+    await page.mouse.down();
+    await page.mouse.move(distanceBox.x + distanceBox.width * 0.95, pointerPoint.y, { steps: 5 });
+    await page.mouse.up();
+    await expect.poll(async () => Number(await distance.inputValue())).toBeGreaterThanOrEqual(distanceBeforeDrag);
+  }
+  await section.getByRole('button', { name: 'Até 10 km' }).click();
+  await expect(distance).toHaveValue('3');
+  await expect(section.locator('#preferred-distance-value')).toContainText('Até 10 km');
+  await distance.press('Home');
+  await distance.press('ArrowRight');
+  await distance.press('ArrowRight');
+  await expect(section.locator('#preferred-distance-value')).toContainText('Até 5 km');
+  await expect(section.getByText('Só você vê estas informações.', { exact: true })).toHaveCount(1);
+
+  const viewport = page.viewportSize();
+  const capture = viewport?.width === 1440 || viewport?.width === 390 ? (viewport.width === 390 ? 'mobile' : 'desktop') : null;
+  if (capture)
+    await section.screenshot({ path: `.impeccable/review/perfil-disponibilidade-${capture}.png` });
+  await expectNoSeriousA11yViolations(page);
+  await expectNoHorizontalScroll(page);
+
+  const update = page.waitForRequest((request) => request.url().endsWith('/api/profile') && request.method() === 'PUT');
+  await page.getByRole('button', { name: 'Salvar perfil' }).click();
+  await expect(page.getByRole('status')).toContainText('Perfil salvo');
+  expect((await update).postDataJSON()).toMatchObject({
+    availabilitySlots: [
+      'fri_early_hours',
+      'sat_early_hours', 'sat_morning', 'sat_afternoon', 'sat_evening',
+      'sun_early_hours', 'sun_morning', 'sun_afternoon', 'sun_evening',
+    ],
+    preferredDistance: 'up_to_5km',
+  });
+
+  await page.goto('/perfil/previa');
+  await expect(page.getByText('Quando e até onde você costuma ir', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Até 5 km', { exact: true })).toHaveCount(0);
+
+  await page.goto('/perfil');
+  await expect(section.getByRole('checkbox', { name: 'Sexta-feira madrugada 0h–6h' })).toBeChecked();
+  await expect(section.getByRole('slider', { name: 'Até onde você costuma se deslocar?' })).toHaveValue('2');
+  await section.getByRole('button', { name: 'Limpar' }).click();
+  await section.getByRole('slider', { name: 'Até onde você costuma se deslocar?' }).press('Home');
+  const clearUpdate = page.waitForRequest((request) => request.url().endsWith('/api/profile') && request.method() === 'PUT');
+  await page.getByRole('button', { name: 'Salvar perfil' }).click();
+  await expect(page.getByRole('status')).toContainText('Perfil salvo');
+  expect((await clearUpdate).postDataJSON()).toMatchObject({ availabilitySlots: [], preferredDistance: null });
+
+  if (capture === 'desktop') {
+    await page.setViewportSize({ width: 640, height: 400 });
+    await expectNoHorizontalScroll(page);
+    await section.screenshot({ path: '.impeccable/review/perfil-disponibilidade-zoom200.png' });
+  }
 });
 
 test('perfil: combobox de pronomes funciona integralmente por teclado', async ({ page }) => {

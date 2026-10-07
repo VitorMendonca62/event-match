@@ -71,6 +71,13 @@
       "when": 1791774000000,
       "tag": "0009_profile_activity_preferences",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791774000001,
+      "tag": "0010_profile_availability_distance",
+      "breakpoints": true
     }
   ]
 }

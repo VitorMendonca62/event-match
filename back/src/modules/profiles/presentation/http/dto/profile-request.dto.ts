@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { ArrayMaxSize, ArrayMinSize, ArrayUnique, IsArray, IsDefined, IsEnum, IsInt, IsString, IsUUID, Matches, MaxLength, Min, MinLength, ValidateIf } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, ArrayUnique, IsArray, IsDefined, IsEnum, IsIn, IsInt, IsString, IsUUID, Matches, MaxLength, Min, MinLength, ValidateIf } from 'class-validator';
 import { PRONOUN_SELECTIONS, USAGE_INTENTS, type EditableProfileVisibility, type PronounSelection, type UsageIntent } from '../../../domain/entities/profile';
+import { AVAILABILITY_SLOTS, PREFERRED_DISTANCES, type AvailabilitySlot, type PreferredDistance } from '../../../domain/value-objects/availability';
 
 export class UpdateProfileDto {
   @ApiProperty({ minimum: 1 }) @IsInt() @Min(1) readonly revision!: number;
@@ -20,4 +21,6 @@ export class UpdateProfileDto {
   @ApiProperty({ enum: ['private', 'authenticated'] }) @IsEnum(['private', 'authenticated']) readonly languagesVisibility!: EditableProfileVisibility;
   @ApiProperty({ type: [String], maxItems: 5, uniqueItems: true, pattern: '^[a-z][a-z0-9_]{1,39}$' }) @IsArray() @ArrayMaxSize(5) @ArrayUnique() @Matches(/^[a-z][a-z0-9_]{1,39}$/, { each: true }) readonly activityPreferenceCodes!: string[];
   @ApiProperty({ enum: ['private', 'authenticated'] }) @IsEnum(['private', 'authenticated']) readonly activityPreferencesVisibility!: EditableProfileVisibility;
+  @ApiProperty({ enum: AVAILABILITY_SLOTS, isArray: true, maxItems: 28, uniqueItems: true }) @IsDefined() @IsArray() @ArrayMaxSize(28) @ArrayUnique() @IsIn(AVAILABILITY_SLOTS, { each: true }) readonly availabilitySlots!: AvailabilitySlot[];
+  @ApiProperty({ enum: PREFERRED_DISTANCES, nullable: true }) @ValidateIf((_object, value) => value !== null) @IsDefined() @IsIn(PREFERRED_DISTANCES) readonly preferredDistance!: PreferredDistance | null;
 }

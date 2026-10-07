@@ -325,7 +325,7 @@ describe('registration persistence (PostgreSQL integration)', () => {
       const accountId = await incompleteAccount(nodeA, 'profile-race@example.test');
       await nodeA.complete.execute({ accountId, birthDate: '1990-05-10', interestIds: INTEREST_IDS.slice(0, 3), documentIds: DOCUMENT_IDS });
       const current = await nodeA.getProfile.execute(accountId);
-      const common = { accountId, revision: current.revision, region: 'Recife - PE', usageIntents: ['friendship'] as const, interestIds: INTEREST_IDS.slice(0, 3), photoVisibility: 'private' as const, presentationVisibility: 'authenticated' as const, pronounSelection: null, customPronouns: null, pronounsVisibility: 'private' as const, profession: null, professionVisibility: 'private' as const, languagesVisibility: 'authenticated' as const, activityPreferencesVisibility: 'authenticated' as const };
+      const common = { accountId, revision: current.revision, region: 'Recife - PE', usageIntents: ['friendship'] as const, interestIds: INTEREST_IDS.slice(0, 3), photoVisibility: 'private' as const, presentationVisibility: 'authenticated' as const, pronounSelection: null, customPronouns: null, pronounsVisibility: 'private' as const, profession: null, professionVisibility: 'private' as const, languagesVisibility: 'authenticated' as const, activityPreferencesVisibility: 'authenticated' as const, availabilitySlots: ['fri_evening'] as const, preferredDistance: 'up_to_5km' as const };
       const first = { ...common, displayName: 'Ana Português', presentation: 'Primeira edição concorrente', languageCodes: ['pt'], activityPreferenceCodes: ['small_group', 'quiet_setting'] };
       const second = { ...common, displayName: 'Ana Libras', presentation: 'Segunda edição concorrente', languageCodes: ['bzs'], activityPreferenceCodes: ['outdoor'] };
 
@@ -515,7 +515,7 @@ describe('registration persistence (PostgreSQL integration)', () => {
       const accountId = await incompleteAccount(nodeA, 'profile-rollback@example.test');
       await nodeA.complete.execute({ accountId, birthDate: '1990-05-10', interestIds: INTEREST_IDS.slice(0, 3), documentIds: DOCUMENT_IDS });
       const initial = await nodeA.getProfile.execute(accountId);
-      await nodeA.updateProfile.execute({ accountId, revision: initial.revision, displayName: initial.displayName, region: initial.region, usageIntents: initial.usageIntents, interestIds: initial.interests.map(({ id }) => id), presentation: initial.presentation, photoVisibility: 'private', presentationVisibility: 'private', pronounSelection: null, customPronouns: null, pronounsVisibility: 'private', profession: null, professionVisibility: 'private', languageCodes: ['pt'], languagesVisibility: 'private', activityPreferenceCodes: ['indoor'], activityPreferencesVisibility: 'private' });
+      await nodeA.updateProfile.execute({ accountId, revision: initial.revision, displayName: initial.displayName, region: initial.region, usageIntents: initial.usageIntents, interestIds: initial.interests.map(({ id }) => id), presentation: initial.presentation, photoVisibility: 'private', presentationVisibility: 'private', pronounSelection: null, customPronouns: null, pronounsVisibility: 'private', profession: null, professionVisibility: 'private', languageCodes: ['pt'], languagesVisibility: 'private', activityPreferenceCodes: ['indoor'], activityPreferencesVisibility: 'private', availabilitySlots: [], preferredDistance: null });
       const before = await nodeA.getProfile.execute(accountId);
       await database.pool.query(`
         create function fail_profile_interest() returns trigger language plpgsql as $$
@@ -523,7 +523,7 @@ describe('registration persistence (PostgreSQL integration)', () => {
         create trigger fail_profile_interest before insert on account_interest
         for each row execute function fail_profile_interest();`);
       try {
-        await expect(nodeA.updateProfile.execute({ accountId, revision: before.revision, displayName: 'Não deve persistir', region: before.region, usageIntents: ['explore_city'], interestIds: INTEREST_IDS.slice(1, 4), presentation: 'Também não persiste', photoVisibility: 'private', presentationVisibility: 'private', pronounSelection: null, customPronouns: null, pronounsVisibility: 'private', profession: null, professionVisibility: 'private', languageCodes: ['bzs'], languagesVisibility: 'private', activityPreferenceCodes: ['outdoor'], activityPreferencesVisibility: 'authenticated' })).rejects.toThrow();
+        await expect(nodeA.updateProfile.execute({ accountId, revision: before.revision, displayName: 'Não deve persistir', region: before.region, usageIntents: ['explore_city'], interestIds: INTEREST_IDS.slice(1, 4), presentation: 'Também não persiste', photoVisibility: 'private', presentationVisibility: 'private', pronounSelection: null, customPronouns: null, pronounsVisibility: 'private', profession: null, professionVisibility: 'private', languageCodes: ['bzs'], languagesVisibility: 'private', activityPreferenceCodes: ['outdoor'], activityPreferencesVisibility: 'authenticated', availabilitySlots: ['sat_evening'], preferredDistance: 'up_to_10km' })).rejects.toThrow();
       } finally {
         await database.pool.query(`drop trigger fail_profile_interest on account_interest; drop function fail_profile_interest();`);
       }
@@ -539,7 +539,7 @@ describe('registration persistence (PostgreSQL integration)', () => {
       const accountId = await incompleteAccount(nodeA, 'profile-preference-deactivated@example.test');
       await nodeA.complete.execute({ accountId, birthDate: '1990-05-10', interestIds: INTEREST_IDS.slice(0, 3), documentIds: DOCUMENT_IDS });
       const initial = await nodeA.getProfile.execute(accountId);
-      const base = { accountId, displayName: initial.displayName, region: initial.region, usageIntents: initial.usageIntents, interestIds: initial.interests.map(({ id }) => id), presentation: initial.presentation, photoVisibility: 'private' as const, presentationVisibility: 'private' as const, pronounSelection: null, customPronouns: null, pronounsVisibility: 'private' as const, profession: null, professionVisibility: 'private' as const, languageCodes: [], languagesVisibility: 'private' as const, activityPreferencesVisibility: 'authenticated' as const };
+      const base = { accountId, displayName: initial.displayName, region: initial.region, usageIntents: initial.usageIntents, interestIds: initial.interests.map(({ id }) => id), presentation: initial.presentation, photoVisibility: 'private' as const, presentationVisibility: 'private' as const, pronounSelection: null, customPronouns: null, pronounsVisibility: 'private' as const, profession: null, professionVisibility: 'private' as const, languageCodes: [], languagesVisibility: 'private' as const, activityPreferencesVisibility: 'authenticated' as const, availabilitySlots: [], preferredDistance: null };
       await nodeA.updateProfile.execute({ ...base, revision: initial.revision, activityPreferenceCodes: ['medium_group', 'outdoor'] });
       await query(`update activity_preference set active = false where code = 'medium_group'`);
       try {

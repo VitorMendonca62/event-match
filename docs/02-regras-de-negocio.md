@@ -61,6 +61,13 @@ As regras normativas completas são RN001–RN168 em [`DER-EventMatch-MVP.md`](D
 - Preferência desativada já escolhida continua legível e pode ser preservada; depois de removida não pode ser readicionada (`inactive_activity_preference`).
 - A lista tem uma visibilidade própria, `private` por padrão e editável entre `private` e `authenticated`. Não altera completude, capacidades, interesses nem eventos, e não é usada em recomendação nesta entrega (ADR-044).
 
+### Disponibilidade e distância preferida (SDD-018)
+
+- Disponibilidade é opcional e removível: a pessoa pode marcar zero a 28 combinações únicas de dia da semana e período fixo. Os períodos são madrugada (0h–6h), manhã (6h–12h), tarde (12h–18h) e noite (18h–24h), sempre no dia do calendário da região informada; “madrugada de sexta” significa sexta-feira de 0h a 6h.
+- Distância preferida é opcional e removível, com as faixas até 2 km, até 5 km, até 10 km, até 25 km ou “na minha cidade”. Ela é relativa à região declarada, não usa localização do aparelho, endereço ou coordenada e não produz cálculo geográfico nesta entrega.
+- Os dois campos são sempre privados: ficam somente na visão própria, não têm toggle de visibilidade e nunca aparecem na prévia, em busca, filtro, recomendação ou telemetria. Não alteram completude, interesses, preferências de atividades, capacidades ou eventos.
+- Disponibilidade e distância participam do mesmo snapshot e da mesma revisão otimista do perfil. Expiração de conta incompleta, exclusão e purga de dados removem os slots e anulam a distância (ADR-045).
+
 ## 3. Eventos e anfitriões
 
 - Apenas encontros presenciais, informais, gratuitos e em local público/estabelecimento identificável podem ser publicados (RN019–RN020).

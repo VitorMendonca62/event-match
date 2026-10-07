@@ -18,6 +18,7 @@ export const profile = pgTable('profile', {
   professionVisibility: text('profession_visibility').notNull().default('private'),
   languagesVisibility: text('languages_visibility').notNull().default('private'),
   activityPreferencesVisibility: text('activity_preferences_visibility').notNull().default('private'),
+  preferredDistance: text('preferred_distance'),
   revision: integer('revision').notNull().default(1),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -35,6 +36,7 @@ export const profile = pgTable('profile', {
   check('profile_profession_visibility_check', sql`${table.professionVisibility} in ('private', 'authenticated', 'public')`),
   check('profile_languages_visibility_check', sql`${table.languagesVisibility} in ('private', 'authenticated', 'public')`),
   check('profile_activity_preferences_visibility_check', sql`${table.activityPreferencesVisibility} in ('private', 'authenticated', 'public')`),
+  check('profile_preferred_distance_check', sql`${table.preferredDistance} is null or ${table.preferredDistance} in ('up_to_2km', 'up_to_5km', 'up_to_10km', 'up_to_25km', 'same_city')`),
   check('profile_pronouns_prefer_private_check', sql`${table.pronounSelection} is distinct from 'prefer_not_to_say' or ${table.pronounsVisibility} = 'private'`),
 ]);
 
@@ -69,6 +71,18 @@ export const profileActivityPreference = pgTable('profile_activity_preference', 
 }, (table) => [
   primaryKey({ columns: [table.accountId, table.preferenceCode] }),
   index('profile_activity_preference_preference_index').on(table.preferenceCode),
+]);
+
+export const profileAvailabilitySlot = pgTable('profile_availability_slot', {
+  accountId: uuid('account_id').notNull().references(() => account.id, { onDelete: 'cascade' }),
+  weekday: text('weekday').notNull(),
+  period: text('period').notNull(),
+  selectedAt: timestamp('selected_at', { withTimezone: true }).notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.accountId, table.weekday, table.period] }),
+  check('profile_availability_slot_weekday_check', sql`${table.weekday} in ('mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun')`),
+  check('profile_availability_slot_period_check', sql`${table.period} in ('early_hours', 'morning', 'afternoon', 'evening')`),
+  index('profile_availability_slot_weekday_period_index').on(table.weekday, table.period),
 ]);
 
 export const profilePhotoAsset = pgTable('profile_photo_asset', {

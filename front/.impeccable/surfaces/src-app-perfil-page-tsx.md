@@ -7,7 +7,7 @@ related_targets: ["src/app/perfil/previa/page.tsx", "src/app/inicio/page.tsx"]
 
 # Completar perfil - surface brief
 
-Scope: convite em `/inicio`, edição em `/perfil` e prévia autenticada em `/perfil/previa`, incluindo a identidade opcional da SDD-016 e as preferências de atividades da SDD-017. Mode: **Operate**. Extensão confirmada em 2026-09-30 do mundo "Convite Cívico"; direção da identidade opcional confirmada em 2026-10-03; preferências de atividades confirmadas em 2026-10-06 (SDD-017/ADR-044); nenhuma mudança durável em `DESIGN.md`.
+Scope: convite em `/inicio`, edição em `/perfil` e prévia autenticada em `/perfil/previa`, incluindo a identidade opcional da SDD-016, as preferências de atividades da SDD-017 e a disponibilidade/distância da SDD-018. Mode: **Operate**. Extensão confirmada em 2026-09-30 do mundo "Convite Cívico"; direção da identidade opcional confirmada em 2026-10-03; preferências de atividades confirmadas em 2026-10-06 (SDD-017/ADR-044); disponibilidade/distância confirmadas em 2026-10-06 (SDD-018/ADR-045); nenhuma mudança durável em `DESIGN.md`.
 
 ## Job e audiência
 
@@ -19,6 +19,7 @@ Pessoa adulta com conta ativa, novata ou veterana, chega a `/inicio` com foto ou
 - A pessoa adiciona uma foto principal, escreve uma apresentação e pode corrigir nome, região aproximada, intenções e interesses existentes.
 - A pessoa pode informar pronomes, profissão e até cinco idiomas sem alterar a completude ou ser obrigada a compartilhá-los.
 - A pessoa pode marcar até cinco preferências de como gosta que os encontros sejam, distintas dos interesses, sem prioridade e sem efeito na completude.
+- A pessoa pode marcar combinações semanais de dia/período e uma faixa de distância preferida, ambos opcionais, removíveis e sempre privados; localização do aparelho e cálculo geográfico ficam fora.
 - Antes de enviar a foto, vê o recorte quadrado; antes de sair, pode abrir uma prévia autenticada da futura visão compartilhável.
 - "Agora não" remove o convite deste navegador por sete dias; perfil completo remove o convite independentemente do cookie.
 
@@ -51,6 +52,7 @@ VISUAL AUTHORITY: herdar marca, tipografia, tokens, bordas, foco âmbar, ritmo e
 - Conteúdo real deve acomodar nomes de 1 a 60 caracteres e regiões de 2 a 80 sem truncar controles nem deslocar a topologia.
 - Identidade opcional: pronome ausente, opção comum, “Outro” com texto de até 40 caracteres ou “Prefiro não informar”; profissão ausente ou até 80 caracteres; idiomas de zero a cinco, incluindo item previamente escolhido que tenha sido desativado.
 - Preferências de atividades: catálogo de 12 opções, zero a cinco marcadas, limite atingido (demais `aria-disabled` com explicação), item escolhido e depois descontinuado ("Opção descontinuada", desmarcável e sem retorno) e catálogo indisponível (aviso só na seção, seleção atual preservada no salvamento).
+- Disponibilidade: zero a 28 células selecionáveis na grade de sete dias por quatro períodos; presets aditivos para dias úteis à noite e fins de semana, limpeza explícita, contador e erro de salvamento. Distância: nenhuma, até 2/5/10/25 km ou mesma cidade.
 - Busca de idioma: lista inicial, consulta sem resultado, um a cinco selecionados, limite atingido, remoção e erro de catálogo indisponível.
 
 ## Interação e layout
@@ -60,7 +62,8 @@ VISUAL AUTHORITY: herdar marca, tipografia, tokens, bordas, foco âmbar, ritmo e
 - Pronomes usam um combobox compacto com lista controlada, navegação por setas, Home/End, Enter/Espaço e Escape; somente “Outro” revela um campo adicional. “Prefiro não informar” permanece uma escolha da visão própria, força privado, desabilita seu controle de compartilhamento e nunca aparece na prévia.
 - Profissão é apresentada como autodeclaração, sem linguagem de verificação. Idiomas usam busca local, lista operável por teclado exibida somente enquanto a busca ou seus resultados mantêm foco, contador `n/5` e botões de remoção com nomes acessíveis.
 - Preferências usam um grupo nativo de checkboxes em chips (≥ 44 px), na ordem do catálogo, sem busca; contador `n/5` em `aria-live="polite"`. Opções aparentemente opostas podem coexistir.
-- Cada um dos quatro grupos opcionais termina com seu próprio controle de visibilidade; não há consentimento global que exponha todos de uma vez.
+- Disponibilidade usa tabela semântica com cabeçalhos persistentes, checkboxes nativos e alvos ≥ 44 px; a ordem é segunda-feira a domingo e madrugada não “vaza” para o dia anterior. Presets são ações aditivas e “Limpar” é explícito. A distância usa um `input[type="range"]` nativo, discreto em seis posições (não informar, 2/5/10/25 km e visualmente “Toda a cidade”), mais botões clicáveis equivalentes com `aria-pressed` e nome acessível “Qualquer lugar na minha cidade” para compatibilidade entre navegadores, com texto vivo da faixa atual e sem toggle de visibilidade.
+- Cada grupo opcional compartilhável termina com seu próprio controle de visibilidade; disponibilidade e distância são exceções sempre privadas e não exibem controle de audiência.
 - O seletor de foto aceita arrastar/soltar e seleção por arquivo, mas mantém um botão nativo claramente rotulado. O editor abre em diálogo modal, mostra a imagem completa com um quadrado de recorte arrastável e redimensionável, e oferece sliders e botões de ajuste para posição e ampliação, com equivalência por teclado.
 - A navegação entre edição e prévia usa ações nomeadas e rotas reais, preservando voltar/atualizar; não simula abas que perdem estado silenciosamente.
 - Ao pedir a prévia com alterações não salvas, um diálogo explica que somente dados persistidos serão exibidos e oferece salvar antes de avançar ou descartar o rascunho e continuar.
@@ -73,8 +76,9 @@ VISUAL AUTHORITY: herdar marca, tipografia, tokens, bordas, foco âmbar, ritmo e
 - Cloudinary fica atrás do backend e não determina a composição da interface.
 - Foto e apresentação começam `private`; esta interface pode alternar apenas entre `private` e `authenticated`. A audiência `public` fica reservada no domínio para uma tarefa futura.
 - Pronomes, profissão, idiomas e preferências de atividades seguem a mesma regra, com visibilidades independentes e `private` por default.
+- Disponibilidade e distância são sempre privadas, não aparecem na prévia e não alteram completude, capacidades ou recomendação até a Task 20.
 - O segredo do provedor nunca alcança o navegador; URLs temporárias não são registradas nem reutilizadas como identidade do asset.
 - A implementação termina com duas capturas desktop/mobile em um passe conjunto, correção em lote, no máximo uma confirmação visual e finish review do Impeccable.
 - Aplicar `server-serialization`, `server-auth-actions`, `server-no-shared-module-state`, `async-parallel`, `async-defer-await`, `bundle-barrel-imports`, `rerender-derived-state-no-effect` e `rerender-move-effect-to-event`.
 
-Open decisions: nenhuma de UX para a identidade opcional. A implementação da SDD-016 depende do aceite da ADR-043; os demais limites técnicos e políticas permanecem nos ADRs da SDD-015.
+Open decisions: nenhuma de UX para a identidade opcional ou a disponibilidade/distância. Os demais limites técnicos e políticas permanecem nos ADRs das SDD-015, SDD-016, SDD-017 e SDD-018.

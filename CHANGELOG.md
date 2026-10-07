@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.16.0 — 2026-10-06
+
+Disponibilidade e distância preferida no perfil (SDD-018; ADR-045). Mudança aditiva na leitura: frontend/workspace `0.16.0`, backend `0.15.0`. Rollout coordenado: desligar `PROFILE_UI_ENABLED`, aplicar `0010_profile_availability_distance`, publicar backend e depois frontend, executar smoke de perfil/prévia e religar a UI.
+
+- Perfil aceita zero a 28 combinações únicas de dia da semana e período fixo (madrugada, manhã, tarde e noite) e uma faixa opcional de distância (até 2/5/10/25 km ou mesma cidade). Os campos são removíveis, privados e não alteram completude, capacidades ou eventos.
+- **Contrato:** `GET /api/v1/profiles/me` devolve os novos campos; `PUT /api/v1/profiles/me` exige `availabilitySlots` e `preferredDistance` no snapshot completo. A prévia permanece sem eles e o BFF falha fechado diante de resposta inválida.
+- `/perfil` ganha uma grade acessível de disponibilidade e um `input[type="range"]` discreto para distância após as preferências de atividades, com botões equivalentes para clique entre navegadores, presets, limpeza explícita, texto anunciado da faixa atual, alvos de toque ≥44 px e comportamento responsivo/zoom 200%.
+- Não há localização do aparelho, cálculo geográfico, filtro ou recomendação nesta entrega. Os campos não são registrados em telemetria.
+- Migration `0010` é aditiva, com `CHECK`s, FK em cascata e índice; purga de expiração e exclusão removem os slots e anulam a distância. Rollback operacional preserva schema e dados.
+
 ## 0.15.0 — 2026-10-06
 
 Preferências de atividades no perfil (SDD-017; ADR-044). Mudança aditiva na leitura: frontend/workspace `0.15.0`, backend `0.14.0`. Rollout coordenado: desligar `PROFILE_UI_ENABLED`, aplicar `0009_profile_activity_preferences`, publicar backend e depois frontend, executar o smoke de catálogo/perfil/prévia e religar a UI.
