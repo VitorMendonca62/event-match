@@ -49,6 +49,7 @@ const REGISTRATION_TABLES = [
   'language',
   'profile',
   'profile_activity_preference',
+  'profile_availability_slot',
   'profile_language',
   'profile_media_attempt',
   'profile_photo_asset',
@@ -217,7 +218,7 @@ describe('registration persistence (PostgreSQL integration)', () => {
       const [interests] = await query<{ count: string }>(`select count(*)::text as count from interest`);
       const [ledger] = await query<{ count: string }>(`select count(*)::text as count from drizzle.__drizzle_migrations`);
       expect(interests?.count).toBe('20');
-      expect(ledger?.count).toBe('10');
+      expect(ledger?.count).toBe('11');
     });
   });
 
@@ -336,7 +337,11 @@ describe('registration persistence (PostgreSQL integration)', () => {
       const [row] = await query<{ revision: number; display_name: string; presentation: string }>(`select revision, display_name, presentation from profile where account_id = $1`, [accountId]);
       const languageRows = await query<{ language_code: string }>(`select language_code from profile_language where account_id = $1`, [accountId]);
       const preferenceRows = await query<{ preference_code: string }>(`select preference_code from profile_activity_preference where account_id = $1 order by preference_code`, [accountId]);
+      const availabilityRows = await query<{ weekday: string; period: string }>(`select weekday, period from profile_availability_slot where account_id = $1 order by weekday, period`, [accountId]);
+      const [distanceRow] = await query<{ preferred_distance: string | null }>(`select preferred_distance from profile where account_id = $1`, [accountId]);
       expect(row?.revision).toBe(current.revision + 1);
+      expect(availabilityRows).toEqual([{ weekday: 'fri', period: 'evening' }]);
+      expect(distanceRow).toEqual({ preferred_distance: 'up_to_5km' });
       if (row?.display_name === first.displayName) {
         expect(row.presentation).toBe(first.presentation);
         expect(languageRows).toEqual([{ language_code: 'pt' }]);
@@ -533,6 +538,8 @@ describe('registration persistence (PostgreSQL integration)', () => {
       expect(after.languages.map(({ code }) => code)).toEqual(['pt']);
       expect(after.activityPreferences.map(({ code }) => code)).toEqual(['indoor']);
       expect(after.activityPreferencesVisibility).toBe('private');
+      expect(after.availabilitySlots).toEqual(before.availabilitySlots);
+      expect(after.preferredDistance).toBe(before.preferredDistance);
     });
 
     test('a deactivated preference stays readable, is preservable and cannot be re-added after removal', async () => {
@@ -599,9 +606,11 @@ describe('registration persistence (PostgreSQL integration)', () => {
     test('the batch expires stale incomplete accounts and nulls their personal data', async () => {
       const accountId = await incompleteAccount(nodeA, 'stale@example.test');
       await query(`update profile set pronoun_selection = 'ela_dela', pronouns_visibility = 'authenticated', profession = 'Produtora', profession_visibility = 'authenticated', languages_visibility = 'authenticated' where account_id = $1`, [accountId]);
+      await query(`update profile set preferred_distance = 'up_to_5km' where account_id = $1`, [accountId]);
       await query(`insert into profile_language (account_id, language_code, selected_at) values ($1, 'pt', now())`, [accountId]);
       await query(`update profile set activity_preferences_visibility = 'authenticated' where account_id = $1`, [accountId]);
       await query(`insert into profile_activity_preference (account_id, preference_code, selected_at) values ($1, 'small_group', now())`, [accountId]);
+      await query(`insert into profile_availability_slot (account_id, weekday, period, selected_at) values ($1, 'fri', 'evening', now())`, [accountId]);
       clock.advance(15 * DAY);
 
       const result = await nodeA.expireStale.execute();
@@ -609,10 +618,11 @@ describe('registration persistence (PostgreSQL integration)', () => {
       expect(result.accounts).toBeGreaterThanOrEqual(1);
       const [row] = await query<Record<string, unknown>>(
         `select a.status, a.birth_date, c.contact_hash, c.holds_contact, k.password_hash, p.display_name, p.region,
-                p.pronoun_selection, p.pronouns_visibility, p.profession, p.profession_visibility, p.languages_visibility, p.activity_preferences_visibility,
+                p.pronoun_selection, p.pronouns_visibility, p.profession, p.profession_visibility, p.languages_visibility, p.activity_preferences_visibility, p.preferred_distance,
                 (select count(*) from profile_usage_intent where account_id = a.id)::text as intents,
                 (select count(*) from profile_language where account_id = a.id)::text as languages,
-                (select count(*) from profile_activity_preference where account_id = a.id)::text as preferences
+                (select count(*) from profile_activity_preference where account_id = a.id)::text as preferences,
+                (select count(*) from profile_availability_slot where account_id = a.id)::text as availability
          from account a
          join account_contact c on c.account_id = a.id
          join account_credential k on k.account_id = a.id
@@ -634,9 +644,11 @@ describe('registration persistence (PostgreSQL integration)', () => {
         profession_visibility: 'private',
         languages_visibility: 'private',
         activity_preferences_visibility: 'private',
+        preferred_distance: null,
         intents: '0',
         languages: '0',
         preferences: '0',
+        availability: '0',
       });
     });
   });
