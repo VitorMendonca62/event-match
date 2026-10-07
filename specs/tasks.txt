@@ -144,7 +144,7 @@ Requisitos de origem e dependências:
 Escopo:
 - Definir provedores inicialmente aceitos, um identificador/URL canônico por provedor e limites de quantidade.
 - Normalizar e validar URLs no backend, recusando esquemas, hosts, credenciais e redirecionamentos não permitidos.
-- Aplicar visibilidade individual `private | authenticated | public`, com default `private` e audiências indisponíveis enquanto seus fluxos não existirem.
+- Aplicar visibilidade individual com default `private`: `authenticated` é configurável e aparece somente na prévia da titular nesta entrega; `public` permanece indisponível até existir perfil público, moderação e denúncia.
 - Permitir adicionar, editar, remover, ordenar e conferir a projeção de cada vínculo.
 - Prever mitigação de spam, personificação, assédio e URLs maliciosas sem importar conteúdo externo.
 
@@ -159,7 +159,10 @@ Critérios de aceite:
 - Nenhum fetch server-side é feito para a URL informada, evitando SSRF e rastreamento involuntário.
 
 Dúvidas e bloqueios para o planejamento:
-- Pendente de definição: provedores iniciais, quantidade máxima, identificador versus URL e se `public` será oferecido.
+- Decidido: Instagram, LinkedIn e X são os provedores iniciais; há no máximo um vínculo por provedor; a UI aceita identificador ou URL colada e o backend persiste somente o identificador canônico.
+- WhatsApp permanece em estudo e fora de escopo até haver decisão específica de privacidade e segurança para número de telefone e contato direto.
+- Decidido: a edição aceita `private | authenticated`; `authenticated` aparece apenas na prévia da titular enquanto perfil de terceiros, moderação e denúncia não existem. `public` permanece indisponível.
+- Plano: `specs/sdd-020-redes-sociais-opcionais/tasks.md` (`ready`; ADR-049 aceita em 2026-10-07).
 
 Estimativa inicial:
 - Complexidade Fibonacci: 5.
