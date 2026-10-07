@@ -170,22 +170,26 @@ Estimativa inicial:
 TASK 17 — Galeria de fotos adicionais do perfil
 
 Objetivo:
-Permitir fotos adicionais opcionais com ordenação, legenda mínima, visibilidade e lifecycle seguro, reutilizando a integração Cloudinary da foto principal.
+Permitir até cinco fotos adicionais opcionais, com ordenação, legenda curta, localização contextual opcional, visibilidade e lifecycle seguro, reutilizando a integração Cloudinary da foto principal.
 
 Valor para a pessoa usuária:
-Como participante, quero complementar minha apresentação com algumas fotos escolhidas, para mostrar interesses e contexto sem perder o controle sobre cada imagem.
+Como participante, quero complementar minha apresentação com algumas fotos escolhidas, para mostrar hobbies, atividades, lugares que frequento ou já visitei e outros interesses ou contextos relevantes, sem perder o controle sobre cada imagem e sua localização contextual.
 
 Requisitos de origem e dependências:
 - Depende da TASK 13 e da ADR-039 para upload assinado, transformação, entrega autenticada, limpeza e exclusão.
 - Rastreia RF012, RF015, RF068, RF081, RN014 e RNF001.
 - Exposição a terceiros depende de política de moderação e denúncia aceita antes do rollout.
+- A seleção de fornecedor e o tratamento de dados da moderação exigem ADR próprio, aceito antes da implementação.
 
 Escopo:
-- Definir quantidade máxima, ordenação estável, substituição, remoção e eventual legenda curta.
+- Limitar a cinco fotos adicionais ativas por perfil, com ordenação estável, substituição e remoção sem afetar a foto principal.
+- Permitir legenda opcional de texto simples com até 120 caracteres, sem links, contatos ou localização precisa.
+- Permitir localização contextual opcional por foto: cidade e, opcionalmente, bairro/região aproximada ou nome do lugar como texto. Não coletar, extrair, persistir ou exibir coordenadas, endereço, localização em tempo real ou metadados EXIF/GPS.
+- Orientar o uso das fotos para contextualizar hobbies, atividades, lugares frequentados, lugares já visitados e interesses, sem transformar o perfil em uma vitrine de aparência ou em uma experiência de namoro.
 - Reutilizar formatos, limites, normalização, EXIF stripping, rate limits e lifecycle Cloudinary, sem duplicar adapter.
-- Aplicar visibilidade por foto com default `private` e projeções por audiência.
+- Aplicar visibilidade por foto com default `private`; habilitar somente `private` e `authenticated`, mantendo `public` fora de escopo. A audiência `authenticated` é restrita a superfícies autorizadas de descoberta, evento ou perfil, e não cria diretório navegável por qualquer pessoa autenticada.
 - Tratar concorrência, reordenação, exclusão da conta, cópia de dados e cleanup de órfãos.
-- Adicionar moderação compatível com a audiência antes de qualquer visualização por terceiros.
+- Aplicar moderação híbrida antes de qualquer visualização por terceiros: triagem automática obrigatória; conteúdo sinalizado segue para revisão humana; indisponibilidade da moderação mantém a foto privada. Disponibilizar denúncia, ocultação imediata para quem denuncia, decisão de remoção e recurso da titular.
 
 Fora de escopo:
 - Vídeo, áudio, stories, comentários, reações, reconhecimento facial ou importação de redes sociais.
@@ -193,12 +197,15 @@ Fora de escopo:
 
 Critérios de aceite:
 - A pessoa não ultrapassa o limite e consegue ordenar/remover sem afetar a foto principal.
+- A pessoa pode adicionar ou remover legenda e localização contextual sem alterar o arquivo; legenda respeita 120 caracteres e localização nunca expõe GPS, endereço ou local em tempo real.
 - Arquivo inválido ou upload incompleto nunca entra na galeria ativa.
-- Cada foto respeita sua audiência; original e metadados privados nunca são entregues.
+- Cada foto respeita sua audiência; `public` é recusada, `authenticated` só é projetada em superfícies autorizadas e original/metadados privados nunca são entregues.
+- Foto pendente, reprovada ou sem moderação disponível nunca é visível a terceiros; conteúdo sinalizado pode ser revisado, removido e contestado.
 - Substituições, remoções e exclusão da conta convergem para limpeza idempotente no provedor.
 
 Dúvidas e bloqueios para o planejamento:
-- Pendente de definição: limite de fotos, legenda, audiência habilitada e solução de moderação/denúncia.
+- Selecionar e aceitar ADR da solução de triagem automática, revisão humana, denúncia, recurso, retenção e integração com o fornecedor de moderação.
+- Plano: `specs/sdd-019-galeria-fotos-perfil/tasks.md` (`blocked` até o aceite das ADRs 047–048 e a resolução dos bloqueios de moderação).
 
 Estimativa inicial:
 - Complexidade Fibonacci: 8.
