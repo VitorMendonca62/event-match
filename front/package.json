@@ -1,6 +1,6 @@
 {
   "name": "@eventmatch/front",
-  "version": "0.17.0",
+  "version": "0.18.0",
   "private": true,
   "scripts": {
     "validate:env": "bun run src/shared/config/validate-env.ts",
@@ -9,7 +9,8 @@
     "start": "bun run validate:env && next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "bun test",
+    "test": "bun test --preload ../front/tests/preload/server-only.ts",
+    "test:server-boundary": "bash tests/verify-server-only-boundary.sh",
     "test:e2e": "../scripts/test-front-e2e.sh"
   },
   "dependencies": {
@@ -18,6 +19,7 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-markdown": "10.1.0",
+    "server-only": "0.0.1",
     "zod": "4.6.5"
   },
   "devDependencies": {

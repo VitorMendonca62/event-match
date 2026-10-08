@@ -204,6 +204,12 @@ Exportação de dados, documentos excepcionais e retenção permanecem condicion
 - `PUT /api/v1/profiles/me` passa a exigir `activityPreferenceCodes` (0–5, únicos, `^[a-z][a-z0-9_]{1,39}$`) e `activityPreferencesVisibility` (`private | authenticated`); ausência responde `400`. Desconhecido/inativo novo responde `422` com somente `unknown_activity_preference` ou `inactive_activity_preference`, sem ecoar códigos. Clientes antigos recebem `400`: front e back são publicados de forma coordenada.
 - `GET /api/v1/profiles/me/preview` acrescenta `activityPreferences?: { code, label }[]` somente quando a visibilidade é `authenticated` e a lista não é vazia; não expõe visibilidade nem `active`.
 
+### BFF público de catálogos (SDD-021, frontend/workspace 0.18.0; ADR-050)
+
+- `GET /api/catalog/interests`, `/languages` e `/activity-preferences` delegam para `front/src/shared/server/catalog-bff.ts`; as rotas não fazem `fetch`, não leem configuração privada localmente e não acessam PostgreSQL.
+- O módulo server-only chama uma vez os endpoints NestJS com `internal: false` e `locale=pt-BR`, sem `Authorization`, `X-EventMatch-BFF-Token`, cookie ou continuação. A resposta pública preserva `content-type`, `Cache-Control: no-store`, `Referrer-Policy: no-referrer` e `X-Content-Type-Options: nosniff`.
+- Envelope e dados são validados estritamente; campos extras, shape inválido, falha de rede, timeout e `5xx` não são repassados. Os mapeamentos existentes de `400` e as mensagens públicas permanecem por catálogo. `server-only` impede importação acidental por Client Components.
+
 ### Disponibilidade e distância preferida (SDD-018, backend 0.15.0; frontend/workspace 0.16.0)
 
 - `GET /api/v1/profiles/me` acrescenta `availabilitySlots: AvailabilitySlot[]` em ordem canônica e `preferredDistance: PreferredDistance | null`. Os campos pertencem exclusivamente à visão própria.

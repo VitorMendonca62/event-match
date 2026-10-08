@@ -1,3 +1,5 @@
+import 'server-only';
+
 import { type BffEnv, getBffEnv } from '../config/bff-env.server';
 import type { AuthBffDependencies } from './authentication-bff';
 import { jsonResponse } from './bff-proxy';

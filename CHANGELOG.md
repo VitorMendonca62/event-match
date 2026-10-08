@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.18.0 — 2026-10-07
+
+Padronização dos proxies BFF de catálogos (SDD-021; ADR-050). Refactor interno do frontend/workspace; backend permanece em `0.16.0` e não há migration ou alteração de contrato NestJS.
+
+- Interesses, idiomas e preferências de atividades agora delegam para `front/src/shared/server/catalog-bff.ts`, com dependências injetáveis, uma chamada pública por requisição, filtros estritos e falha fechada.
+- As três rotas mantêm query, envelope, mensagens, status e headers públicos; nenhum token, cookie, sessão ou dado extra é enviado ao backend.
+- `server-only` passa a ser dependência direta do frontend e protege os módulos server-side que leem ambiente ou chamam o backend. Uma fixture de build cobre a tentativa de importação por Client Component.
+- Não há migration nem rollback de dados. Rollback operacional: reverter o frontend/workspace para `0.17.0`; a API e o banco permanecem inalterados.
+
 ## 0.17.0 — 2026-10-07
 
 Presença social opcional no perfil (SDD-020; ADR-049). Mudança aditiva coordenada: frontend/workspace `0.17.0`, backend `0.16.0`. Rollout: desligar `PROFILE_UI_ENABLED`, aplicar `0012_profile_social_links`, publicar backend e depois frontend, executar smoke de perfil/prévia e religar a UI.

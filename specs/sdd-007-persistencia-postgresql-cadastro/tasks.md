@@ -3,7 +3,7 @@
 - **Slug:** persistencia-postgresql-cadastro
 - **Autor do plano:** Code-Planner (SDD)
 - **Data:** 2026-09-25
-- **Status:** ready
+- **Status:** implemented — publicado em `0.8.0` e corrigido em `0.8.1`; revisão documental atualizada em 2026-10-07.
 - **Versão-alvo:** 0.8.0
 - **Tipo:** feature
 - **Impacto público:** none (sem endpoint/OpenAPI; schema PostgreSQL aditivo e novas variáveis de ambiente obrigatórias)
@@ -26,17 +26,17 @@ Versão: a SDD-006 permanece `0.7.0` e esta task publica `0.8.0` nos manifests d
 
 Inclui:
 
-- [ ] Schemas Drizzle por módulo e migration `0000` revisada + migration custom de seed dos 20 interesses do DER §3.10 (ADR-013).
-- [ ] Tabelas: `contact_verification`, `verification_rate_window`, `registration`, `account`, `account_contact`, `account_credential`, `terms_document`, `terms_acceptance`, `profile`, `profile_usage_intent`, `account_interest`, `interest`.
-- [ ] Domínio `registration`: entidades `ContactVerification`, `Registration`, `Account`; value objects `ContactIdentifier`, `ContactChannel`, `Password`, `BirthDate`, `DisplayName`, `Region`, `UsageIntent`, `RegistrationStatus`, `VerificationPolicy` (parâmetros da ADR-009); erros tipados.
-- [ ] Portas outbound e adapters Drizzle, mapeadores, `ContactProtectorPort`, `VerificationSecretPort`, `PasswordHasherPort`, `CommonPasswordCheckerPort`, `ClockPort`, `IdGeneratorPort`, `VerificationDeliveryPort` (apenas porta + double de teste).
-- [ ] Casos de uso internos (sem controller): `RequestContactVerification`, `ResendContactVerification`, `VerifyContact`, `StartRegistration` (senha), `SaveRequiredData` (cria `Account` incompleta + `Profile`), `CompleteRegistration` (nascimento, aceites, ≥3 interesses → `active`), `ExpireStaleRegistrations`. Os casos de uso de pedido de desafio/reenvio contam a tentativa em unidade de trabalho própria, antes da unidade de negócio (ADR-015).
-- [ ] Módulos NestJS `registration`, `profiles`, `catalog` com tokens e DI, sem controllers.
-- [ ] Limpeza oportunista de janelas de limite com mais de 2 h do mesmo sujeito, no próprio comando de contagem (ADR-015); sem job.
-- [ ] `resolveExecutor` (ADR-016); `DrizzleDatabase` permanece sem tipo de schema; remover o `schema.ts` compartilhado vazio e apontar `drizzle.config.ts` ao glob dos módulos (ADR-013); regra de lint restringindo import de schema entre módulos à pasta `schema/`.
-- [ ] Novas variáveis Zod: `CONTACT_HASH_KEY`, `CONTACT_ENCRYPTION_KEY`, `VERIFICATION_SECRET_KEY` (ADR-014); `.env.example`, README e testes.
-- [ ] Testes unitários, integração PostgreSQL isolada e `db:check`.
-- [ ] Docs: `docs/03-*` (schema físico), `docs/02-*` (regras novas: normalização, senha), `docs/01-*` (módulos, ADRs 013–017), `docs/04-*` (porta de entrega sem provedor), `back/README.md` (migration, rollout, rollback), `CHANGELOG.md` criado, bump de versão.
+- [x] Schemas Drizzle por módulo e migration `0000` revisada + migration custom de seed dos 20 interesses do DER §3.10 (ADR-013).
+- [x] Tabelas: `contact_verification`, `verification_rate_window`, `registration`, `account`, `account_contact`, `account_credential`, `terms_document`, `terms_acceptance`, `profile`, `profile_usage_intent`, `account_interest`, `interest`.
+- [x] Domínio `registration`: entidades `ContactVerification`, `Registration`, `Account`; value objects `ContactIdentifier`, `ContactChannel`, `Password`, `BirthDate`, `DisplayName`, `Region`, `UsageIntent`, `RegistrationStatus`, `VerificationPolicy` (parâmetros da ADR-009); erros tipados.
+- [x] Portas outbound e adapters Drizzle, mapeadores, `ContactProtectorPort`, `VerificationSecretPort`, `PasswordHasherPort`, `CommonPasswordCheckerPort`, `ClockPort`, `IdGeneratorPort`, `VerificationDeliveryPort` (apenas porta + double de teste).
+- [x] Casos de uso internos (sem controller): `RequestContactVerification`, `ResendContactVerification`, `VerifyContact`, `StartRegistration` (senha), `SaveRequiredData` (cria `Account` incompleta + `Profile`), `CompleteRegistration` (nascimento, aceites, ≥3 interesses → `active`), `ExpireStaleRegistrations`. Os casos de uso de pedido de desafio/reenvio contam a tentativa em unidade de trabalho própria, antes da unidade de negócio (ADR-015).
+- [x] Módulos NestJS `registration`, `profiles`, `catalog` com tokens e DI, sem controllers.
+- [x] Limpeza oportunista de janelas de limite com mais de 2 h do mesmo sujeito, no próprio comando de contagem (ADR-015); sem job.
+- [x] `resolveExecutor` (ADR-016); `DrizzleDatabase` permanece sem tipo de schema; remover o `schema.ts` compartilhado vazio e apontar `drizzle.config.ts` ao glob dos módulos (ADR-013); regra de lint restringindo import de schema entre módulos à pasta `schema/`.
+- [x] Novas variáveis Zod: `CONTACT_HASH_KEY`, `CONTACT_ENCRYPTION_KEY`, `VERIFICATION_SECRET_KEY` (ADR-014); `.env.example`, README e testes.
+- [x] Testes unitários, integração PostgreSQL isolada e `db:check`.
+- [x] Docs: `docs/03-*` (schema físico), `docs/02-*` (regras novas: normalização, senha), `docs/01-*` (módulos, ADRs 013–017), `docs/04-*` (porta de entrega sem provedor), `back/README.md` (migration, rollout, rollback), `CHANGELOG.md` criado, bump de versão.
 
 Exclui:
 
@@ -245,11 +245,11 @@ Rollback:
 
 - [x] Decisões citam `docs/` e ADRs.
 - [x] Um ADR `proposed` foi criado para cada decisão material.
-- [x] Nenhum código de produção foi escrito.
+- [x] Código de produção, migrations e testes foram implementados; a revisão pós-entrega foi registrada em `0.8.1`.
 - [x] Contratos front/back, OpenAPI e PostgreSQL estão explícitos (sem contrato HTTP nesta task).
 - [x] Performance, segurança e observabilidade foram tratadas.
 - [x] `vercel-react-best-practices` e `nestjs-expert` foram aplicadas conforme o escopo (apenas backend).
-- [x] Testes, migration e rollback estão planejados.
+- [x] Testes, migration e rollback foram implementados e documentados.
 - [x] Perguntas em aberto foram exauridas.
 
 ## 11. Correções pós-revisão (0.8.1)
@@ -266,3 +266,7 @@ A revisão de código de 2026-09-26 encontrou divergências bloqueantes; as corr
 Decisão posterior: a ADR-019, aceita em 2026-09-26, passa a exigir uma validação de nascimento sem persistência antes do contato. Esta fundação continua correta: `CompleteRegistration` revalida e grava `birthDate` somente na ativação; o novo estágio de elegibilidade e seu contrato pertencem à SDD-009.
 
 A ADR-023, aceita na mesma data, define a origem confiável do BFF na Vercel e encerra o adiamento arquitetural do limite por origem. A tabela/porta já previstas continuam corretas; o incremento do escopo `origin` será implementado e testado na SDD-009.
+
+## 12. Revisão posterior (2026-10-07)
+
+O `code-reviewer` confirmou a implementação e a rastreabilidade no `CHANGELOG.md` `0.8.0/0.8.1`. `back lint`, `back typecheck` e `back build` passaram. A suíte unitária agregada do backend permanece com falhas de infraestrutura ao inicializar Supertest em Bun (`app.address()` nulo / porta `0`); isso afeta testes de contratos posteriores e deve ser corrigido em tarefa de manutenção, sem reabrir o escopo já entregue desta SDD.

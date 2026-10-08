@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { proxyActivityPreferenceCatalog, proxyPhotoMutation, proxyProfile } from '../../src/shared/server/profile-bff';
+import { proxyPhotoMutation, proxyProfile } from '../../src/shared/server/profile-bff';
 import { browserRequest, fakeBackend, TOKEN, testEnv } from './bff-fixtures';
 
 const interestIds = [crypto.randomUUID(), crypto.randomUUID(), crypto.randomUUID()];
@@ -71,17 +71,5 @@ describe('profile BFF (ADR-038..040)', () => {
     expect(invalid.calls).toHaveLength(0);
     const { availabilitySlots: _slots, ...withoutAvailability } = body;
     expect((await proxyProfile(browserRequest('/api/profile', { method: 'PUT', cookie, body: withoutAvailability }), { env: testEnv(), fetchImpl: invalid.fetchImpl })).status).toBe(400);
-  });
-  test('activity preference catalog is public, filtered and fails closed', async () => {
-    const backend = fakeBackend(200, { activityPreferences: [{ code: 'outdoor', label: 'Ao ar livre' }] });
-    const ok = await proxyActivityPreferenceCatalog({ env: testEnv(), fetchImpl: backend.fetchImpl });
-    expect(await ok.json()).toEqual({ data: { activityPreferences: [{ code: 'outdoor', label: 'Ao ar livre' }] }, message: 'Preferências de atividades disponíveis.', statusCode: 200 });
-    expect(backend.calls[0]?.url).toBe('http://backend.test/api/v1/catalog/activity-preferences?locale=pt-BR');
-    expect(backend.calls[0]?.init.headers.get('x-eventmatch-bff-token')).toBeNull();
-    expect(backend.calls[0]?.init.headers.get('authorization')).toBeNull();
-    const leaky = await proxyActivityPreferenceCatalog({ env: testEnv(), fetchImpl: fakeBackend(200, { activityPreferences: [{ code: 'outdoor', label: 'Ao ar livre', active: false }] }).fetchImpl });
-    expect(leaky.status).toBe(503);
-    expect((await proxyActivityPreferenceCatalog({ env: testEnv(), fetchImpl: fakeBackend(400).fetchImpl })).status).toBe(400);
-    expect((await proxyActivityPreferenceCatalog({ env: testEnv(), fetchImpl: fakeBackend(500).fetchImpl })).status).toBe(503);
   });
 });

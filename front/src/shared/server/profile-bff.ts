@@ -1,5 +1,7 @@
+import 'server-only';
+
 import { envelopeSchema } from '@/features/registration/contracts';
-import { activityPreferenceListDataSchema, internalOwnProfileSchema, ownProfileSchema, profilePreviewSchema, signedUploadGrantSchema, updateProfileSchema } from '@/features/profile/contracts';
+import { internalOwnProfileSchema, ownProfileSchema, profilePreviewSchema, signedUploadGrantSchema, updateProfileSchema } from '@/features/profile/contracts';
 import { z } from 'zod';
 import { resolveOriginFingerprint } from './origin-fingerprint';
 import type { BffEnv } from '@/shared/config/bff-env.server';
@@ -50,14 +52,6 @@ export async function proxyProfile(request: Request, deps: Deps): Promise<Respon
   }
   if ([400, 403, 409].includes(upstream.status)) return response(upstream.status);
   return response(503);
-}
-
-/** Public catalog: no session, no internal credential; only `{ code, label }[]` passes through. */
-export async function proxyActivityPreferenceCatalog(deps: Deps): Promise<Response> {
-  const upstream = await callBackend({ method: 'GET', path: '/catalog/activity-preferences?locale=pt-BR', internal: false }, deps.env, deps.fetchImpl);
-  const data = activityPreferenceListDataSchema.safeParse(dataOf(upstream.body));
-  if (upstream.status === 200 && data.success) return jsonResponse({ data: data.data, message: 'Preferências de atividades disponíveis.', statusCode: 200 });
-  return jsonResponse({ data: {}, message: 'Catálogo indisponível.', statusCode: upstream.status === 400 ? 400 : 503 });
 }
 
 export async function proxyProfilePreview(request: Request, deps: Deps): Promise<Response> {
