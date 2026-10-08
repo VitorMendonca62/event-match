@@ -1,4 +1,4 @@
-import { registrationHandler } from '@/shared/server/route-handler';
-import { REGISTRATION_OPERATIONS } from '@/shared/server/registration-operations';
+import { getBffEnv } from '@/shared/config/bff-env.server';
+import { proxyInterestCatalog } from '@/shared/server/catalog-bff';
 
-export const GET = registrationHandler(REGISTRATION_OPERATIONS.interests);
+export const GET = () => proxyInterestCatalog({ env: getBffEnv() });

@@ -237,16 +237,4 @@ describe('registration BFF proxy', () => {
     expect(lines[0]).not.toContain(TOKEN);
   });
 
-  test('public catalog is proxied without the internal credential or continuation', async () => {
-    const backend = fakeBackend(200, { interests: [] });
-    const response = await proxyRegistration(
-      new Request('http://app.test/api/catalog/interests', { headers: { cookie } }),
-      OPS.interests,
-      { env, fetchImpl: backend.fetchImpl, log: silent },
-    );
-    expect(response.status).toBe(200);
-    expect(backend.calls[0]!.url).toBe('http://backend.test/api/v1/catalog/interests?locale=pt-BR');
-    expect(backend.calls[0]!.init.headers.get('x-eventmatch-bff-token')).toBeNull();
-    expect(backend.calls[0]!.init.headers.get('authorization')).toBeNull();
-  });
 });

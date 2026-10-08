@@ -1,3 +1,5 @@
+import 'server-only';
+
 import { getBffEnv } from '../config/bff-env.server';
 import { type BffOperation, jsonResponse, proxyRegistration } from './bff-proxy';
 

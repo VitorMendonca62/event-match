@@ -7,7 +7,6 @@ import {
   eligibilityDataSchema,
   eligibilityRequestSchema,
   emptyRequestSchema,
-  interestListDataSchema,
   legalDocumentListDataSchema,
   passwordRequestSchema,
   requiredDataRequestSchema,
@@ -127,14 +126,5 @@ export const REGISTRATION_OPERATIONS = {
     continuation: 'required',
     idempotency: 'required',
     onSuccess: 'expire',
-  },
-  interests: {
-    operation: 'catalog.interests',
-    method: 'GET',
-    backendPath: '/catalog/interests?locale=pt-BR',
-    internal: false,
-    responseSchema: interestListDataSchema,
-    continuation: 'none',
-    idempotency: 'none',
   },
 } as const satisfies Record<string, BffOperation>;

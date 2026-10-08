@@ -101,10 +101,10 @@ Estimativa inicial:
 
 ---
 
-TASK 24 — Descoberta básica e detalhe público de eventos
+TASK 24 — Descoberta por lista, mapa aproximado e detalhe público de eventos
 
 Objetivo:
-Permitir descobrir, buscar, filtrar, salvar, compartilhar e dispensar eventos publicados, exibindo detalhe suficiente para decidir sem revelar ponto exato ou dados privados.
+Permitir descobrir, buscar, filtrar, salvar, compartilhar e dispensar eventos publicados por lista ou mapa aproximado, exibindo detalhe suficiente para decidir sem revelar ponto exato ou dados privados.
 
 Valor para a pessoa usuária:
 Como participante, quero encontrar encontros compatíveis na minha região e entender a proposta antes de manifestar interesse, sem comprometer a privacidade do grupo.
@@ -115,24 +115,29 @@ Requisitos de origem e dependências:
 - Rastreia RF022–RF027, RF102, RN026–RN027, RN107, RN147 e RN156–RN157.
 
 Escopo:
+- Uma consulta e conjunto de filtros compartilhados entre as visualizações de lista e mapa.
 - Lista, busca textual e filtros iniciais por data, horário, região, categoria, vagas, acessibilidade e faixa etária quando autorizados pelo contrato.
+- Mapa com marcadores de região aproximada ou agrupamentos, sem coordenada, nome ou pista que permita deduzir o ponto exato antes da confirmação.
 - Página de detalhe, salvos, compartilhamento e sinal de desinteresse.
+- Ação “Surpreenda-me”, que seleciona com variedade um evento elegível e compatível com interesses, intenção de uso e filtros vigentes, respeitando indisponibilidade, bloqueios e sinais de desinteresse.
 - Projeções públicas e autenticadas mínimas, sem ponto exato, contatos, lista de participantes ou dados sensíveis.
 
 Fora de escopo:
-- Participar, aprovar solicitações, ranking personalizado avançado, localização em tempo real ou publicidade paga.
+- Participar, aprovar solicitações, ranking personalizado avançado, localização em tempo real, geolocalização obrigatória ou publicidade paga.
 
 Critérios de aceite:
 - Eventos indisponíveis não aparecem como disponíveis; lotados são identificados conforme a regra aplicável.
 - Convites e detalhes nunca expõem ponto exato, contatos ou dados privados.
 - Busca e filtros não usam dados sensíveis ou localização precisa.
+- Lista e mapa retornam o mesmo conjunto elegível para os mesmos filtros; o mapa agrupa ou aproxima marcadores sem expor o ponto reservado.
+- “Surpreenda-me” nunca seleciona evento indisponível, dispensado, incompatível por bloqueio/restrição ou favorecido por pagamento; a pessoa pode solicitar outra sugestão.
 
 Situação para planejamento:
-- A planejar após a TASK 23 e com o contrato de região da TASK 20 estabilizado; exigirá ADRs para projeções, filtros, ordenação e privacidade de localização.
+- A planejar após a TASK 23 e com o contrato de região da TASK 20 estabilizado; exigirá ADRs para projeções, filtros, ordenação/variedade, privacidade dos marcadores e uso de provedora de mapas, se houver.
 
 Estimativa inicial:
 - Complexidade Fibonacci: 8.
-- Risco de deploy: médio/alto, por exposição pública, filtros e desempenho de consultas.
+- Risco de deploy: alto, por exposição pública, privacidade de localização, filtros, algoritmo de sugestão e desempenho de consultas/mapa.
 
 ---
 

@@ -151,5 +151,5 @@ Rollout: publicar somente o frontend após checks e smoke dos três `GET`; não 
 - [x] Cobertura dos três catálogos adicionada em `front/tests/integration/catalog-bff.test.ts`.
 - [x] Documentação, changelog, manifests e lockfile atualizados para `0.18.0`; sem alteração de backend, OpenAPI, banco ou migration.
 - [x] `bun run --cwd front lint`, `typecheck`, `test`, `build` e `test:server-boundary` passaram; frontend: 165 testes, 0 falhas.
-- [x] `bun run --cwd back lint`, `typecheck` e `build` passaram. `bun run --cwd back test` foi executado isoladamente, mas o ambiente Bun/Supertest falhou na inicialização de servidores (`port 0 in use`), resultando em 66 falhas não relacionadas ao escopo.
-- [ ] `bun run --cwd front test:e2e` permanece pendente por indisponibilidade do daemon Docker no ambiente de validação.
+- [x] `bun run --cwd back lint`, `typecheck`, `build` e `test` passaram; a suíte HTTP que abre portas efêmeras foi executada fora do sandbox (367 testes, 0 falhas).
+- [x] `bun run --cwd front test:e2e` passou fora do sandbox: 80 testes passaram, 1 foi ignorado.

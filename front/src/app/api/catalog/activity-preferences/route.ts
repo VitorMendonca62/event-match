@@ -1,6 +1,4 @@
 import { getBffEnv } from '@/shared/config/bff-env.server';
-import { proxyActivityPreferenceCatalog } from '@/shared/server/profile-bff';
+import { proxyActivityPreferenceCatalog } from '@/shared/server/catalog-bff';
 
-export function GET(): Promise<Response> {
-  return proxyActivityPreferenceCatalog({ env: getBffEnv() });
-}
+export const GET = () => proxyActivityPreferenceCatalog({ env: getBffEnv() });

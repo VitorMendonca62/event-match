@@ -1,3 +1,5 @@
+import 'server-only';
+
 import type { BffEnv } from '../config/bff-env.server';
 import { isContinuationToken } from './continuation-cookie';
 
