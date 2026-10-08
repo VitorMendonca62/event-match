@@ -138,7 +138,7 @@ describe('Auth API v1 (e2e, container)', () => {
       info: { version: string };
       paths: Record<string, unknown>;
     };
-    expect(document.info.version).toBe('0.14.0');
+    expect(document.info.version).toBe('0.15.0');
     expect(Object.keys(document.paths)).toEqual(
       expect.arrayContaining(['/api/v1/auth/login', '/api/v1/auth/session', '/api/v1/auth/logout']),
     );
@@ -201,6 +201,8 @@ describe('Auth API v1 (e2e, container)', () => {
       languagesVisibility: 'authenticated',
       activityPreferenceCodes: ['small_group', 'outdoor'],
       activityPreferencesVisibility: 'authenticated',
+      availabilitySlots: ['fri_evening', 'sat_early_hours'],
+      preferredDistance: 'up_to_5km',
     };
     const { activityPreferenceCodes: _omittedCodes, ...withoutPreferences } = update;
     void _omittedCodes;

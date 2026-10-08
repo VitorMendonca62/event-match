@@ -33,7 +33,7 @@ function seedStatement(file: string, insert: string): string {
 const languageSeedStatement = () => seedStatement('0008_profile_optional_identity.sql', 'INSERT INTO "language"');
 const activityPreferenceSeedStatement = () => seedStatement('0009_profile_activity_preferences.sql', 'INSERT INTO "activity_preference"');
 
-describe('migrations 0007 to 0009 over existing 0006 profile data', () => {
+describe('migrations 0007 to 0010 over existing 0006 profile data', () => {
   let database: EphemeralDatabase;
   let folder: string;
 
@@ -167,7 +167,7 @@ describe('migrations 0007 to 0009 over existing 0006 profile data', () => {
     ]);
     expect(catalog.rows[0]).toEqual({ code: 'outdoor', label_pt_br: 'Ao ar livre', sort_order: 10 });
     const ledger = await database.pool.query(`select count(*)::int as count from drizzle.__drizzle_migrations`);
-    expect(ledger.rows).toEqual([{ count: 10 }]);
+    expect(ledger.rows).toEqual([{ count: 11 }]);
 
     await expect(database.pool.query(`update profile set activity_preferences_visibility = 'everyone' where account_id = $1`, [id])).rejects.toMatchObject({ code: '23514' });
     await expect(database.pool.query(`insert into activity_preference (code, label_pt_br, sort_order) values ('Bad-Code', 'Inválida', 999)`)).rejects.toMatchObject({ code: '23514' });
@@ -189,6 +189,31 @@ describe('migrations 0007 to 0009 over existing 0006 profile data', () => {
       await client.query('begin');
       await client.query(`delete from account where id = $1`, [id]);
       const relation = await client.query(`select count(*)::int as count from profile_activity_preference where account_id = $1`, [id]);
+      expect(relation.rows).toEqual([{ count: 0 }]);
+    } finally {
+      await client.query('rollback');
+      client.release();
+    }
+  });
+
+  test('adds optional availability and distance with database-enforced closed values', async () => {
+    const id = '30000000-0000-7000-8000-000000000007';
+    const defaults = await database.pool.query(`select preferred_distance from profile where account_id = $1`, [id]);
+    expect(defaults.rows).toEqual([{ preferred_distance: null }]);
+    const tables = await database.pool.query(`select table_name from information_schema.tables where table_schema = 'public' and table_name = 'profile_availability_slot'`);
+    expect(tables.rows).toEqual([{ table_name: 'profile_availability_slot' }]);
+    await database.pool.query(`update profile set preferred_distance = 'up_to_5km' where account_id = $1`, [id]);
+    await database.pool.query(`insert into profile_availability_slot (account_id, weekday, period, selected_at) values ($1, 'fri', 'early_hours', now()), ($1, 'sat', 'evening', now())`, [id]);
+    await expect(database.pool.query(`update profile set preferred_distance = 'up_to_100km' where account_id = $1`, [id])).rejects.toMatchObject({ code: '23514' });
+    await expect(database.pool.query(`insert into profile_availability_slot (account_id, weekday, period, selected_at) values ($1, 'monday', 'evening', now())`, [id])).rejects.toMatchObject({ code: '23514' });
+    await expect(database.pool.query(`insert into profile_availability_slot (account_id, weekday, period, selected_at) values ($1, 'fri', 'early_hours', now())`, [id])).rejects.toMatchObject({ code: '23505' });
+    const index = await database.pool.query(`select indexname from pg_indexes where tablename = 'profile_availability_slot' and indexname = 'profile_availability_slot_weekday_period_index'`);
+    expect(index.rows).toHaveLength(1);
+    const client = await database.pool.connect();
+    try {
+      await client.query('begin');
+      await client.query(`delete from account where id = $1`, [id]);
+      const relation = await client.query(`select count(*)::int as count from profile_availability_slot where account_id = $1`, [id]);
       expect(relation.rows).toEqual([{ count: 0 }]);
     } finally {
       await client.query('rollback');

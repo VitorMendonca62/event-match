@@ -3,6 +3,7 @@ import type { InterestCatalogReaderPort } from '../../../catalog/domain/ports/in
 import type { LanguageCatalogReaderPort } from '../../../catalog/domain/ports/language-catalog-reader.port';
 import type { ActivityPreferenceCatalogReaderPort } from '../../../catalog/domain/ports/activity-preference-catalog-reader.port';
 import { Profile, type EditableProfileVisibility, type UsageIntent } from '../../domain/entities/profile';
+import type { AvailabilitySlot, PreferredDistance } from '../../domain/value-objects/availability';
 import { ProfileError } from '../../domain/errors/profile.error';
 import type { ProfileRepositoryPort } from '../../domain/ports/outbound/profile-repository.port';
 import type { ProfileInvitationSubjectPort } from '../../domain/ports/outbound/profile-security.port';
@@ -45,6 +46,7 @@ function ownView(profile: ReturnType<Profile['snapshot']>, hasActivePhoto = prof
     profession: profile.profession, professionVisibility: profile.professionVisibility,
     languages: profile.languages, languagesVisibility: profile.languagesVisibility,
     activityPreferences: profile.activityPreferences, activityPreferencesVisibility: profile.activityPreferencesVisibility,
+    availabilitySlots: profile.availabilitySlots, preferredDistance: profile.preferredDistance,
     completion: new ProfileCompletion().calculate(profile, hasActivePhoto),
   };
 }
@@ -57,6 +59,7 @@ export type UpdateOwnProfileInput = Readonly<{
   pronounsVisibility: EditableProfileVisibility; profession: string | null; professionVisibility: EditableProfileVisibility;
   languageCodes: readonly string[]; languagesVisibility: EditableProfileVisibility;
   activityPreferenceCodes: readonly string[]; activityPreferencesVisibility: EditableProfileVisibility;
+  availabilitySlots: readonly AvailabilitySlot[]; preferredDistance: PreferredDistance | null;
 }>;
 
 export class GetOwnProfile {
@@ -126,6 +129,7 @@ export class UpdateOwnProfile {
         languagesVisibility: input.languagesVisibility,
         // findByCodes returns catalog order, so the payload order is ignored.
         activityPreferences: foundPreferences, activityPreferencesVisibility: input.activityPreferencesVisibility,
+        availabilitySlots: input.availabilitySlots, preferredDistance: input.preferredDistance,
       });
       if (await this.profiles.updateIfRevision(context, next, input.revision) === 'conflict') throw new ProfileError('PROFILE_REVISION_CONFLICT');
       return { profile: next.snapshot(), photo: this.mediaPolicy.enabled ? await this.media.findActive(context, input.accountId) : null };

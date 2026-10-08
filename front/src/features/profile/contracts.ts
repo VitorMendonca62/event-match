@@ -9,6 +9,22 @@ export const MAX_ACTIVITY_PREFERENCES = 5;
 export const activityPreferenceSchema = z.object({ code: z.string().regex(/^[a-z][a-z0-9_]{1,39}$/), label: z.string().min(1) }).strict();
 export const ownActivityPreferenceSchema = activityPreferenceSchema.extend({ active: z.boolean() }).strict();
 export const interestSchema = z.object({ id: z.uuid(), slug: z.string().min(1), label: z.string().min(1) }).strict();
+export const AVAILABILITY_WEEKDAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
+export const AVAILABILITY_PERIODS = ['early_hours', 'morning', 'afternoon', 'evening'] as const;
+export const AVAILABILITY_SLOTS = [
+  'mon_early_hours', 'mon_morning', 'mon_afternoon', 'mon_evening',
+  'tue_early_hours', 'tue_morning', 'tue_afternoon', 'tue_evening',
+  'wed_early_hours', 'wed_morning', 'wed_afternoon', 'wed_evening',
+  'thu_early_hours', 'thu_morning', 'thu_afternoon', 'thu_evening',
+  'fri_early_hours', 'fri_morning', 'fri_afternoon', 'fri_evening',
+  'sat_early_hours', 'sat_morning', 'sat_afternoon', 'sat_evening',
+  'sun_early_hours', 'sun_morning', 'sun_afternoon', 'sun_evening',
+] as const;
+export const availabilitySlotSchema = z.enum(AVAILABILITY_SLOTS);
+export const PREFERRED_DISTANCES = ['up_to_2km', 'up_to_5km', 'up_to_10km', 'up_to_25km', 'same_city'] as const;
+export const preferredDistanceSchema = z.enum(PREFERRED_DISTANCES);
+export type AvailabilitySlot = z.infer<typeof availabilitySlotSchema>;
+export type PreferredDistance = z.infer<typeof preferredDistanceSchema>;
 export const completionSchema = z.object({
   complete: z.boolean(), completedCount: z.number().int().min(0).max(6), totalCount: z.literal(6),
   missing: z.array(z.enum(['display_name', 'region', 'usage_intents', 'interests', 'photo', 'presentation'])),
@@ -26,6 +42,8 @@ export const ownProfileSchema = z.object({
   languagesVisibility: z.enum(['private', 'authenticated', 'public']),
   activityPreferences: z.array(ownActivityPreferenceSchema).max(MAX_ACTIVITY_PREFERENCES),
   activityPreferencesVisibility: z.enum(['private', 'authenticated', 'public']),
+  availabilitySlots: z.array(availabilitySlotSchema).max(28).refine((items) => new Set(items).size === items.length),
+  preferredDistance: preferredDistanceSchema.nullable(),
 }).strict();
 export type OwnProfile = z.infer<typeof ownProfileSchema>;
 export const internalOwnProfileSchema = ownProfileSchema.extend({ invitationSubject: z.string().regex(/^v1\.[A-Za-z0-9_-]{43}$/) }).strict();
@@ -40,6 +58,8 @@ export const updateProfileSchema = z.object({
   languagesVisibility: visibilitySchema,
   activityPreferenceCodes: z.array(activityPreferenceSchema.shape.code).max(MAX_ACTIVITY_PREFERENCES).refine((items) => new Set(items).size === items.length),
   activityPreferencesVisibility: visibilitySchema,
+  availabilitySlots: z.array(availabilitySlotSchema).max(28).refine((items) => new Set(items).size === items.length),
+  preferredDistance: preferredDistanceSchema.nullable(),
 }).strict().superRefine((value, context) => {
   if (value.pronounSelection === 'other' && !value.customPronouns) context.addIssue({ code: 'custom', path: ['customPronouns'], message: 'Informe seus pronomes.' });
   if (value.pronounSelection !== 'other' && value.customPronouns !== null) context.addIssue({ code: 'custom', path: ['customPronouns'], message: 'Remova o texto personalizado.' });

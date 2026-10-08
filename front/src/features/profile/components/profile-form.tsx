@@ -17,6 +17,7 @@ import { ProfileVisibilityToggle } from './profile-visibility-toggle';
 import { ProfilePronounsField } from './profile-pronouns-field';
 import { ProfileLanguagePicker } from './profile-language-picker';
 import { ProfileActivityPreferencesField } from './profile-activity-preferences-field';
+import { ProfileAvailabilityField } from './profile-availability-field';
 
 export function ProfileForm({
   initial,
@@ -75,6 +76,8 @@ export function ProfileForm({
       languagesVisibility: form.get('languagesVisibility'),
       activityPreferenceCodes: form.getAll('activityPreferenceCodes'),
       activityPreferencesVisibility: form.get('activityPreferencesVisibility'),
+      availabilitySlots: form.getAll('availabilitySlots'),
+      preferredDistance: String(form.get('preferredDistance') ?? '') || null,
     };
     const validated = updateProfileSchema.safeParse(body);
     if (!validated.success) {
@@ -90,6 +93,10 @@ export function ProfileForm({
                   ? 'Escolha no máximo cinco idiomas, sem repetições.'
                   : issue.path[0] === 'activityPreferenceCodes'
                   ? 'Escolha no máximo cinco preferências, sem repetições.'
+                  : issue.path[0] === 'availabilitySlots'
+                    ? 'Escolha até 28 períodos, sem repetições.'
+                    : issue.path[0] === 'preferredDistance'
+                      ? 'Escolha uma faixa válida ou “Não informar”.'
                   : issue.code === 'custom' && issue.message
                     ? issue.message
                     : 'Revise este campo.';
@@ -366,6 +373,12 @@ export function ProfileForm({
         </div>
       </section>
       <ProfileActivityPreferencesField initial={profile} options={activityPreferenceOptions} error={errors.activityPreferenceCodes} onDirty={() => setDirty(true)} />
+      <ProfileAvailabilityField
+        initial={profile}
+        availabilityError={errors.availabilitySlots}
+        preferredDistanceError={errors.preferredDistance}
+        onDirty={() => setDirty(true)}
+      />
       <div className="flex flex-wrap gap-3">
         <Button type="submit" pending={pending} pendingLabel="Salvando…">
           Salvar perfil

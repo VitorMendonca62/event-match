@@ -1,4 +1,11 @@
 import { ProfileError } from '../errors/profile.error';
+import {
+  AVAILABILITY_SLOTS,
+  PREFERRED_DISTANCES,
+  toCanonicalOrder,
+  type AvailabilitySlot,
+  type PreferredDistance,
+} from '../value-objects/availability';
 
 export const USAGE_INTENTS = ['friendship', 'activity_company', 'explore_city', 'networking'] as const;
 export type UsageIntent = (typeof USAGE_INTENTS)[number];
@@ -32,6 +39,8 @@ export type ProfileState = Readonly<{
   languagesVisibility: ProfileFieldVisibility;
   activityPreferences: readonly ProfileActivityPreference[];
   activityPreferencesVisibility: ProfileFieldVisibility;
+  availabilitySlots: readonly AvailabilitySlot[];
+  preferredDistance: PreferredDistance | null;
 }>;
 
 const CONTACT_PATTERN = /(?:https?:\/\/|www\.|[\w.+-]+@[\w.-]+\.[a-z]{2,}|(?:\+?55\s*)?(?:\(?\d{2}\)?\s*)?9?\d{4}[-\s]?\d{4})/iu;
@@ -61,6 +70,8 @@ export class Profile {
     const profession = input.profession === null ? null : normalizeText(input.profession);
     const intents = [...new Set(input.usageIntents)];
     const interests = [...new Map(input.interests.map((interest) => [interest.id, interest])).values()];
+    const availabilitySlots = [...input.availabilitySlots];
+    const availabilitySet = new Set(availabilitySlots);
     const allowedIntents = new Set<string>(USAGE_INTENTS);
     const valid =
       displayName.length >= 1 && displayName.length <= 60 &&
@@ -85,7 +96,15 @@ export class Profile {
       input.activityPreferences.length <= MAX_ACTIVITY_PREFERENCES &&
       new Set(input.activityPreferences.map(({ code }) => code)).size === input.activityPreferences.length &&
       ['private', 'authenticated'].includes(input.activityPreferencesVisibility);
-    if (!valid || !identityValid || !preferencesValid) throw new ProfileError('INVALID_PROFILE_CONTENT');
+    const availabilityValid =
+      availabilitySlots.length <= AVAILABILITY_SLOTS.length &&
+      availabilitySet.size === availabilitySlots.length &&
+      availabilitySlots.every((slot) => AVAILABILITY_SLOTS.includes(slot as AvailabilitySlot));
+    const preferredDistanceValid =
+      input.preferredDistance === null || PREFERRED_DISTANCES.includes(input.preferredDistance);
+    if (!valid || !identityValid || !preferencesValid || !availabilityValid || !preferredDistanceValid) {
+      throw new ProfileError('INVALID_PROFILE_CONTENT');
+    }
     return new Profile({
       ...this.state,
       displayName,
@@ -104,6 +123,8 @@ export class Profile {
       languagesVisibility: input.languagesVisibility,
       activityPreferences: [...input.activityPreferences],
       activityPreferencesVisibility: input.activityPreferencesVisibility,
+      availabilitySlots: toCanonicalOrder(availabilitySlots as AvailabilitySlot[]),
+      preferredDistance: input.preferredDistance,
       revision: this.state.revision + 1,
     });
   }

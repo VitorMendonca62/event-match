@@ -13,6 +13,7 @@ const state = {
   pronounSelection: null, customPronouns: null, pronounsVisibility: 'private' as const,
   profession: null, professionVisibility: 'private' as const, languages: [], languagesVisibility: 'private' as const,
   activityPreferences: [] as { code: string; label: string; active: boolean }[], activityPreferencesVisibility: 'private' as const,
+  availabilitySlots: [], preferredDistance: null,
 };
 const PRONOUN_LABELS = { ela_dela: 'Ela/dela', ele_dele: 'Ele/dele', elu_delu: 'Elu/delu' } as const;
 
@@ -95,5 +96,33 @@ describe('Profile (ADR-038)', () => {
         });
       }
     }
+  });
+  describe('availability and distance (ADR-045)', () => {
+    test('accepts the complete grid, canonicalizes slots and keeps distance optional', () => {
+      const updated = Profile.restore(state).update({
+        ...state,
+        availabilitySlots: ['sun_evening', 'fri_early_hours', 'mon_morning'],
+        preferredDistance: 'up_to_5km',
+      }).snapshot();
+      expect(updated.availabilitySlots).toEqual(['mon_morning', 'fri_early_hours', 'sun_evening']);
+      expect(updated.preferredDistance).toBe('up_to_5km');
+      expect(Profile.restore(state).update({ ...state, availabilitySlots: [] }).snapshot().preferredDistance).toBeNull();
+    });
+
+    test('rejects unknown, duplicate and oversized availability payloads and invalid distance', () => {
+      expect(() => Profile.restore(state).update({ ...state, availabilitySlots: ['mon_morning', 'mon_morning'] })).toThrow(ProfileError);
+      expect(() => Profile.restore(state).update({ ...state, availabilitySlots: ['not_a_slot' as never] })).toThrow(ProfileError);
+      expect(() => Profile.restore(state).update({ ...state, availabilitySlots: Array.from({ length: 29 }, () => 'mon_morning' as const) })).toThrow(ProfileError);
+      expect(() => Profile.restore(state).update({ ...state, preferredDistance: 'up_to_100km' as never })).toThrow(ProfileError);
+    });
+
+    test('does not project availability or distance into preview', () => {
+      const updated = Profile.restore(state).update({ ...state, availabilitySlots: ['sat_evening'], preferredDistance: 'same_city' }).snapshot();
+      const preview = new ProfilePreviewProjector().project(updated, PRONOUN_LABELS);
+      expect(preview).not.toHaveProperty('availabilitySlots');
+      expect(preview).not.toHaveProperty('preferredDistance');
+      expect(JSON.stringify(preview)).not.toContain('sat_evening');
+      expect(JSON.stringify(preview)).not.toContain('same_city');
+    });
   });
 });
