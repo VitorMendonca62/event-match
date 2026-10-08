@@ -1,0 +1,4 @@
+interface:
+  display_name: "Registrar tarefa SDD"
+  short_description: "Cria tarefas padronizadas no backlog SDD"
+  default_prompt: "Use $task-register para registrar esta demanda em specs/tasks.txt."
