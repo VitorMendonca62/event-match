@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.19.1 — 2026-10-08
+
+Dispensa do convite delegada ao BFF de perfil (SDD-024; ADR-040 e ADR-050). Refactor interno do frontend/workspace; backend permanece em `0.17.0`, sem migration ou alteração de contrato.
+
+- A rota `POST /api/profile/invitation/dismiss` agora delega para `profile-bff.ts`, preservando autenticação, proteção same-origin/JSON, envelope, cookies, mapeamento de erros e telemetria allowlisted.
+- A cobertura de integração valida sucesso, bloqueios locais, sessão, respostas upstream, privacidade e regressão dos proxies de catálogo da SDD-021.
+- Rollback operacional: reverter o artefato frontend para `0.19.0` ou desligar `PROFILE_UI_ENABLED`; não há dados ou schema a reverter.
+
 ## 0.19.0 — 2026-10-08
 
 Localização estruturada por UF e município (SDD-023; ADR-052 e ADR-053). Breaking change coordenada: frontend/workspace `0.19.0`, backend `0.17.0`, contrato v1.

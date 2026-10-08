@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { proxyPhotoMutation, proxyProfile } from '../../src/shared/server/profile-bff';
-import { browserRequest, fakeBackend, TOKEN, testEnv } from './bff-fixtures';
+import { proxyPhotoMutation, proxyProfile, proxyProfileInvitationDismiss } from '../../src/shared/server/profile-bff';
+import { browserRequest, fakeBackend, SECRET, TOKEN, testEnv } from './bff-fixtures';
 
 const interestIds = [crypto.randomUUID(), crypto.randomUUID(), crypto.randomUUID()];
 const profile = {
@@ -71,5 +71,164 @@ describe('profile BFF (ADR-038..040)', () => {
     expect(invalid.calls).toHaveLength(0);
     const { availabilitySlots: _slots, ...withoutAvailability } = body;
     expect((await proxyProfile(browserRequest('/api/profile', { method: 'PUT', cookie, body: withoutAvailability }), { env: testEnv(), fetchImpl: invalid.fetchImpl })).status).toBe(400);
+  });
+});
+
+describe('profile invitation dismissal BFF (ADR-040)', () => {
+  test('dismisses the invitation with one authenticated upstream call and allowlisted telemetry', async () => {
+    const backend = fakeBackend(200, profile);
+    const logs: string[] = [];
+    const originalInfo = console.info;
+    console.info = (...args: unknown[]) => logs.push(args.map(String).join(' '));
+
+    try {
+      const result = await proxyProfileInvitationDismiss(
+        browserRequest('/api/profile/invitation/dismiss', { cookie }),
+        { env: testEnv(), fetchImpl: backend.fetchImpl },
+      );
+      const text = await result.text();
+
+      expect(result.status).toBe(200);
+      expect(JSON.parse(text)).toEqual({ data: {}, message: 'Invitation dismissed.', statusCode: 200 });
+      expect(text).not.toContain('invitationSubject');
+      expect(text).not.toContain(profile.invitationSubject);
+      expect(text).not.toContain(TOKEN);
+      expect(result.headers.get('content-type')).toBe('application/json; charset=utf-8');
+      expect(result.headers.get('cache-control')).toBe('no-store');
+      expect(result.headers.get('referrer-policy')).toBe('no-referrer');
+      expect(result.headers.get('x-content-type-options')).toBe('nosniff');
+
+      const setCookie = result.headers.get('set-cookie');
+      expect(setCookie).toContain(`eventmatch_profile_invite=${profile.invitationSubject}.`);
+      expect(setCookie).toContain('Path=/');
+      expect(setCookie).toContain('Max-Age=604800');
+      expect(setCookie).toContain('HttpOnly');
+      expect(setCookie).toContain('SameSite=Lax');
+      expect(setCookie).not.toContain('Domain=');
+      expect(setCookie).not.toContain('Secure');
+
+      expect(backend.calls).toHaveLength(1);
+      expect(backend.calls[0]?.url).toBe('http://backend.test/api/v1/profiles/me');
+      expect(backend.calls[0]?.init.method).toBe('GET');
+      expect(backend.calls[0]?.init.cache).toBe('no-store');
+      expect(backend.calls[0]?.init.redirect).toBe('manual');
+      expect(backend.calls[0]?.init.headers.get('authorization')).toBe(`Bearer ${TOKEN}`);
+      expect(backend.calls[0]?.init.headers.get('x-eventmatch-bff-token')).toBe(SECRET);
+      expect(backend.calls[0]?.init.headers.get('cookie')).toBeNull();
+
+      expect(logs).toHaveLength(1);
+      const log = JSON.parse(logs[0]!);
+      expect(log).toMatchObject({ scope: 'profile-bff', operation: 'profile.invite.dismiss', status: 200 });
+      expect(typeof log.durationMs).toBe('number');
+      expect(log.correlationId).toMatch(/^[0-9a-f-]{36}$/);
+      expect(logs[0]).not.toContain(profile.invitationSubject);
+      expect(logs[0]).not.toContain(TOKEN);
+      expect(logs[0]).not.toContain('eventmatch_profile_invite');
+      expect(logs[0]).not.toContain('displayName');
+    } finally {
+      console.info = originalInfo;
+    }
+  });
+
+  test('returns 404 without contacting the backend when the profile UI is disabled', async () => {
+    const backend = fakeBackend(200, profile);
+    const result = await proxyProfileInvitationDismiss(
+      browserRequest('/api/profile/invitation/dismiss', { cookie }),
+      { env: testEnv({ PROFILE_UI_ENABLED: false }), fetchImpl: backend.fetchImpl },
+    );
+
+    expect(result.status).toBe(404);
+    expect(await result.json()).toEqual({ data: {}, message: 'Request failed.', statusCode: 404 });
+    expect(result.headers.get('set-cookie')).toBeNull();
+    expect(backend.calls).toHaveLength(0);
+  });
+
+  test('rejects missing, foreign and repeated origins or non-JSON before contacting the backend', async () => {
+    const requests = [
+      new Request('http://app.test/api/profile/invitation/dismiss', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', cookie },
+      }),
+      browserRequest('/api/profile/invitation/dismiss', { cookie, headers: { origin: 'https://evil.test' } }),
+      browserRequest('/api/profile/invitation/dismiss', { cookie, headers: { origin: 'http://app.test, http://app.test' } }),
+      browserRequest('/api/profile/invitation/dismiss', { cookie, headers: { 'content-type': 'text/plain' } }),
+    ];
+
+    for (const request of requests) {
+      const backend = fakeBackend(200, profile);
+      const result = await proxyProfileInvitationDismiss(request, { env: testEnv(), fetchImpl: backend.fetchImpl });
+
+      expect(result.status).toBe(403);
+      expect(await result.json()).toEqual({ data: {}, message: 'Request failed.', statusCode: 403 });
+      expect(result.headers.get('set-cookie')).toBeNull();
+      expect(backend.calls).toHaveLength(0);
+    }
+  });
+
+  test('does not add body parsing to the existing content-type-only validation', async () => {
+    const backend = fakeBackend(200, profile);
+    const request = new Request('http://app.test/api/profile/invitation/dismiss', {
+      method: 'POST',
+      headers: { origin: 'http://app.test', 'content-type': 'application/json', cookie },
+      body: '{not-json',
+    });
+    const result = await proxyProfileInvitationDismiss(request, { env: testEnv(), fetchImpl: backend.fetchImpl });
+
+    expect(result.status).toBe(200);
+    expect(backend.calls).toHaveLength(1);
+  });
+
+  test('expires an absent or malformed session without contacting the backend', async () => {
+    for (const sessionCookie of [undefined, 'eventmatch_session=invalid']) {
+      const backend = fakeBackend(200, profile);
+      const result = await proxyProfileInvitationDismiss(
+        browserRequest('/api/profile/invitation/dismiss', { cookie: sessionCookie }),
+        { env: testEnv(), fetchImpl: backend.fetchImpl },
+      );
+
+      expect(result.status).toBe(401);
+      expect(await result.json()).toEqual({ data: {}, message: 'Request failed.', statusCode: 401 });
+      expect(result.headers.get('set-cookie')).toBe('eventmatch_session=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax');
+      expect(backend.calls).toHaveLength(0);
+    }
+  });
+
+  test('maps upstream authentication, authorization and unavailable responses without leaking details', async () => {
+    const cases = [
+      { status: 401, expectedCookie: 'eventmatch_session=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax' },
+      { status: 403, expectedCookie: null },
+      { status: 503, expectedCookie: null },
+    ] as const;
+
+    for (const current of cases) {
+      const backend = fakeBackend(current.status, { secret: 'never' });
+      const result = await proxyProfileInvitationDismiss(
+        browserRequest('/api/profile/invitation/dismiss', { cookie }),
+        { env: testEnv(), fetchImpl: backend.fetchImpl },
+      );
+
+      expect(result.status).toBe(current.status);
+      expect(await result.json()).toEqual({ data: {}, message: 'Request failed.', statusCode: current.status });
+      expect(result.headers.get('set-cookie')).toBe(current.expectedCookie);
+      expect(backend.calls).toHaveLength(1);
+    }
+  });
+
+  test('maps network failures and invalid successful profile shapes to 503', async () => {
+    const offline = await proxyProfileInvitationDismiss(
+      browserRequest('/api/profile/invitation/dismiss', { cookie }),
+      { env: testEnv(), fetchImpl: (async () => { throw new Error('offline'); }) as unknown as typeof fetch },
+    );
+    expect(offline.status).toBe(503);
+    expect(await offline.json()).toEqual({ data: {}, message: 'Request failed.', statusCode: 503 });
+    expect(offline.headers.get('set-cookie')).toBeNull();
+
+    const invalidShape = await proxyProfileInvitationDismiss(
+      browserRequest('/api/profile/invitation/dismiss', { cookie }),
+      { env: testEnv(), fetchImpl: fakeBackend(200, { invitationSubject: 'secret', profile: 'private' }).fetchImpl },
+    );
+    expect(invalidShape.status).toBe(503);
+    expect(await invalidShape.json()).toEqual({ data: {}, message: 'Request failed.', statusCode: 503 });
+    expect(invalidShape.headers.get('set-cookie')).toBeNull();
   });
 });

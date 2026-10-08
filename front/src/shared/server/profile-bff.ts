@@ -7,7 +7,9 @@ import { resolveOriginFingerprint } from './origin-fingerprint';
 import type { BffEnv } from '@/shared/config/bff-env.server';
 import { callBackend } from './backend-client';
 import { expiredSessionCookie, readSessionCookie } from './authentication-cookie';
+import { logBffEvent } from './bff-logger';
 import { jsonResponse } from './bff-proxy';
+import { serializeInvitationCookie } from './profile-invitation-cookie';
 import { hasJsonContentType, hasTrustedOrigin } from './same-origin';
 
 type Deps = Readonly<{ env: BffEnv; fetchImpl?: typeof fetch }>;
@@ -56,6 +58,36 @@ export async function proxyProfile(request: Request, deps: Deps): Promise<Respon
   }
   if ([403, 409].includes(upstream.status)) return response(upstream.status);
   return response(503);
+}
+
+export async function proxyProfileInvitationDismiss(request: Request, deps: Deps): Promise<Response> {
+  const startedAt = performance.now();
+  const correlationId = crypto.randomUUID();
+  const finish = (statusCode: number, cookies: readonly string[] = []) => {
+    logBffEvent({
+      scope: 'profile-bff',
+      operation: 'profile.invite.dismiss',
+      status: statusCode,
+      durationMs: performance.now() - startedAt,
+      correlationId,
+    });
+    return jsonResponse(
+      { data: {}, message: statusCode === 200 ? 'Invitation dismissed.' : 'Request failed.', statusCode },
+      cookies,
+    );
+  };
+
+  if (!deps.env.PROFILE_UI_ENABLED) return finish(404);
+  if (!hasTrustedOrigin(request, deps.env) || !hasJsonContentType(request)) return finish(403);
+  const session = readSessionCookie(request.headers.get('cookie'), deps.env);
+  if (!session) return finish(401, [expiredSessionCookie(deps.env)]);
+
+  const profile = await readOwnProfile(session, deps);
+  if (profile.kind === 'ok') {
+    return finish(200, [serializeInvitationCookie(profile.value.invitationSubject, deps.env)]);
+  }
+  if (profile.kind === 401) return finish(401, [expiredSessionCookie(deps.env)]);
+  return finish(profile.kind === 403 ? 403 : 503);
 }
 
 export async function proxyProfilePreview(request: Request, deps: Deps): Promise<Response> {
