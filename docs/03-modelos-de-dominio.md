@@ -89,7 +89,7 @@ A `0006_authenticated_session` (aditiva) amplia `account_status_check` para os d
 
 - `profileId`, `accountId`, `displayName`, foto, apresentação, região aproximada e intenção.
 - Interesses (mínimo três), campos opcionais e uma política de visibilidade por campo.
-- Disponibilidade opcional como conjunto normalizado de `weekday × period` e distância preferida opcional, ambos privados e fora da projeção.
+- Disponibilidade opcional como conjunto normalizado de `weekday × period` e distância preferida opcional, ambos privados e fora da projeção; presença social opcional como até três `SocialLink`s ordenados.
 - Nascimento completo, e-mail e celular nunca integram a visão pública.
 - Habilitação de anfitrião é capacidade derivada, não papel permanente.
 
@@ -231,7 +231,8 @@ Referências: RF057–RF062, RF068, RF073–RF078; RN080–RN106, RN115–RN123.
 ## 6. Retenção e ressalva jurídica
 
 Implemente retenção por categoria conforme `docs/02-regras-de-negocio.md §9`, com eliminação verificável, anonimização quando prevista e legal hold granular. RF068, RF073, RF074, RN068, RN080–RN083, RN093, RN096, RN100–RN104, RN115–RN122 e RNF023 não podem ter política final liberada sem validação jurídica brasileira.
-- **Agregado `Profile` (SDD-015, SDD-018):** `displayName`, `region`, intenções, interesses ativos, apresentação opcional, disponibilidade opcional, distância preferida opcional, visibilidades de foto/apresentação e `revision` positiva. `ProfileCompletion` deriva seis itens; `ProfilePreviewProjector` materializa somente a audiência solicitada e nunca inclui disponibilidade ou distância.
+- **Agregado `Profile` (SDD-015, SDD-018, SDD-020):** `displayName`, `region`, intenções, interesses ativos, apresentação opcional, disponibilidade opcional, distância preferida opcional, vínculos sociais opcionais, visibilidades de foto/apresentação e `revision` positiva. `ProfileCompletion` deriva seis itens; `ProfilePreviewProjector` materializa somente a audiência solicitada e nunca inclui disponibilidade ou distância. A interface social usa ordem fixa por provedor, embora o agregado preserve posição interna para leitura estável e compatibilidade do contrato.
 - **Concorrência:** alterações usam compare-and-set por `revision`; intenções e interesses são substituídos na mesma unidade de trabalho.
 - **Mídia:** `ProfilePhotoAsset` percorre `pending → active → delete_pending`; há no máximo um pending e um active por conta. Identidade do provedor e metadados validados ficam no asset; URL assinada nunca é persistida. `ProfileMediaAttempt` guarda apenas subject HMAC e instante para limites compartilhados.
-- **Privacidade:** foto/apresentação começam `private`; o schema conhece `authenticated` e `public`, mas o contrato SDD-015 rejeita `public`.
+- **Privacidade:** foto/apresentação começam `private`; o schema conhece `authenticated` e `public`, mas os contratos atuais rejeitam `public`. `SocialLink` guarda provedor, identificador canônico, posição e audiência; URL não é persistida e é derivada por registry confiável.
+- **Persistência social:** a migration `0012_profile_social_links` cria relação por conta com `CHECK`s de provedor, identificador, posição e audiência, unicidade de provedor/posição e FK em cascata. A relação é substituída atomicamente no mesmo compare-and-set do perfil.

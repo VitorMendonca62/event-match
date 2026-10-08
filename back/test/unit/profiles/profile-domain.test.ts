@@ -13,7 +13,7 @@ const state = {
   pronounSelection: null, customPronouns: null, pronounsVisibility: 'private' as const,
   profession: null, professionVisibility: 'private' as const, languages: [], languagesVisibility: 'private' as const,
   activityPreferences: [] as { code: string; label: string; active: boolean }[], activityPreferencesVisibility: 'private' as const,
-  availabilitySlots: [], preferredDistance: null,
+  availabilitySlots: [], preferredDistance: null, socialLinks: [],
 };
 const PRONOUN_LABELS = { ela_dela: 'Ela/dela', ele_dele: 'Ele/dele', elu_delu: 'Elu/delu' } as const;
 
@@ -123,6 +123,27 @@ describe('Profile (ADR-038)', () => {
       expect(preview).not.toHaveProperty('preferredDistance');
       expect(JSON.stringify(preview)).not.toContain('sat_evening');
       expect(JSON.stringify(preview)).not.toContain('same_city');
+    });
+  });
+
+  describe('social links (ADR-049)', () => {
+    const links = [
+      { id: '00000000-0000-4000-8000-000000000001', provider: 'instagram' as const, canonicalIdentifier: 'ana', position: 1, visibility: 'private' as const },
+      { id: '00000000-0000-4000-8000-000000000002', provider: 'linkedin' as const, canonicalIdentifier: 'ana-silva', position: 2, visibility: 'authenticated' as const },
+    ];
+
+    test('accepts ordered links and only projects authenticated links with derived URLs', () => {
+      const updated = Profile.restore(state).update({ ...state, socialLinks: [...links].reverse() }).snapshot();
+      expect(updated.socialLinks.map(({ position }) => position)).toEqual([1, 2]);
+      expect(new ProfilePreviewProjector().project(updated, PRONOUN_LABELS).socialLinks).toEqual([
+        { provider: 'linkedin', identifier: 'ana-silva', url: 'https://www.linkedin.com/in/ana-silva' },
+      ]);
+    });
+
+    test('rejects public links, repeated providers and repeated positions', () => {
+      expect(() => Profile.restore(state).update({ ...state, socialLinks: [{ ...links[0], visibility: 'public' }] })).toThrow(ProfileError);
+      expect(() => Profile.restore(state).update({ ...state, socialLinks: [links[0], { ...links[1], provider: 'instagram' }] })).toThrow(ProfileError);
+      expect(() => Profile.restore(state).update({ ...state, socialLinks: [links[0], { ...links[1], position: 1 }] })).toThrow(ProfileError);
     });
   });
 });

@@ -7,7 +7,7 @@ const base: OwnProfile = {
   revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'], interests: [], presentation: null,
   photoVisibility: 'private', presentationVisibility: 'private', photo: null, pronounSelection: null, customPronouns: null,
   pronounsVisibility: 'private', profession: null, professionVisibility: 'private', languages: [], languagesVisibility: 'private',
-  activityPreferences: [], activityPreferencesVisibility: 'private', availabilitySlots: [], preferredDistance: null,
+  activityPreferences: [], activityPreferencesVisibility: 'private', availabilitySlots: [], preferredDistance: null, socialLinks: [],
   completion: { complete: false, completedCount: 4, totalCount: 6, missing: ['photo', 'presentation'] },
 };
 

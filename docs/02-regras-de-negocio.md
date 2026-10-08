@@ -68,6 +68,13 @@ As regras normativas completas são RN001–RN168 em [`DER-EventMatch-MVP.md`](D
 - Os dois campos são sempre privados: ficam somente na visão própria, não têm toggle de visibilidade e nunca aparecem na prévia, em busca, filtro, recomendação ou telemetria. Não alteram completude, interesses, preferências de atividades, capacidades ou eventos.
 - Disponibilidade e distância participam do mesmo snapshot e da mesma revisão otimista do perfil. Expiração de conta incompleta, exclusão e purga de dados removem os slots e anulam a distância (ADR-045).
 
+### Presença social opcional (SDD-020)
+
+- O perfil pode conter zero a três vínculos sociais, no máximo um por provedor entre Instagram, LinkedIn e X. Cada vínculo tem posição interna única, audiência própria e começa `private`; a interface usa ordem fixa e não oferece reordenação.
+- A edição aceita identificador ou URL HTTPS dos hosts e caminhos allowlisted de cada provedor. O domínio persiste somente o identificador canônico; a URL é derivada do registro confiável. HTTP, subdomínio desconhecido, caminho estranho, query, fragmento, credencial, porta, redirecionamento e qualquer busca externa são rejeitados.
+- A edição aceita apenas `private` e `authenticated`; `public` é conhecido pelo schema para evolução futura, mas permanece reservado e é recusado no snapshot atual. A interface apresenta um único controle de compartilhamento futuro: ao ser alterado, desligado serializa os vínculos preenchidos como `private`, e ligado como `authenticated`. Vínculos legados com audiências mistas preservam seus valores até o controle ser alterado. Os vínculos não alteram completude, interesses, preferências, capacidades ou eventos.
+- Vínculos sociais participam do mesmo snapshot e da mesma revisão otimista do perfil. A visão própria pode mostrar os três vínculos; a prévia da própria titular inclui somente vínculos `authenticated`, sem expor audiência nem ids internos. Nenhuma URL bruta ou conteúdo remoto entra em telemetria.
+
 ## 3. Eventos e anfitriões
 
 - Apenas encontros presenciais, informais, gratuitos e em local público/estabelecimento identificável podem ser publicados (RN019–RN020).

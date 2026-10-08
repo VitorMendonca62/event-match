@@ -1,0 +1,4 @@
+interface:
+  display_name: "Auditoria de Segurança EventMatch"
+  short_description: "Audite front, BFF e backend do EventMatch"
+  default_prompt: "Use $eventmatch-security-auditor para auditar o EventMatch no front e no backend."

@@ -1,11 +1,11 @@
 {
   "name": "@eventmatch/front",
-  "version": "0.16.0",
+  "version": "0.17.0",
   "private": true,
   "scripts": {
     "validate:env": "bun run src/shared/config/validate-env.ts",
     "dev": "bun run validate:env && next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "bun run validate:env && next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",

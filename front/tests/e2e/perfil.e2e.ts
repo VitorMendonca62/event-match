@@ -296,6 +296,61 @@ test('perfil: disponibilidade e distância são privadas, persistem e são remov
   }
 });
 
+test('perfil: presença social usa provedores fixos, compartilha futuramente e remove vínculos vazios', async ({ page }) => {
+  await openProfile(page, 'perfil-redes-sociais');
+  const section = page.getByRole('region', { name: 'Presença social (opcional)' });
+  await expect(section).toBeVisible();
+  await expect(section).toContainText('O EventMatch não verifica esses perfis');
+  await expect(section.getByRole('textbox', { name: 'Instagram — identificador ou link do perfil' })).toBeVisible();
+  await expect(section.getByRole('textbox', { name: 'LinkedIn — identificador ou link do perfil' })).toBeVisible();
+  await expect(section.getByRole('textbox', { name: 'X — identificador ou link do perfil' })).toBeVisible();
+  await expect(section.getByRole('textbox', { name: 'Instagram — identificador ou link do perfil' })).toHaveAttribute('placeholder', '@pessoa ou instagram.com/pessoa');
+  await expect(section.getByRole('textbox', { name: 'LinkedIn — identificador ou link do perfil' })).toHaveAttribute('placeholder', '@pessoa ou linkedin.com/in/pessoa');
+  await expect(section.getByRole('textbox', { name: 'X — identificador ou link do perfil' })).toHaveAttribute('placeholder', '@pessoa ou x.com/pessoa');
+  await expect(section).not.toContainText('Use seu nome de usuário, como @pessoa, ou cole o endereço do perfil.');
+  await expect(section).not.toContainText('Somente o identificador normalizado será guardado.');
+  await expect(section.getByRole('button', { name: /Adicionar perfil social/ })).toHaveCount(0);
+  await expect(section.getByRole('button', { name: /Mover/ })).toHaveCount(0);
+
+  await section.getByRole('textbox', { name: 'Instagram — identificador ou link do perfil' }).fill('https://www.instagram.com/Ana.Exemplo');
+  await section.getByRole('textbox', { name: 'LinkedIn — identificador ou link do perfil' }).fill('pessoa-exemplo');
+  await section.getByText('Compartilhar redes sociais futuramente?', { exact: true }).click();
+  await expect(section).toContainText('Ative para mostrar a pessoas autenticadas quando esse recurso estiver disponível.');
+  const viewport = page.viewportSize();
+  if (viewport?.width === 1440 || viewport?.width === 390)
+    await section.screenshot({ path: `.impeccable/review/perfil-redes-sociais-${viewport.width === 390 ? 'mobile' : 'desktop'}.png` });
+  await expectNoSeriousA11yViolations(page);
+  await expectNoHorizontalScroll(page);
+
+  const update = page.waitForRequest((request) => request.url().endsWith('/api/profile') && request.method() === 'PUT');
+  await section.locator('xpath=..').getByRole('button', { name: 'Salvar perfil' }).click();
+  await expect(page.getByRole('status')).toContainText('Perfil salvo');
+  expect((await update).postDataJSON()).toMatchObject({
+    socialLinks: [
+      { provider: 'instagram', identifierOrUrl: 'https://www.instagram.com/Ana.Exemplo', position: 1, visibility: 'authenticated' },
+      { provider: 'linkedin', identifierOrUrl: 'pessoa-exemplo', position: 2, visibility: 'authenticated' },
+    ],
+  });
+
+  await page.goto('/perfil/previa');
+  await expect(page.getByRole('heading', { name: 'Presença social' })).toBeVisible();
+  await expect(page.getByText('Instagram', { exact: true })).toBeVisible();
+  await expect(page.getByText('LinkedIn', { exact: true })).toBeVisible();
+  await expect(page.getByRole('listitem').filter({ hasText: 'Instagram' }).getByRole('link', { name: 'Abrir perfil' })).toHaveAttribute('href', 'https://www.instagram.com/ana.exemplo');
+
+  await page.goto('/perfil');
+  const reloaded = page.getByRole('region', { name: 'Presença social (opcional)' });
+  await reloaded.getByRole('textbox', { name: 'Instagram — identificador ou link do perfil' }).fill('');
+  const removeUpdate = page.waitForRequest((request) => request.url().endsWith('/api/profile') && request.method() === 'PUT');
+  await page.getByRole('button', { name: 'Salvar perfil' }).click();
+  await expect(page.getByRole('status')).toContainText('Perfil salvo');
+  expect((await removeUpdate).postDataJSON()).toMatchObject({ socialLinks: [{ provider: 'linkedin', position: 2, visibility: 'authenticated' }] });
+  await page.goto('/perfil/previa');
+  await expect(page.getByRole('heading', { name: 'Presença social' })).toBeVisible();
+  await expect(page.getByText('Instagram', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('LinkedIn', { exact: true })).toBeVisible();
+});
+
 test('perfil: combobox de pronomes funciona integralmente por teclado', async ({ page }) => {
   const email = await registerAccount(page, 'perfil-pronomes-teclado');
   await page.goto('/entrar');

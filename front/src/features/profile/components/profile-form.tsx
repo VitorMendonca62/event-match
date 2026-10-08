@@ -18,6 +18,12 @@ import { ProfilePronounsField } from './profile-pronouns-field';
 import { ProfileLanguagePicker } from './profile-language-picker';
 import { ProfileActivityPreferencesField } from './profile-activity-preferences-field';
 import { ProfileAvailabilityField } from './profile-availability-field';
+import { ProfileSocialLinksField } from './profile-social-links-field';
+
+function parseSocialLinks(value: FormDataEntryValue | null): unknown {
+  if (typeof value !== 'string') return undefined;
+  try { return JSON.parse(value) as unknown; } catch { return undefined; }
+}
 
 export function ProfileForm({
   initial,
@@ -78,6 +84,7 @@ export function ProfileForm({
       activityPreferencesVisibility: form.get('activityPreferencesVisibility'),
       availabilitySlots: form.getAll('availabilitySlots'),
       preferredDistance: String(form.get('preferredDistance') ?? '') || null,
+      socialLinks: parseSocialLinks(form.get('socialLinks')),
     };
     const validated = updateProfileSchema.safeParse(body);
     if (!validated.success) {
@@ -95,8 +102,10 @@ export function ProfileForm({
                   ? 'Escolha no máximo cinco preferências, sem repetições.'
                   : issue.path[0] === 'availabilitySlots'
                     ? 'Escolha até 28 períodos, sem repetições.'
-                    : issue.path[0] === 'preferredDistance'
+                  : issue.path[0] === 'preferredDistance'
                       ? 'Escolha uma faixa válida ou “Não informar”.'
+                      : issue.path[0] === 'socialLinks'
+                        ? issue.message || 'Revise os vínculos sociais.'
                   : issue.code === 'custom' && issue.message
                     ? issue.message
                     : 'Revise este campo.';
@@ -312,6 +321,7 @@ export function ProfileForm({
         </div>
         <div className="border-t border-border pt-8"><ProfileLanguagePicker initial={profile} options={languageOptions} error={errors.languageCodes} onDirty={() => setDirty(true)} /></div>
       </section>
+      <ProfileSocialLinksField initial={profile} error={errors.socialLinks} onDirty={() => setDirty(true)} />
       <section
         aria-labelledby="profile-intents"
         aria-describedby={errors.usageIntents ? 'usage-intents-error' : undefined}
