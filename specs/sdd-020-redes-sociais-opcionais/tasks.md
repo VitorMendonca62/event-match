@@ -20,10 +20,10 @@ Rastreabilidade: `docs/DER-EventMatch-MVP.md` RF015 e RF081; RN009, RN014 e RN11
 
 ### Inclui
 
-- [x] Vínculos sociais opcionais, removíveis, com ordem interna estável, privados por padrão e independentes da foto principal, interesses, completude e capacidades.
+- [x] Três campos fixos e opcionais — Instagram, LinkedIn e X —, privados por padrão e independentes da foto principal, interesses, completude e capacidades; limpar o campo remove o vínculo no snapshot seguinte e não há ordenação manual.
 - [x] Persistir somente provedor permitido e identificador canônico; derivar URL de saída a partir da configuração confiável do provedor.
 - [x] Aceitar URL colada ou identificador apenas como entrada, normalizar no backend e rejeitar esquemas, hosts, credenciais, portas, query strings, fragmentos, redirecionadores e caminhos que não sejam perfil pessoal permitido.
-- [x] Visibilidade individual `private | authenticated` no contrato editável; `public` continua reservado e sem exposição real nesta entrega.
+- [x] Contrato editável com `private | authenticated`; a UI aplica um único toggle de compartilhamento futuro a todos os campos preenchidos, enquanto `public` continua reservado e sem exposição real nesta entrega.
 - [x] Atualizar visão própria, prévia, DTOs/OpenAPI, BFF, documentação e testes, sem fazer fetch remoto.
 
 ### Exclui
@@ -165,19 +165,19 @@ Compatibilidade: leitura aditiva; a escrita exige a chave nova para preservar o 
 
 | # | Regra atual | Após a mudança | Origem |
 |---|---|---|---|
-| 1 | Perfil não possui vínculos sociais. | Pode conter zero até o limite aprovado de vínculos, por provedor permitido e sem repetição. | RF081; ADR-049 |
+| 1 | Perfil não possui vínculos sociais. | Pode conter zero a três vínculos, um para cada campo fixo de provedor permitido e sem repetição. | RF081; ADR-049 |
 | 2 | Não há URL social persistida. | Persiste apenas identificador canônico; URL é derivada de configuração confiável. | Task 18; ADR-049 |
-| 3 | Campos opcionais começam privados. | Cada vínculo começa `private`; edição permite somente `private | authenticated`; `public` é recusado. | RF015, RN014; ADR-038 |
+| 3 | Campos opcionais começam privados. | Cada vínculo começa `private`; o toggle global aplica `private | authenticated` aos campos preenchidos; `public` é recusado. | RF015, RN014; ADR-038 |
 | 4 | Sem projeção social. | Prévia inclui apenas vínculo autorizado, ainda acessível apenas pela titular nesta entrega. | RF015; ADR-038 |
-| 5 | Perfil atualiza por revisão. | Adição, edição, remoção e reordenação participam do mesmo snapshot e conflito `409`. | ADR-038 |
+| 5 | Perfil atualiza por revisão. | Edição dos campos fixos, limpeza de um identificador e o toggle global participam do mesmo snapshot e conflito `409`; não existe reordenação manual. | ADR-038 |
 | 6 | Nenhuma integração social externa. | Não há OAuth, fetch, scrape, redirect resolution, token, webhook ou confirmação de propriedade. | Task 18; RN009 |
 
 ## 6. Critérios de Aceitação
 
 - Apenas provider/host/formato aprovados entram no banco; identificador canônico não contém URL, query, fragmento, credencial ou espaço.
-- Uma conta não duplica provedor, não excede o limite e não tem posições duplicadas; operações concorrentes geram um sucesso e um `409`, nunca relação parcial.
+- Uma conta não duplica provedor nem excede o limite; a posição interna é derivada da ordem fixa dos provedores e snapshots concorrentes geram um sucesso e um `409`, nunca relação parcial.
 - Todo vínculo novo é privado; `public` recebe `400`; `authenticated` não é entregue fora de superfície autorizada.
-- `GET /me` devolve vínculos em ordem estável, sem tokens; remoção os exclui de visão própria/prévia sem alterar interesses ou dados restantes.
+- `GET /me` devolve vínculos na ordem fixa dos provedores, sem tokens; limpar um campo os exclui de visão própria/prévia sem alterar interesses ou dados restantes.
 - Backend/BFF/RSC não chamam domínio externo informado e logs/métricas/erros não incluem URL, identificador ou host de entrada.
 - DTOs, Swagger, Zod, domínio e checks do banco convergem; adapters são injetados e não há acesso frontend→PostgreSQL.
 - UI é acessível por teclado/leitor de tela/zoom 200%, usa labels persistentes, estados textuais e não induz confiança no perfil externo.

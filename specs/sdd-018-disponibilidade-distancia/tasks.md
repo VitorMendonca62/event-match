@@ -3,7 +3,7 @@
 - **Slug:** disponibilidade-distancia
 - **Autor do plano:** Code-Planner (SDD)
 - **Data:** 2026-10-06
-- **Status:** ready — ADR-045 aceita em 2026-10-06; nenhuma pergunta em aberto
+- **Status:** implemented — publicado em `0.16.0`; ADR-045 aceita em 2026-10-06 e nenhuma pergunta em aberto.
 - **Versão-alvo:** workspace/front `0.16.0`; back `0.15.0`
 - **Tipo:** feature
 - **Impacto público:** additive
@@ -38,7 +38,7 @@ Rastreabilidade: `docs/DER-EventMatch-MVP.md` RF015, RF023, RF081; RN011–RN014
 - [x] Migration aditiva `0010` com tabela de slots, coluna de distância, CHECKs, FK em cascata e índice.
 - [x] Nova seção em `/perfil`, logo após "Como você gosta dos encontros": grade acessível de disponibilidade e grupo de rádios de distância.
 - [x] Atualizar docs 02–04, OpenAPI, `CHANGELOG.md`, versões, surface brief e testes.
-- [ ] Revisão visual Impeccable delimitada (desktop, mobile, zoom 200%) e finish review.
+- [x] Revisão visual Impeccable delimitada (desktop, mobile, zoom 200%) e finish review.
 
 ### Exclui
 
@@ -305,9 +305,9 @@ bun run --cwd front build
 
 - [x] Decisões citam `docs/` e ADRs.
 - [x] Um ADR foi criado e aceito para cada decisão material.
-- [x] Código de produção, migration e testes foram implementados; a revisão visual E2E aguarda apenas o runner Docker disponível.
+- [x] Código de produção, migration e testes foram implementados; a revisão visual delimitada e o finish review foram concluídos.
 - [x] Contratos front/back, OpenAPI e PostgreSQL estão explícitos.
 - [x] Performance, segurança e observabilidade foram tratadas.
 - [x] `vercel-react-best-practices`, `impeccable` e `nestjs-expert` foram aplicadas conforme o escopo.
-- [x] Testes, migration e rollback estão planejados.
+- [x] Testes, migration e rollback foram implementados e documentados.
 - [x] Perguntas em aberto foram exauridas.

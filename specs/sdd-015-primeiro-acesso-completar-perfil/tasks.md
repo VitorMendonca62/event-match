@@ -3,7 +3,7 @@
 - **Slug:** primeiro-acesso-completar-perfil
 - **Autor do plano:** Code-Planner (SDD)
 - **Data:** 2026-09-30
-- **Status:** ready — ADR-041 rejeitada e contrato sem promessa de expiração conforme ADR-042
+- **Status:** implemented — publicado em `0.13.0`; ADR-041 rejeitada e contrato sem promessa de expiração conforme ADR-042. A configuração produtiva do Cloudinary continua como pré-requisito operacional de rollout.
 - **Versão-alvo:** workspace/front `0.13.0`; back `0.12.0`
 - **Tipo:** feature
 - **Impacto público:** additive
@@ -29,20 +29,20 @@ Rastreabilidade: `docs/DER-EventMatch-MVP.md` RF012–RF016 e RF081; RN008–RN0
 
 ### Inclui
 
-- [ ] Evoluir `profiles` para agregado editável com completude, revisão otimista e projeção de prévia.
-- [ ] Ler e editar nome, região aproximada, intenções, interesses, apresentação e visibilidade de foto/apresentação.
-- [ ] Preservar no mínimo três interesses ativos, uma intenção e os limites já existentes de nome/região.
-- [ ] Criar uma única foto principal privada no Cloudinary, com seleção, recorte, prévia local, upload assinado direto, finalização, substituição e remoção.
-- [ ] Entregar somente variantes raster normalizadas e autenticadas, sem EXIF/localização.
-- [ ] Criar limpeza idempotente de assets pendentes/deletáveis, execução oportunista limitada e comando operacional explícito.
-- [ ] Expor API NestJS v1 somente ao BFF, com sessão/capacidades, DTOs, Swagger, no-store e erros tipados.
-- [ ] Criar BFF/proxy Next.js para perfil e foto sem acesso ao PostgreSQL nem exposição de segredo/token.
-- [ ] Transformar o item de `/inicio` em convite acionável com progresso e “Agora não”.
-- [ ] Persistir o adiamento por sete dias em cookie HttpOnly escopado ao sujeito pseudônimo da conta.
-- [ ] Criar `/perfil` para edição e `/perfil/previa` para projeção autenticada restrita à titular.
-- [ ] Cobrir estados vazios, loading/pending, sucesso, conflito, sessão expirada, indisponibilidade, arquivo inválido, rate limit e falha do provedor.
-- [ ] Atualizar docs 01–04, OpenAPI, `.env.example`, READMEs, `CHANGELOG.md`, versões e runbook de mídia.
-- [ ] Executar revisão visual Impeccable delimitada com capturas desktop/mobile e finish review.
+- [x] Evoluir `profiles` para agregado editável com completude, revisão otimista e projeção de prévia.
+- [x] Ler e editar nome, região aproximada, intenções, interesses, apresentação e visibilidade de foto/apresentação.
+- [x] Preservar no mínimo três interesses ativos, uma intenção e os limites já existentes de nome/região.
+- [x] Criar uma única foto principal privada no Cloudinary, com seleção, recorte, prévia local, upload assinado direto, finalização, substituição e remoção.
+- [x] Entregar somente variantes raster normalizadas e autenticadas, sem EXIF/localização.
+- [x] Criar limpeza idempotente de assets pendentes/deletáveis, execução oportunista limitada e comando operacional explícito.
+- [x] Expor API NestJS v1 somente ao BFF, com sessão/capacidades, DTOs, Swagger, no-store e erros tipados.
+- [x] Criar BFF/proxy Next.js para perfil e foto sem acesso ao PostgreSQL nem exposição de segredo/token.
+- [x] Transformar o item de `/inicio` em convite acionável com progresso e “Agora não”.
+- [x] Persistir o adiamento por sete dias em cookie HttpOnly escopado ao sujeito pseudônimo da conta.
+- [x] Criar `/perfil` para edição e `/perfil/previa` para projeção autenticada restrita à titular.
+- [x] Cobrir estados vazios, loading/pending, sucesso, conflito, sessão expirada, indisponibilidade, arquivo inválido, rate limit e falha do provedor.
+- [x] Atualizar docs 01–04, OpenAPI, `.env.example`, READMEs, `CHANGELOG.md`, versões e runbook de mídia.
+- [x] Executar revisão visual Impeccable delimitada com capturas desktop/mobile e finish review.
 
 ### Exclui
 
@@ -360,45 +360,45 @@ Backend valida relações/minimums e recusa config incoerente. `.env.example` co
 
 ### Funcionais
 
-- [ ] Conta ativa com perfil incompleto vê convite e contagem correta em `/inicio`; conta completa não vê.
-- [ ] O mesmo comportamento vale para conta recém-ativada e veterana; nenhuma flag `firstLogin` é necessária.
-- [ ] “Agora não” oculta o convite por sete dias naquele navegador e conta; outra conta no mesmo navegador não é afetada.
-- [ ] Limpar o cookie apenas antecipa o convite e nunca muda o perfil ou autorização.
-- [ ] `/perfil` reaproveita valores existentes e salva alterações válidas atomicamente.
-- [ ] Menos de três interesses, intenção vazia, duplicatas, interesse inativo e limites inválidos são recusados sem escrita parcial.
-- [ ] Duas abas com a mesma revisão produzem um sucesso e um conflito recuperável, nunca last-write-wins silencioso.
-- [ ] Foto pode ser pré-visualizada, enviada, finalizada, substituída e removida somente pela titular.
-- [ ] Grant vencido, arquivo inválido, resposta Cloudinary forjada e asset de outra conta nunca ativam foto.
-- [ ] `/perfil/previa` usa projeção do backend e nunca contém contato, nascimento completo, estado, restrição, sessão ou ids internos.
-- [ ] Foto/apresentação privadas não aparecem na projeção; mudar para `authenticated` altera somente a prévia nesta entrega; `public` é rejeitado pela API/UI.
-- [ ] Completar foto/apresentação não concede capacidade de anfitrião.
+- [x] Conta ativa com perfil incompleto vê convite e contagem correta em `/inicio`; conta completa não vê.
+- [x] O mesmo comportamento vale para conta recém-ativada e veterana; nenhuma flag `firstLogin` é necessária.
+- [x] “Agora não” oculta o convite por sete dias naquele navegador e conta; outra conta no mesmo navegador não é afetada.
+- [x] Limpar o cookie apenas antecipa o convite e nunca muda o perfil ou autorização.
+- [x] `/perfil` reaproveita valores existentes e salva alterações válidas atomicamente.
+- [x] Menos de três interesses, intenção vazia, duplicatas, interesse inativo e limites inválidos são recusados sem escrita parcial.
+- [x] Duas abas com a mesma revisão produzem um sucesso e um conflito recuperável, nunca last-write-wins silencioso.
+- [x] Foto pode ser pré-visualizada, enviada, finalizada, substituída e removida somente pela titular.
+- [x] Grant vencido, arquivo inválido, resposta Cloudinary forjada e asset de outra conta nunca ativam foto.
+- [x] `/perfil/previa` usa projeção do backend e nunca contém contato, nascimento completo, estado, restrição, sessão ou ids internos.
+- [x] Foto/apresentação privadas não aparecem na projeção; mudar para `authenticated` altera somente a prévia nesta entrega; `public` é rejeitado pela API/UI.
+- [x] Completar foto/apresentação não concede capacidade de anfitrião.
 
 ### Segurança, privacidade e operação
 
-- [ ] `api_secret`, tokens, cookies, upload signatures, URLs assinadas, texto e ids do provedor não aparecem em logs/telemetria.
-- [ ] Upload aceita apenas JPEG/PNG/WebP estático <= 5 MiB e dimensões permitidas; somente derivados normalizados são servidos.
-- [ ] Fixtures com EXIF/GPS não mantêm esses metadados na variante entregue.
-- [ ] Assets não finalizados não entram em leitura; vencidos/substituídos/removidos convergem para deleção idempotente.
-- [ ] Limites 10/24 h por conta e 30/15 min por origem persistem entre réplicas e não guardam IP/PII.
-- [ ] Falha Cloudinary preserva foto atual e não impede salvar texto; resposta é recuperável e neutra.
-- [ ] CSP e configuração permitem somente upload/entrega Cloudinary necessários; nenhum wildcard amplo é adicionado.
-- [ ] Flags desligadas retornam 404/ocultam UI; configuração de mídia incompleta falha no bootstrap somente quando habilitada.
+- [x] `api_secret`, tokens, cookies, upload signatures, URLs assinadas, texto e ids do provedor não aparecem em logs/telemetria.
+- [x] Upload aceita apenas JPEG/PNG/WebP estático <= 5 MiB e dimensões permitidas; somente derivados normalizados são servidos.
+- [x] Fixtures com EXIF/GPS não mantêm esses metadados na variante entregue.
+- [x] Assets não finalizados não entram em leitura; vencidos/substituídos/removidos convergem para deleção idempotente.
+- [x] Limites 10/24 h por conta e 30/15 min por origem persistem entre réplicas e não guardam IP/PII.
+- [x] Falha Cloudinary preserva foto atual e não impede salvar texto; resposta é recuperável e neutra.
+- [x] CSP e configuração permitem somente upload/entrega Cloudinary necessários; nenhum wildcard amplo é adicionado.
+- [x] Flags desligadas retornam 404/ocultam UI; configuração de mídia incompleta falha no bootstrap somente quando habilitada.
 
 ### UX, acessibilidade e performance
 
-- [ ] Formulário, recorte, remoção, erros e convite funcionam com teclado, leitor de tela e zoom de 200%.
-- [ ] Alvos têm >=44 px, foco visível e mensagens associadas; `aria-live` não anuncia progresso excessivamente.
-- [ ] Estados de foto têm dimensões estáveis; texto de 60/80/500 caracteres não sobrepõe controles em mobile/desktop.
-- [ ] `prefers-reduced-motion` é respeitado e nenhuma informação depende de cor/movimento.
-- [ ] RSC evita cascata: sessão/perfil/catálogo independentes são iniciados em paralelo quando seguro; nenhuma busca client-only causa flash do convite.
-- [ ] Client bundle não inclui SDK administrativo Cloudinary; cropper é carregado somente na edição de foto e justificado no bundle.
-- [ ] Capturas de `/inicio` incompleto, `/perfil` e `/perfil/previa` em desktop/mobile passam no detector e finish review em no máximo dois passes.
+- [x] Formulário, recorte, remoção, erros e convite funcionam com teclado, leitor de tela e zoom de 200%.
+- [x] Alvos têm >=44 px, foco visível e mensagens associadas; `aria-live` não anuncia progresso excessivamente.
+- [x] Estados de foto têm dimensões estáveis; texto de 60/80/500 caracteres não sobrepõe controles em mobile/desktop.
+- [x] `prefers-reduced-motion` é respeitado e nenhuma informação depende de cor/movimento.
+- [x] RSC evita cascata: sessão/perfil/catálogo independentes são iniciados em paralelo quando seguro; nenhuma busca client-only causa flash do convite.
+- [x] Client bundle não inclui SDK administrativo Cloudinary; cropper é carregado somente na edição de foto e justificado no bundle.
+- [x] Capturas de `/inicio` incompleto, `/perfil` e `/perfil/previa` em desktop/mobile passam no detector e finish review em no máximo dois passes.
 
 ### Observabilidade
 
-- [ ] Eventos estruturados: `profile.read`, `profile.update`, `profile.conflict`, `profile.preview`, `profile.invite.dismiss`, `profile.photo.grant`, `profile.photo.finalize`, `profile.photo.reject`, `profile.photo.remove`, `profile.media.cleanup`.
-- [ ] Eventos contêm outcome, status allowlisted, duração, correlation id, provider e contagens agregadas; nunca conteúdo do perfil ou mídia.
-- [ ] Métricas distinguem falha de validação, limite, provider, banco e cleanup; alerta operacional acompanha fila `delete_pending` e uso Cloudinary.
+- [x] Eventos estruturados: `profile.read`, `profile.update`, `profile.conflict`, `profile.preview`, `profile.invite.dismiss`, `profile.photo.grant`, `profile.photo.finalize`, `profile.photo.reject`, `profile.photo.remove`, `profile.media.cleanup`.
+- [x] Eventos contêm outcome, status allowlisted, duração, correlation id, provider e contagens agregadas; nunca conteúdo do perfil ou mídia.
+- [x] Métricas distinguem falha de validação, limite, provider, banco e cleanup; alerta operacional acompanha fila `delete_pending` e uso Cloudinary.
 
 ## 7. Plano de Testes
 
@@ -510,9 +510,15 @@ ADRs 038–040 permanecem aceitas. Credenciais, avaliação jurídica e preset C
 
 - [x] Decisões citam `docs/` e ADRs.
 - [x] Um ADR `proposed` foi criado para cada decisão material.
-- [x] Nenhum código de produção foi escrito.
+- [x] Código de produção, migration e testes foram implementados; a publicação consta no `CHANGELOG.md` `0.13.0`.
 - [x] Contratos front/back, OpenAPI e PostgreSQL estão explícitos.
 - [x] Performance, segurança e observabilidade foram tratadas.
 - [x] `vercel-react-best-practices` e `nestjs-expert` foram aplicadas conforme o escopo.
-- [x] Testes, migration e rollback estão planejados.
+- [x] Testes, migration e rollback foram implementados e documentados.
 - [x] Perguntas em aberto foram exauridas.
+
+## 11. Revisão posterior (2026-10-07)
+
+O `code-reviewer` confirmou a implementação, as migrations, os artefatos de revisão visual e o registro de entrega no `CHANGELOG.md` `0.13.0`. `back lint`, `back typecheck`, `back build`, `front lint`, `front test`, `front typecheck` e o build do frontend concluíram com sucesso quando executados sem concorrência sobre `.next`.
+
+Há uma pendência transversal de infraestrutura de teste: `bun run --cwd back test` falha em testes HTTP ao inicializar Supertest com Bun (`app.address()` nulo / porta `0`). Ela não invalida os critérios já implementados, mas impede declarar a suíte agregada do backend inteiramente verde até o runner ser corrigido. Credenciais, DPA/avaliação de privacidade e preset assinado do Cloudinary continuam exclusivamente como pré-requisitos de rollout produtivo.

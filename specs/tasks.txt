@@ -1,4 +1,228 @@
+TASK 27 — Pós-evento: presença, contestação e avaliações
+
+Objetivo:
+Permitir que anfitrião e participantes registrem realização e presença após o encontro, tratem divergências antes de qualquer consequência e enviem avaliações privadas de experiência e segurança.
+
+Valor para a pessoa usuária:
+Como participante, quero registrar de forma justa o que ocorreu no encontro e avaliar a experiência, para que o produto aprenda com segurança sem criar ranking público de pessoas.
+
+Requisitos de origem e dependências:
+- Depende da TASK 25 para estados finais de evento, participações confirmadas e autorização por papel.
+- Rastreia RF045–RF048, RN060, RN068–RN070, RN141–RN146 e RNF001–RNF002.
+
+Escopo:
+- Registrar realização do evento, presença/incerteza/ausência, contestação e resolução auditável.
+- Coletar avaliação privada de experiência, segurança e realização conforme o DER.
+- Calcular somente agregados autorizados após o mínimo de avaliações válidas, sem ranking público ou comentários individuais publicados.
+- Atualizar contratos, documentação, observabilidade segura e testes.
+
+Fora de escopo:
+- Penalidades automáticas, reputação pública, comentários públicos ou moderação geral de denúncias.
+
+Critérios de aceite:
+- Somente pessoas autorizadas pelo papel e estado do evento podem registrar ou contestar presença.
+- Avaliações e comentários individuais nunca aparecem publicamente; agregados obedecem o mínimo definido no DER.
+- Logs, respostas e projeções não expõem conteúdo privado ou dados de terceiros além do necessário.
+
+Situação para planejamento:
+- A planejar após a TASK 25; exigirá decisões de retenção, auditoria, elegibilidade e cálculo dos agregados.
+
+Estimativa inicial:
+- Complexidade Fibonacci: 8.
+- Risco de deploy: alto, por afetar confiança, privacidade e possíveis medidas futuras.
+
+---
+
+TASK 26 — Conversa coletiva, avisos e segurança do evento
+
+Objetivo:
+Oferecer conversa coletiva restrita às pessoas autorizadas no evento, com avisos essenciais do anfitrião, ciclo de retenção e controles de bloqueio e moderação proporcionais.
+
+Valor para a pessoa usuária:
+Como participante confirmado, quero receber orientações essenciais e conversar com o grupo somente enquanto isso for apropriado ao encontro, mantendo proteção contra abuso.
+
+Requisitos de origem e dependências:
+- Depende da TASK 25 para participação confirmada, saída, remoção, cancelamento e autorização de anfitrião.
+- Rastreia RF039–RF044, RF053–RF056, RF090–RF091, RN050–RN069, RN131–RN136 e RNF001–RNF002.
+
+Escopo:
+- Conversa e histórico para papéis autorizados, avisos comuns/essenciais e um aviso fixado.
+- Regras de edição, ocultação, silenciamento, bloqueio, encerramento e retenção conforme estados do evento.
+- Preparar contratos de denúncia e auditoria sem expor conteúdo ou decisões internas indevidamente.
+
+Fora de escopo:
+- Anexos/imagens em mensagens, automação de moderação, atendimento operacional completo ou chat direto entre pessoas.
+
+Critérios de aceite:
+- Pessoas não confirmadas não acessam conversa, histórico, lista privada ou ponto exato por meio desse módulo.
+- Cancelamento e encerramento do evento alteram leitura/escrita exatamente conforme o DER.
+- Avisos essenciais permanecem disponíveis nas situações autorizadas sem restaurar interação bloqueada.
+
+Situação para planejamento:
+- A planejar após a TASK 25; requer ADRs para retenção de mensagens, autorização, moderação e integração com bloqueios/denúncias.
+
+Estimativa inicial:
+- Complexidade Fibonacci: 13.
+- Risco de deploy: alto, por envolver conteúdo gerado por pessoas, privacidade e segurança.
+
+---
+
+TASK 25 — Participação e gestão do anfitrião em eventos
+
+Objetivo:
+Implementar solicitações, entrada automática, confirmação, desistência, capacidade, decisões do anfitrião, edição relevante, reconfirmação, cancelamento e transferência de evento.
+
+Valor para a pessoa usuária:
+Como participante ou anfitriã, quero entrar e administrar encontros de forma previsível, com vagas, estados e comunicações coerentes e seguras.
+
+Requisitos de origem e dependências:
+- Depende da TASK 23 para evento publicado, seus estados iniciais e visão detalhada autorizada.
+- Rastreia RF028–RF038, RF085, RF103, RN023–RN049, RN125–RN130 e RN167.
+
+Escopo:
+- Modelar participação, solicitação e vagas com consistência transacional.
+- Oferecer os fluxos de decisão, retirada, desistência, mudança relevante, reconfirmação, cancelamento e transferência definidos no DER.
+- Expor somente os dados necessários a cada papel e registrar auditoria/telemetria segura.
+
+Fora de escopo:
+- Conversa coletiva, avaliações, denúncia completa, pagamentos ou recomendações de pessoas.
+
+Critérios de aceite:
+- Não há sobre-reserva de vagas sob concorrência; cada decisão respeita bloqueios, restrições e estado do evento.
+- O evento nunca fica sem anfitriã confirmada e cancelamento é irreversível.
+- Mudanças relevantes, prazos e notificações seguem as regras do DER e não revelam razões privadas indevidamente.
+
+Situação para planejamento:
+- A planejar após a TASK 23; exigirá ADRs para máquina de estados, concorrência, reserva de vaga, autorização entre contextos e notificações.
+
+Estimativa inicial:
+- Complexidade Fibonacci: 13.
+- Risco de deploy: alto, por concorrência, autorização e efeitos em múltiplas pessoas.
+
+---
+
+TASK 24 — Descoberta básica e detalhe público de eventos
+
+Objetivo:
+Permitir descobrir, buscar, filtrar, salvar, compartilhar e dispensar eventos publicados, exibindo detalhe suficiente para decidir sem revelar ponto exato ou dados privados.
+
+Valor para a pessoa usuária:
+Como participante, quero encontrar encontros compatíveis na minha região e entender a proposta antes de manifestar interesse, sem comprometer a privacidade do grupo.
+
+Requisitos de origem e dependências:
+- Depende da TASK 23 para eventos publicados, catálogo de atividades e projeções públicas mínimas.
+- Consome a região estruturada da TASK 20 quando ela estiver disponível; não deve inferir localização precisa de dados legados.
+- Rastreia RF022–RF027, RF102, RN026–RN027, RN107, RN147 e RN156–RN157.
+
+Escopo:
+- Lista, busca textual e filtros iniciais por data, horário, região, categoria, vagas, acessibilidade e faixa etária quando autorizados pelo contrato.
+- Página de detalhe, salvos, compartilhamento e sinal de desinteresse.
+- Projeções públicas e autenticadas mínimas, sem ponto exato, contatos, lista de participantes ou dados sensíveis.
+
+Fora de escopo:
+- Participar, aprovar solicitações, ranking personalizado avançado, localização em tempo real ou publicidade paga.
+
+Critérios de aceite:
+- Eventos indisponíveis não aparecem como disponíveis; lotados são identificados conforme a regra aplicável.
+- Convites e detalhes nunca expõem ponto exato, contatos ou dados privados.
+- Busca e filtros não usam dados sensíveis ou localização precisa.
+
+Situação para planejamento:
+- A planejar após a TASK 23 e com o contrato de região da TASK 20 estabilizado; exigirá ADRs para projeções, filtros, ordenação e privacidade de localização.
+
+Estimativa inicial:
+- Complexidade Fibonacci: 8.
+- Risco de deploy: médio/alto, por exposição pública, filtros e desempenho de consultas.
+
+---
+
+TASK 23 — Fundação de eventos: criação, rascunho, prévia e publicação
+
+Objetivo:
+Criar o bounded context de Eventos para que anfitriãs habilitadas criem encontros, salvem rascunhos, validem dados, revisem a prévia e publiquem somente encontros presenciais, gratuitos, informais e em locais públicos.
+
+Valor para a pessoa usuária:
+Como anfitriã habilitada, quero preparar e publicar um encontro com segurança e clareza, para reunir pessoas em uma atividade local compatível com o propósito do EventMatch.
+
+Requisitos de origem e dependências:
+- Depende da conclusão funcional da TASK 20 para usar município/UF estruturados como região do evento; até lá não inicia implementação.
+- Consome a capacidade de anfitriã já definida no perfil, sem duplicar regras de completude no frontend.
+- Rastreia RF016–RF021, RF084–RF085, RN005, RN017–RN022, RN028–RN031, RN047–RN049 e RN137.
+
+Escopo:
+- Criar o módulo NestJS hexagonal de Eventos, persistência PostgreSQL, contratos HTTP documentados e BFFs mínimos necessários.
+- Criar, editar e recuperar rascunhos; validar informações; pré-visualizar; publicar evento elegível.
+- Modelar estados iniciais e separar região aproximada de ponto exato reservado aos papéis autorizados.
+- Registrar alterações e observabilidade sem conteúdo privado; atualizar documentação, OpenAPI e testes.
+
+Fora de escopo:
+- Descoberta, solicitação/participação, conversa, avaliações, denúncia, evento pago, remoto ou residencial.
+
+Critérios de aceite:
+- Somente perfil elegível cria ou publica evento; regras de presença, gratuidade, informalidade e local público são aplicadas no backend.
+- Rascunho é recuperável e publicação bloqueia dados inválidos, data passada e capacidade ausente.
+- Prévia e respostas públicas nunca expõem ponto exato, contatos ou detalhes privados.
+- O frontend permanece consumidor do BFF/API; PostgreSQL é acessado somente por adaptadores do backend.
+
+Situação para planejamento:
+- Pronta para planejamento assim que a TASK 20 estabilizar o contrato de região. Exigirá ADRs para máquina de estados, endereço/ponto exato, limites de anfitriã, persistência e projeções de privacidade.
+
+Estimativa inicial:
+- Complexidade Fibonacci: 13.
+- Risco de deploy: alto, por criar novo bounded context, dados geográficos e controles de exposição.
+
+---
+
+TASK 22 — Delegar a dispensa do convite ao BFF de perfil
+
+Objetivo:
+Extrair a lógica do Route Handler `POST /api/profile/invitation/dismiss` para uma função testável em `front/src/shared/server/profile-bff.ts`, reduzindo a rota a delegação sem alterar o comportamento público, o cookie ou a telemetria.
+
+Valor para a pessoa usuária:
+Como pessoa mantenedora, quero que a dispensa do convite siga o mesmo limite de responsabilidade dos demais proxies de perfil, para que autenticação, expiração de sessão e privacidade do cookie não regridam durante manutenção.
+
+Requisitos de origem e dependências:
+- Origem: análise de rotas BFF posterior à TASK 21 (2026-10-07).
+- Rastreia a SDD-015, ADR-040 e `docs/04-integracoes-externas.md` §Perfil v1 e BFF.
+- Independente da TASK 21; se a ADR-050 for aceita, deve respeitar a marcação `server-only` já definida para `profile-bff.ts`.
+
+Situação atual:
+- `front/src/app/api/profile/invitation/dismiss/route.ts` contém autenticação, validação same-origin/JSON, telemetria allowlisted, leitura de perfil e serialização de cookie inline.
+- Os demais proxies de perfil são funções injetáveis em `front/src/shared/server/profile-bff.ts`; a rota de dispensa é a exceção.
+- A operação consulta `GET /api/v1/profiles/me` por `readOwnProfile`, não grava no PostgreSQL e não altera completude.
+
+Escopo:
+- Criar um proxy injetável no módulo de perfil para a dispensa do convite, recebendo `Request` e `Deps = { env, fetchImpl? }`.
+- Reduzir o Route Handler a obter o ambiente e delegar ao proxy.
+- Preservar flag `PROFILE_UI_ENABLED`, checagens de mesma origem/JSON, sessão e expiração em `401`, mapeamento atual de `403`/`404`/`503`, uma consulta upstream, envelope, headers e mensagem pública.
+- Preservar o evento `profile.invite.dismiss`, correlação/duração allowlisted e a ausência de conteúdo de perfil, subject, cookie ou token nos logs.
+- Preservar o cookie de sete dias por `invitationSubject` pseudônimo, com `HttpOnly`, `SameSite=Lax`, `Secure` e prefixo `__Host-` em produção, sem `Domain`.
+- Adicionar testes de integração do BFF para sucesso, UI desligada, origem/conteúdo inválido sem chamada upstream, sessão ausente/`401`, `403` e indisponibilidade; manter os testes unitários do cookie.
+
+Fora de escopo:
+- Mudar a UX do convite, prazo de sete dias, contrato HTTP, mensagens, corpo, cookie, flag, endpoint NestJS, banco, modelo de completude ou telemetria.
+- Juntar a rota ao `catalog-bff.ts`, pois ela é autenticada, grava cookie e pertence ao contexto de perfil.
+- Cache, retry, migration, mudança visual ou novo requisito de produto.
+
+Critérios de aceite:
+- O Route Handler contém somente obtenção de ambiente e delegação para o proxy de perfil.
+- `POST /api/profile/invitation/dismiss` mantém externamente os mesmos status, envelope, headers e cookie em todos os caminhos.
+- Requisição válida usa somente uma leitura autenticada do perfil; requisição inválida, UI desligada ou sessão ausente não acessa o backend quando isso já não ocorria.
+- Nenhum subject, token, cookie ou dado de perfil é incluído em logs ou resposta JSON.
+- Lint, typecheck, testes e build do frontend passam.
+
+Dúvidas e bloqueios para o planejamento:
+- Nenhum: ADR-040 já define contrato, cookie, privacidade e comportamento idempotente.
+
+Estimativa inicial:
+- Complexidade Fibonacci: 2.
+- Risco de deploy: baixo, por ser uma extração interna com testes de regressão do contrato.
+
+---
+
 TASK 21 — Padronizar o BFF de catálogos em um módulo testável
+
+Status: implementada — SDD-021 concluída, ADR-050 aceita e frontend/workspace preparado na versão `0.18.0` em 2026-10-07.
 
 Objetivo:
 Unificar os proxies BFF de catálogos (interesses, idiomas e preferências de atividades) em um único padrão delegado e testável, eliminando a divergência apontada na revisão da SDD-017, sem mudar contratos públicos.
@@ -15,7 +239,7 @@ Situação atual:
 - `front/src/app/api/catalog/languages/route.ts` e `interests/route.ts` fazem o proxy inline com `getBffEnv()` e `fetch` global, sem teste.
 - `front/src/app/api/catalog/activity-preferences/route.ts` delega a `proxyActivityPreferenceCatalog`, que aceita `fetchImpl` injetável e é testada, mas vive em `profile-bff.ts`, módulo do contexto de perfil.
 - Segurança e performance são equivalentes nas duas formas (mesmo fetch único, filtro Zod estrito, `jsonResponse` com `no-store`/`nosniff`); a diferença é testabilidade e coesão.
-- Nenhum módulo de `front/src/shared/server/` importa o pacote `server-only`.
+- Após a implementação, os consumidores server-side delimitados pela ADR-050 importam `server-only`, incluindo o novo `catalog-bff.ts`.
 
 Escopo:
 - Criar `front/src/shared/server/catalog-bff.ts` com uma função por catálogo (`proxyInterestCatalog`, `proxyLanguageCatalog`, `proxyActivityPreferenceCatalog`), todas com `Deps = { env, fetchImpl? }`, filtro Zod estrito e mapeamento de erro `400`/`503` idêntico ao atual.
@@ -90,6 +314,8 @@ Estimativa inicial:
 
 TASK 19 — Acessibilidade e alimentação com privacidade contextual
 
+Status: bloqueada — adiada por não ser necessária agora; permanece bloqueada até a resolução das definições de produto/jurídico e o aceite das ADRs aplicáveis.
+
 Objetivo:
 Permitir que a pessoa registre necessidades de acessibilidade e alimentação para usos claramente informados, mantendo esses dados privados por padrão e revelando somente o necessário no contexto autorizado.
 
@@ -121,7 +347,7 @@ Critérios de aceite:
 Dúvidas e bloqueios para o planejamento:
 - Pendente de definição: vocabulários, texto livre permitido, finalidades, audiências, duração do consentimento e tratamento de alergias.
 - Exige avaliação jurídica/privacidade antes de exposição contextual em produção.
-- Plano: `specs/sdd-021-acessibilidade-alimentacao-privacidade-contextual/tasks.md` (`blocked` até aceite das ADRs 050–051 e resolução dos bloqueios de produto/jurídico).
+- Plano: `specs/sdd-022-acessibilidade-alimentacao-privacidade-contextual/tasks.md` (`blocked` até aceite das ADRs aplicáveis e resolução dos bloqueios de produto/jurídico).
 
 Estimativa inicial:
 - Complexidade Fibonacci: 8.
@@ -163,7 +389,7 @@ Dúvidas e bloqueios para o planejamento:
 - Decidido: Instagram, LinkedIn e X são os provedores iniciais; há no máximo um vínculo por provedor; a UI aceita identificador ou URL colada e o backend persiste somente o identificador canônico.
 - WhatsApp permanece em estudo e fora de escopo até haver decisão específica de privacidade e segurança para número de telefone e contato direto.
 - Decidido: a edição aceita `private | authenticated`; `authenticated` aparece apenas na prévia da titular enquanto perfil de terceiros, moderação e denúncia não existem. `public` permanece indisponível.
-- Plano: `specs/sdd-020-redes-sociais-opcionais/tasks.md` (`ready`; ADR-049 aceita em 2026-10-07).
+- Plano: `specs/sdd-020-redes-sociais-opcionais/tasks.md` (`implemented`; ADR-049 aceita e release `0.17.0` em 2026-10-07). A UX usa três campos fixos e um toggle global; não há ordenação manual.
 
 Estimativa inicial:
 - Complexidade Fibonacci: 5.
@@ -252,7 +478,7 @@ Dúvidas e bloqueios para o planejamento:
 - Decidido: sem campo de fuso; os períodos valem na hora local da região da pessoa.
 - Decidido: distância em km por faixas fixas (até 2, 5, 10 ou 25 km, ou qualquer lugar na minha cidade), relativa à região informada; sem coordenada, até a Task 20 a faixa não tem efeito geográfico.
 - Decidido: ambos sempre privados, sem controle de compartilhamento e fora da prévia.
-- Plano: `specs/sdd-018-disponibilidade-distancia/tasks.md` (`blocked` até o aceite da ADR-045 `proposed`).
+- Plano: `specs/sdd-018-disponibilidade-distancia/tasks.md` (`implemented`; ADR-045 aceita e release `0.16.0` em 2026-10-06). A distância permanece sem efeito geográfico até a TASK 20.
 
 Estimativa inicial:
 - Complexidade Fibonacci: 8.
