@@ -332,10 +332,10 @@ export function ProfilePhotoEditor({
   }
 
   return (
-    <section aria-labelledby="profile-photo" className="space-y-5 border-b border-border pb-10">
+    <section aria-labelledby="profile-photo" className="space-y-5">
       <div>
-        <h2 id="profile-photo" className="text-xl font-bold">Foto principal</h2>
-        <p className="mt-1 text-muted-foreground">
+        <h3 id="profile-photo" className="text-lg font-bold">Foto principal</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
           Escolha o enquadramento que será usado como sua foto quadrada.
         </p>
       </div>

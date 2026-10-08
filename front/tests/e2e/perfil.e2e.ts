@@ -323,7 +323,7 @@ test('perfil: presença social usa provedores fixos, compartilha futuramente e r
   await expectNoHorizontalScroll(page);
 
   const update = page.waitForRequest((request) => request.url().endsWith('/api/profile') && request.method() === 'PUT');
-  await section.locator('xpath=..').getByRole('button', { name: 'Salvar perfil' }).click();
+  await page.getByRole('button', { name: 'Salvar perfil' }).click();
   await expect(page.getByRole('status')).toContainText('Perfil salvo');
   expect((await update).postDataJSON()).toMatchObject({
     socialLinks: [

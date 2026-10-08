@@ -1,5 +1,7 @@
 TASK 28 — Reorganizar a edição de perfil em etapas compreensíveis
 
+Status: implementada no frontend em 2026-10-08 — página única em quatro grupos (Sobre você; Identidade e comunicação; Interesses e encontros; Quando e até onde), índice fixo com status salvo por grupo, ações de salvar/prévia sempre visíveis com indicação de alterações não salvas e controles de visibilidade compactos. Sem salvamento parcial, sem mudança de contrato/BFF e sem ADR (nenhuma decisão material). Direção registrada no surface brief `front/.impeccable/surfaces/src-app-perfil-page-tsx.md`; E2E de perfil, acessibilidade e teclado verdes.
+
 Objetivo:
 Melhorar a experiência de edição do perfil, organizando suas informações em uma navegação clara e progressiva para reduzir a sobrecarga de uma única página extensa.
 

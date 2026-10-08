@@ -154,75 +154,79 @@ export function LocationField({
       <p id={hintId} className="text-sm text-muted-foreground">
         Escolha seu estado e município. Não pedimos endereço, bairro, CEP ou sua localização do aparelho.
       </p>
-      <label className="block space-y-2">
-        <span className="font-semibold">Estado</span>
-        <select
-          name="ufCode"
-          value={ufCode}
-          onChange={changeUf}
-          disabled={disabled}
-          required
-          className="block min-h-13 w-full rounded-xl border-2 border-border bg-surface px-4 text-lg text-foreground hover:border-muted-foreground focus-visible:border-foreground focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:text-disabled"
-        >
-          <option value="">Escolha um estado</option>
-          {federativeUnits.map((unit) => (
-            <option key={unit.code} value={unit.code}>{unit.name} ({unit.code})</option>
-          ))}
-        </select>
-      </label>
-      <div className="relative space-y-2">
-        <label htmlFor={`${id}-municipality`} className="block font-semibold">Município</label>
-        <input
-          id={`${id}-municipality`}
-          name="municipalityQuery"
-          role="combobox"
-          value={query}
-          onChange={changeQuery}
-          onKeyDown={onQueryKeyDown}
-          disabled={disabled || !ufCode}
-          required
-          autoComplete="off"
-          placeholder={ufCode ? 'Digite o município' : 'Escolha primeiro seu estado'}
-          aria-expanded={municipalities.length > 0}
-          aria-controls={listboxId}
-          aria-autocomplete="list"
-          aria-activedescendant={activeIndex >= 0 ? `${listboxId}-${municipalities[activeIndex]?.code}` : undefined}
-          aria-describedby={describedBy}
-          aria-invalid={error ? true : undefined}
-          aria-errormessage={error ? errorId : undefined}
-          className={cn(
-            'block min-h-13 w-full rounded-xl border-2 bg-surface px-4 text-lg text-foreground transition-colors duration-200',
-            'placeholder:text-disabled hover:border-muted-foreground focus-visible:border-foreground focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:text-disabled',
-            error ? 'border-error' : 'border-border',
-          )}
-        />
-        <input type="hidden" name="municipalityCode" value={selectedCode} />
-        <div id={statusId} aria-live="polite" className="text-sm text-muted-foreground">
-          {statusText}
-          {status === 'error' ? (
-            <button type="button" className="ms-2 font-semibold text-primary underline underline-offset-4" onClick={() => setRetryKey((value) => value + 1)}>
-              Tentar novamente
-            </button>
-          ) : null}
+      <div className="@container">
+        <div className="grid gap-5 @xl:grid-cols-2 @xl:items-start">
+          <label className="block space-y-2">
+            <span className="block font-semibold">Estado</span>
+            <select
+              name="ufCode"
+              value={ufCode}
+              onChange={changeUf}
+              disabled={disabled}
+              required
+              className="block min-h-13 w-full rounded-xl border-2 border-border bg-surface px-4 text-lg text-foreground hover:border-muted-foreground focus-visible:border-foreground focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:text-disabled"
+            >
+              <option value="">Escolha um estado</option>
+              {federativeUnits.map((unit) => (
+                <option key={unit.code} value={unit.code}>{unit.name} ({unit.code})</option>
+              ))}
+            </select>
+          </label>
+          <div className="relative space-y-2">
+            <label htmlFor={`${id}-municipality`} className="block font-semibold">Município</label>
+            <input
+              id={`${id}-municipality`}
+              name="municipalityQuery"
+              role="combobox"
+              value={query}
+              onChange={changeQuery}
+              onKeyDown={onQueryKeyDown}
+              disabled={disabled || !ufCode}
+              required
+              autoComplete="off"
+              placeholder={ufCode ? 'Digite o município' : 'Escolha primeiro seu estado'}
+              aria-expanded={municipalities.length > 0}
+              aria-controls={listboxId}
+              aria-autocomplete="list"
+              aria-activedescendant={activeIndex >= 0 ? `${listboxId}-${municipalities[activeIndex]?.code}` : undefined}
+              aria-describedby={describedBy}
+              aria-invalid={error ? true : undefined}
+              aria-errormessage={error ? errorId : undefined}
+              className={cn(
+                'block min-h-13 w-full rounded-xl border-2 bg-surface px-4 text-lg text-foreground transition-colors duration-200',
+                'placeholder:text-disabled hover:border-muted-foreground focus-visible:border-foreground focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:text-disabled',
+                error ? 'border-error' : 'border-border',
+              )}
+            />
+            <input type="hidden" name="municipalityCode" value={selectedCode} />
+            <div id={statusId} aria-live="polite" className="text-sm text-muted-foreground">
+              {statusText}
+              {status === 'error' ? (
+                <button type="button" className="ms-2 font-semibold text-primary underline underline-offset-4" onClick={() => setRetryKey((value) => value + 1)}>
+                  Tentar novamente
+                </button>
+              ) : null}
+            </div>
+            {municipalities.length ? (
+              <ul id={listboxId} role="listbox" aria-label="Municípios encontrados" className="absolute z-10 mt-1 max-h-64 w-full overflow-auto rounded-xl border-2 border-border bg-card p-1">
+                {municipalities.map((municipality, index) => (
+                  <li
+                    key={municipality.code}
+                    id={`${listboxId}-${municipality.code}`}
+                    role="option"
+                    aria-selected={index === activeIndex}
+                    className={cn('min-h-11 cursor-pointer rounded-lg px-3 py-2.5', index === activeIndex ? 'bg-primary-muted text-foreground' : 'hover:bg-surface')}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => selectMunicipality(municipality)}
+                  >
+                    {municipality.name}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            {error ? <p id={errorId} className="flex items-start gap-2 text-sm font-semibold text-error"><AlertIcon className="mt-0.5 size-4 shrink-0" />{error}</p> : null}
+          </div>
         </div>
-        {municipalities.length ? (
-          <ul id={listboxId} role="listbox" aria-label="Municípios encontrados" className="absolute z-10 mt-1 max-h-64 w-full overflow-auto rounded-xl border-2 border-border bg-card p-1">
-            {municipalities.map((municipality, index) => (
-              <li
-                key={municipality.code}
-                id={`${listboxId}-${municipality.code}`}
-                role="option"
-                aria-selected={index === activeIndex}
-                className={cn('min-h-11 cursor-pointer rounded-lg px-3 py-2.5', index === activeIndex ? 'bg-primary-muted text-foreground' : 'hover:bg-surface')}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => selectMunicipality(municipality)}
-              >
-                {municipality.name}
-              </li>
-            ))}
-          </ul>
-        ) : null}
-        {error ? <p id={errorId} className="flex items-start gap-2 text-sm font-semibold text-error"><AlertIcon className="mt-0.5 size-4 shrink-0" />{error}</p> : null}
       </div>
     </fieldset>
   );

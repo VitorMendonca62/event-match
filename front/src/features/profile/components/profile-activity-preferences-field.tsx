@@ -40,14 +40,14 @@ export function ProfileActivityPreferencesField({ initial, options, error, onDir
   }
 
   return (
-    <section aria-labelledby="profile-activity-preferences" className="space-y-5 border-t border-border pt-10">
+    <section aria-labelledby="profile-activity-preferences" className="space-y-5">
       <div>
-        <h2 id="profile-activity-preferences" className="text-xl font-bold">
+        <h3 id="profile-activity-preferences" className="text-lg font-bold">
           Como você gosta dos encontros
-        </h2>
-        <p id="activity-preferences-hint" className="mt-1 max-w-[65ch] text-muted-foreground">
-          Interesses dizem do que você gosta; aqui você conta como prefere que o encontro seja. Opcional, até cinco, sem ordem
-          de prioridade. Opções diferentes podem valer ao mesmo tempo.
+        </h3>
+        <p id="activity-preferences-hint" className="mt-1 max-w-[65ch] text-sm text-muted-foreground">
+          Interesses dizem do que você gosta; aqui, como prefere que o encontro seja. Opcional, até cinco, sem ordem de
+          prioridade.
         </p>
       </div>
       {options === null ? (
@@ -62,13 +62,13 @@ export function ProfileActivityPreferencesField({ initial, options, error, onDir
       ) : (
         <fieldset aria-describedby={descriptionIds} className="space-y-4">
           <legend className="flex w-full items-end justify-between gap-4">
-            <span className="font-semibold">Preferências de atividades</span>
+            <span className="text-sm font-semibold">Preferências de atividades</span>
             <span aria-live="polite" className="text-sm tabular-nums text-muted-foreground">
               <span className="sr-only">Selecionadas: </span>
               {selected.size}/{MAX_ACTIVITY_PREFERENCES}
             </span>
           </legend>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2">
             {options.map((item) => {
               const checked = selected.has(item.code);
               const blocked = limitReached && !checked;

@@ -36,11 +36,11 @@ export default async function ProfilePage() {
   // A failing preference catalog degrades only its own section (SDD-017).
   const activityPreferenceOptions = preferences?.success ? preferences.data.activityPreferences : null;
   return (
-    <div className="mx-auto min-h-dvh max-w-5xl px-5 pb-20 sm:px-8 lg:px-10">
+    <div className="mx-auto min-h-dvh max-w-6xl px-5 pb-32 sm:px-8 lg:px-10 lg:pb-24">
       <header className="flex items-center justify-between gap-4 py-6"><BrandMark size="sm" href="/inicio" /><ButtonLink href="/inicio" variant="quiet">Voltar ao início</ButtonLink></header>
-      <main className="grid gap-10 pt-6 lg:grid-cols-[minmax(0,4fr)_minmax(0,7fr)] lg:gap-16 lg:pt-12">
-        <div className="space-y-4"><h1 className="font-display text-4xl font-black uppercase leading-[0.95] tracking-[-0.02em] poster-stretch sm:text-5xl">Complete seu <span className="text-primary">perfil.</span></h1><p className="max-w-[48ch] text-lg leading-relaxed text-muted-foreground">Prepare uma apresentação para atividades em grupo. Você pode voltar e editar quando quiser.</p></div>
-        <div className="min-w-0">{safeProfile && catalog?.success && languages?.success && federativeUnits?.success ? <ProfileForm initial={safeProfile} interestOptions={catalog.data.interests} languageOptions={languages.data.languages} federativeUnits={federativeUnits.data.federativeUnits} activityPreferenceOptions={activityPreferenceOptions} /> : <Notice tone="warning" title="Perfil temporariamente indisponível.">Volte ao início e tente novamente em instantes.</Notice>}</div>
+      <main className="pt-4 lg:pt-8">
+        <div className="mb-6 space-y-3 lg:mb-14 lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:items-end lg:gap-16 lg:space-y-0"><h1 className="font-display text-4xl font-black uppercase leading-[0.95] tracking-[-0.02em] poster-stretch sm:text-5xl">Complete seu <span className="text-primary">perfil.</span></h1><p className="max-w-[56ch] text-lg leading-relaxed text-muted-foreground">Prepare uma apresentação para atividades em grupo. Tudo começa privado: você decide o que compartilhar, item por item, e pode voltar quando quiser.</p></div>
+        {safeProfile && catalog?.success && languages?.success && federativeUnits?.success ? <ProfileForm initial={safeProfile} interestOptions={catalog.data.interests} languageOptions={languages.data.languages} federativeUnits={federativeUnits.data.federativeUnits} activityPreferenceOptions={activityPreferenceOptions} /> : <Notice tone="warning" title="Perfil temporariamente indisponível.">Volte ao início e tente novamente em instantes.</Notice>}
       </main>
     </div>
   );

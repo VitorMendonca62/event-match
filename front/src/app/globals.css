@@ -89,6 +89,18 @@
     text-underline-offset: 0.2em;
   }
 
+  /* The profile form pins its section nav on top and, below lg, its actions on the bottom:
+     keep focused or scrolled-to fields clear of both (WCAG 2.4.11). */
+  html:has([data-profile-form]) {
+    scroll-padding-block: 4.5rem 6rem;
+  }
+
+  @media (width >= 64rem) {
+    html:has([data-profile-form]) {
+      scroll-padding-block: 2rem;
+    }
+  }
+
   input[type='date']::-webkit-calendar-picker-indicator {
     filter: invert(1);
     opacity: 0.8;
