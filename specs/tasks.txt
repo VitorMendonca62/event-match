@@ -1,3 +1,39 @@
+TASK 28 — Reorganizar a edição de perfil em etapas compreensíveis
+
+Objetivo:
+Melhorar a experiência de edição do perfil, organizando suas informações em uma navegação clara e progressiva para reduzir a sobrecarga de uma única página extensa.
+
+Valor para a pessoa usuária:
+Como pessoa usuária, quero editar meu perfil por grupos de informação fáceis de entender, para localizar o que preciso atualizar e concluir as alterações com mais segurança.
+
+Requisitos de origem e dependências:
+- Origem: demanda de melhoria de UX e design do perfil; a tela atual concentra foto, dados básicos, apresentação, identidade e comunicação, interesses, preferências, disponibilidade e distância em um único formulário.
+- Depende dos contratos e controles de edição de perfil já entregues nas TASKs 14–18; não há dependência bloqueante adicional identificada.
+- Rastreia RF012, RF013 e RF081; deve preservar RN008.
+
+Escopo:
+- Reorganizar a interface de edição de perfil em grupos e etapas de informação com hierarquia, orientação de progresso e ações de salvamento compreensíveis.
+- Preservar os campos, validações, controles de visibilidade, prévia, tratamento de conflito e comportamentos atuais da edição de perfil.
+- Projetar e validar a experiência em desktop e dispositivos móveis, incluindo navegação por teclado, leitura por tecnologias assistivas e estados de erro.
+
+Fora de escopo:
+- Criar novos campos de perfil, alterar regras de completude, mudar contratos do BFF/backend ou redesenhar a prévia pública além do necessário para a nova navegação de edição.
+
+Critérios de aceite:
+- A pessoa consegue identificar os grupos de informações e acessar cada parte do perfil sem percorrer uma página única excessivamente longa.
+- Campos obrigatórios, validações, privacidade, alterações não salvas, conflito de revisão e acesso à prévia mantêm comportamento equivalente ao atual.
+- A edição é utilizável por teclado e leitor de tela e mantém uma experiência coerente em telas desktop e móveis.
+- O perfil salvo contém os mesmos dados enviados pelo fluxo atual para a mesma escolha da pessoa usuária.
+
+Situação para planejamento:
+- Pronta para planejamento. Exige descoberta de UX para definir agrupamentos, modelo de navegação e estratégia de salvamento entre etapas; registrar ADR caso a solução altere persistência parcial, contrato, estado de rascunho ou limite arquitetural. Aplicar `impeccable` e `vercel-react-best-practices` no planejamento e na implementação da interface.
+
+Estimativa inicial:
+- Complexidade Fibonacci: 8.
+- Risco de deploy: médio, por alterar um fluxo de edição com validações, acessibilidade e controles de privacidade já utilizados.
+
+---
+
 TASK 27 — Pós-evento: presença, contestação e avaliações
 
 Objetivo:
