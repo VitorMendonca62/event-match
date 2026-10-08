@@ -31,7 +31,7 @@ export const SOCIAL_PROVIDER_LABELS = {
 } as const;
 export const SOCIAL_PROVIDER_HELP = {
   instagram: '',
-  linkedin: 'Use o identificador depois de linkedin.com/in/ ou cole o endereço do perfil.',
+  linkedin: '',
   x: '',
 } as const;
 export const SOCIAL_PROVIDER_PLACEHOLDERS = {
