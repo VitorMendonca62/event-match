@@ -179,7 +179,7 @@ test('15. armazenamento e cookies: allowlist do sessionStorage, cookie HttpOnly 
   const raw = await page.evaluate(() => window.sessionStorage.getItem('eventmatch.registration'));
   const draftKeys = Object.keys(JSON.parse(raw ?? '{}'));
   expect(draftKeys.sort()).toEqual(
-    ['displayName', 'interestIds', 'localStep', 'region', 'schemaVersion', 'touchedAt', 'usageIntents'].sort(),
+    ['displayName', 'interestIds', 'localStep', 'ufCode', 'municipalityCode', 'municipalityName', 'schemaVersion', 'touchedAt', 'usageIntents'].sort(),
   );
   for (const secret of [email, PASSWORD_MARK, ADULT_BIRTH_DATE, 'token=']) expect(raw).not.toContain(secret);
   expect(await page.evaluate(() => window.localStorage.length)).toBe(0);

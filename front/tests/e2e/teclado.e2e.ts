@@ -50,7 +50,10 @@ test('13. só teclado: caminho feliz inteiro com Tab, Enter, Espaço e Esc', asy
   await expectStep(page, TITLES.requiredData);
 
   await typeInto(page, page.getByLabel('Nome de exibição'), 'Ana Teste');
-  await typeInto(page, page.getByLabel('Bairro ou cidade'), 'Recife');
+  await tabTo(page, page.getByLabel('Estado'));
+  await page.getByLabel('Estado').selectOption('PE');
+  await typeInto(page, page.getByRole('combobox', { name: 'Município' }), 'Recife');
+  await page.getByRole('option', { name: 'Recife', exact: true }).click();
   const intent = page.getByRole('group', { name: 'O que você procura no EventMatch?' }).getByRole('checkbox').first();
   await tabTo(page, intent);
   await page.keyboard.press('Space');

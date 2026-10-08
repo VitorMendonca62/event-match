@@ -12,18 +12,6 @@ export class DisplayName {
   }
 }
 
-export class Region {
-  private constructor(readonly value: string) {}
-
-  static create(value: string): Region {
-    const normalized = value.trim();
-    if (normalized.length < 2 || normalized.length > 80) {
-      throw new RegistrationError('INVALID_REGION');
-    }
-    return new Region(normalized);
-  }
-}
-
 export const USAGE_INTENTS = ['friendship', 'activity_company', 'explore_city', 'networking'] as const;
 export type UsageIntentValue = (typeof USAGE_INTENTS)[number];
 

@@ -16,7 +16,7 @@ const DAY = 24 * 60 * MINUTE;
 const CONTACT = 'ana@example.test';
 const ORIGIN = Buffer.alloc(32, 9);
 const PASSWORD = 'uma senha longa';
-const REQUIRED = { displayName: 'Ana', region: 'Recife - PE', usageIntents: ['friendship'] };
+const REQUIRED = { displayName: 'Ana', ufCode: 'PE', municipalityCode: '2611606', usageIntents: ['friendship'] };
 const COMPLETION = {
   birthDate: ADULT_BIRTH_DATE,
   documentIds: Object.values(DOCUMENTS),

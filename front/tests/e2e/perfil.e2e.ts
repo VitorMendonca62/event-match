@@ -508,7 +508,9 @@ test('perfil: prévia oferece salvar o rascunho ou descartá-lo', async ({ page 
   await expect(page).toHaveURL(/\/inicio$/);
   await page.goto('/perfil');
 
-  await page.getByRole('textbox', { name: 'Região aproximada' }).fill('Centro, Recife');
+  await page.getByLabel('Estado').selectOption('PE');
+  await page.getByRole('combobox', { name: 'Município' }).fill('Recife');
+  await page.getByRole('option', { name: 'Recife', exact: true }).click();
   await page.getByRole('button', { name: 'Ver prévia' }).click();
   const saveDialog = page.getByRole('alertdialog', {
     name: 'Você tem alterações não salvas',
@@ -517,7 +519,7 @@ test('perfil: prévia oferece salvar o rascunho ou descartá-lo', async ({ page 
     (request) => request.url().endsWith('/api/profile') && request.method() === 'PUT',
   );
   await saveDialog.getByRole('button', { name: 'Salvar e ver prévia' }).click();
-  expect((await update).postDataJSON()).toMatchObject({ region: 'Centro, Recife' });
+  expect((await update).postDataJSON()).toMatchObject({ ufCode: 'PE', municipalityCode: '2611606' });
   await expect(page).toHaveURL(/\/perfil\/previa$/);
 
   await page.goto('/perfil');
@@ -540,7 +542,9 @@ test('perfil: conflito entre abas preserva o rascunho e permite reaplicá-lo', a
   const otherPage = await context.newPage();
   await otherPage.goto('/perfil');
 
-  await page.getByRole('textbox', { name: 'Região aproximada' }).fill('Boa Viagem, Recife');
+  await page.getByLabel('Estado').selectOption('PE');
+  await page.getByRole('combobox', { name: 'Município' }).fill('Recife');
+  await page.getByRole('option', { name: 'Recife', exact: true }).click();
   await page.getByRole('button', { name: 'Salvar perfil' }).click();
   await expect(page.getByRole('status')).toContainText('Perfil salvo');
 

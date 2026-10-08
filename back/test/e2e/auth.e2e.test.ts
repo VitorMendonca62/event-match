@@ -89,7 +89,7 @@ async function activeAccount(contact: string): Promise<void> {
   const required = await call('PUT', '/api/v1/registration/required-data', {
     continuation: password.continuation!,
     key: true,
-    body: { displayName: 'Ana', region: 'Recife - PE', usageIntents: ['friendship'] },
+    body: { displayName: 'Ana', ufCode: 'PE', municipalityCode: '2611606', usageIntents: ['friendship'] },
   });
   const documents = await call('GET', '/api/v1/registration/legal-documents?locale=pt-BR');
   const documentIds = (documents.body.data.documents as { id: string }[]).map((document) => document.id);
@@ -138,7 +138,7 @@ describe('Auth API v1 (e2e, container)', () => {
       info: { version: string };
       paths: Record<string, unknown>;
     };
-    expect(document.info.version).toBe('0.16.0');
+    expect(document.info.version).toBe('0.17.0');
     expect(Object.keys(document.paths)).toEqual(
       expect.arrayContaining(['/api/v1/auth/login', '/api/v1/auth/session', '/api/v1/auth/logout']),
     );
@@ -183,10 +183,12 @@ describe('Auth API v1 (e2e, container)', () => {
     expect(anaProfile.status).toBe(200);
     expect(biaProfile.status).toBe(200);
     const interests = (anaProfile.body.data.interests as { id: string }[]).map(({ id }) => id);
+    const anaLocation = (anaProfile.body.data as { location: { ufCode: string; municipalityCode: string } }).location;
     const update = {
       revision: anaProfile.body.data.revision,
       displayName: 'Ana do perfil',
-      region: anaProfile.body.data.region,
+      ufCode: anaLocation.ufCode,
+      municipalityCode: anaLocation.municipalityCode,
       usageIntents: anaProfile.body.data.usageIntents,
       interestIds: interests,
       presentation: 'Atividades culturais em grupo.',

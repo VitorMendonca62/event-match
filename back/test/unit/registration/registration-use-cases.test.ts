@@ -126,7 +126,7 @@ describe('registration use cases', () => {
       expect(harness.database.state.accounts.get(accountId)).toMatchObject({ status: 'expired', birthDate: null });
       expect(harness.database.state.accountContacts.get(accountId)).toMatchObject({ contactHash: null, holdsContact: false });
       expect(harness.database.state.credentials.get(accountId)).toBeNull();
-      expect(harness.database.state.profiles.get(accountId)).toEqual({ displayName: null, region: null });
+      expect(harness.database.state.profiles.get(accountId)).toEqual({ displayName: null, ufCode: null, municipalityCode: null });
       expect(harness.database.state.usageIntents.has(accountId)).toBe(false);
       expect(harness.database.state.verifications.get(result.verificationId)?.status).toBe('open');
     });
@@ -290,17 +290,17 @@ describe('registration use cases', () => {
       expect(account).toMatchObject({ status: 'account_incomplete' });
       const registration = harness.database.state.registrations.get(account?.registrationId ?? '');
       expect(registration).toMatchObject({ status: 'converted', retained: null, expiredAt: null });
-      expect(harness.database.state.profiles.get(accountId)).toEqual({ displayName: 'Ana', region: 'Recife - PE' });
+      expect(harness.database.state.profiles.get(accountId)).toEqual({ displayName: 'Ana', ufCode: 'PE', municipalityCode: '2611606' });
       expect(harness.database.state.usageIntents.get(accountId)).toEqual(['friendship']);
     });
 
     test('validates input before opening a transaction', async () => {
       const commits = harness.database.commits;
       await expect(
-        harness.saveRequiredData.execute({ registrationId: 'r', displayName: ' ', region: 'Recife', usageIntents: ['friendship'] }),
+        harness.saveRequiredData.execute({ registrationId: 'r', displayName: ' ', ufCode: 'PE', municipalityCode: '2611606', usageIntents: ['friendship'] }),
       ).rejects.toMatchObject({ code: 'INVALID_DISPLAY_NAME' });
       await expect(
-        harness.saveRequiredData.execute({ registrationId: 'r', displayName: 'Ana', region: 'Recife', usageIntents: [] }),
+        harness.saveRequiredData.execute({ registrationId: 'r', displayName: 'Ana', ufCode: 'PE', municipalityCode: '2611606', usageIntents: [] }),
       ).rejects.toMatchObject({ code: 'INVALID_USAGE_INTENTS' });
       expect(harness.database.commits).toBe(commits);
     });
@@ -312,7 +312,7 @@ describe('registration use cases', () => {
       harness.clock.advance(DAY);
 
       await expect(
-        harness.saveRequiredData.execute({ registrationId, displayName: 'Ana', region: 'Recife', usageIntents: ['friendship'] }),
+        harness.saveRequiredData.execute({ registrationId, displayName: 'Ana', ufCode: 'PE', municipalityCode: '2611606', usageIntents: ['friendship'] }),
       ).rejects.toMatchObject({ code: 'REGISTRATION_UNAVAILABLE' });
       expect(harness.database.state.registrations.get(registrationId)).toMatchObject({ status: 'expired', retained: null });
       expect(harness.database.state.accounts.size).toBe(0);
@@ -417,7 +417,7 @@ describe('registration use cases', () => {
       await expect(harness.expireStale.execute()).resolves.toEqual({ registrations: 1, accounts: 1, sessions: 0 });
       expect(harness.database.state.registrations.get(registrationId)?.status).toBe('expired');
       expect(harness.database.state.accounts.get(accountId)?.status).toBe('expired');
-      expect(harness.database.state.profiles.get(accountId)).toEqual({ displayName: null, region: null });
+      expect(harness.database.state.profiles.get(accountId)).toEqual({ displayName: null, ufCode: null, municipalityCode: null });
       await expect(harness.expireStale.execute()).resolves.toEqual({ registrations: 0, accounts: 0, sessions: 0 });
     });
   });

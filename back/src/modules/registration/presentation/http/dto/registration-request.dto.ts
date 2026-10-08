@@ -16,6 +16,7 @@ import {
 } from 'class-validator';
 
 import { USAGE_INTENTS } from '../../../domain/value-objects/profile-fields';
+import { FEDERATIVE_UNIT_CODES } from '../../../../catalog/domain/value-objects/location';
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -98,10 +99,14 @@ export class RequiredDataRequestDto {
   @MaxLength(60)
   readonly displayName!: string;
 
-  @ApiProperty({ maxLength: 80, example: 'Recife - PE' })
+  @ApiProperty({ enum: FEDERATIVE_UNIT_CODES, example: 'PE' })
+  @IsIn(FEDERATIVE_UNIT_CODES)
+  readonly ufCode!: string;
+
+  @ApiProperty({ example: '2611606', pattern: '^\\d{7}$' })
   @IsString()
-  @MaxLength(80)
-  readonly region!: string;
+  @Matches(/^\d{7}$/u)
+  readonly municipalityCode!: string;
 
   @ApiProperty({ enum: USAGE_INTENTS, isArray: true, example: ['friendship'] })
   @IsArray()

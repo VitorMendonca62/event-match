@@ -8,17 +8,20 @@ import { currentProfileView } from '@/shared/server/profile-view';
 import { callBackend } from '@/shared/server/backend-client';
 import { getBffEnv } from '@/shared/config/bff-env.server';
 import { envelopeSchema, interestListDataSchema } from '@/features/registration/contracts';
+import { federativeUnitListDataSchema } from '@/features/location/contracts';
 import { activityPreferenceListDataSchema, languageListDataSchema } from '@/features/profile/contracts';
 
 export const metadata: Metadata = { title: 'Completar perfil · EventMatch', robots: { index: false, follow: false }, referrer: 'no-referrer' };
 export const dynamic = 'force-dynamic';
 
 export default async function ProfilePage() {
-  const catalogPromise = callBackend({ method: 'GET', path: '/catalog/interests?locale=pt-BR', internal: false }, getBffEnv());
-  const languagesPromise = callBackend({ method: 'GET', path: '/catalog/languages?locale=pt-BR', internal: false }, getBffEnv());
-  const preferencesPromise = callBackend({ method: 'GET', path: '/catalog/activity-preferences?locale=pt-BR', internal: false }, getBffEnv())
+  const env = getBffEnv();
+  const catalogPromise = callBackend({ method: 'GET', path: '/catalog/interests?locale=pt-BR', internal: false }, env);
+  const languagesPromise = callBackend({ method: 'GET', path: '/catalog/languages?locale=pt-BR', internal: false }, env);
+  const federativeUnitsPromise = callBackend({ method: 'GET', path: '/catalog/federative-units', internal: false }, env);
+  const preferencesPromise = callBackend({ method: 'GET', path: '/catalog/activity-preferences?locale=pt-BR', internal: false }, env)
     .catch(() => ({ status: 503, body: null }));
-  const [profile, catalogResponse, languagesResponse, preferencesResponse] = await Promise.all([currentProfileView(), catalogPromise, languagesPromise, preferencesPromise]);
+  const [profile, catalogResponse, languagesResponse, federativeUnitsResponse, preferencesResponse] = await Promise.all([currentProfileView(), catalogPromise, languagesPromise, federativeUnitsPromise, preferencesPromise]);
   if (profile.kind === 'disabled') notFound();
   if (profile.kind === 'anonymous' || profile.kind === 401) redirect('/entrar');
   const safeProfile = profile.kind === 'ok' ? (({ invitationSubject: _, ...safe }) => safe)(profile.value) : null;
@@ -28,6 +31,8 @@ export default async function ProfilePage() {
   const languages = languagesResponse.status === 200 && languagesEnvelope.success ? languageListDataSchema.safeParse(languagesEnvelope.data.data) : null;
   const preferencesEnvelope = envelopeSchema.safeParse(preferencesResponse.body);
   const preferences = preferencesResponse.status === 200 && preferencesEnvelope.success ? activityPreferenceListDataSchema.safeParse(preferencesEnvelope.data.data) : null;
+  const federativeUnitsEnvelope = envelopeSchema.safeParse(federativeUnitsResponse.body);
+  const federativeUnits = federativeUnitsResponse.status === 200 && federativeUnitsEnvelope.success ? federativeUnitListDataSchema.safeParse(federativeUnitsEnvelope.data.data) : null;
   // A failing preference catalog degrades only its own section (SDD-017).
   const activityPreferenceOptions = preferences?.success ? preferences.data.activityPreferences : null;
   return (
@@ -35,7 +40,7 @@ export default async function ProfilePage() {
       <header className="flex items-center justify-between gap-4 py-6"><BrandMark size="sm" href="/inicio" /><ButtonLink href="/inicio" variant="quiet">Voltar ao início</ButtonLink></header>
       <main className="grid gap-10 pt-6 lg:grid-cols-[minmax(0,4fr)_minmax(0,7fr)] lg:gap-16 lg:pt-12">
         <div className="space-y-4"><h1 className="font-display text-4xl font-black uppercase leading-[0.95] tracking-[-0.02em] poster-stretch sm:text-5xl">Complete seu <span className="text-primary">perfil.</span></h1><p className="max-w-[48ch] text-lg leading-relaxed text-muted-foreground">Prepare uma apresentação para atividades em grupo. Você pode voltar e editar quando quiser.</p></div>
-        <div className="min-w-0">{safeProfile && catalog?.success && languages?.success ? <ProfileForm initial={safeProfile} interestOptions={catalog.data.interests} languageOptions={languages.data.languages} activityPreferenceOptions={activityPreferenceOptions} /> : <Notice tone="warning" title="Perfil temporariamente indisponível.">Volte ao início e tente novamente em instantes.</Notice>}</div>
+        <div className="min-w-0">{safeProfile && catalog?.success && languages?.success && federativeUnits?.success ? <ProfileForm initial={safeProfile} interestOptions={catalog.data.interests} languageOptions={languages.data.languages} federativeUnits={federativeUnits.data.federativeUnits} activityPreferenceOptions={activityPreferenceOptions} /> : <Notice tone="warning" title="Perfil temporariamente indisponível.">Volte ao início e tente novamente em instantes.</Notice>}</div>
       </main>
     </div>
   );

@@ -13,7 +13,7 @@ import {
 const CONTACT = 'ana@example.test';
 const ORIGIN = Buffer.alloc(32, 9);
 const PASSWORD = 'uma senha longa';
-const REQUIRED = { displayName: 'Ana', region: 'Recife - PE', usageIntents: ['friendship'] };
+const REQUIRED = { displayName: 'Ana', ufCode: 'PE', municipalityCode: '2611606', usageIntents: ['friendship'] };
 
 describe('CancelRegistration (ADR-030)', () => {
   let harness: RegistrationHarness;
@@ -76,7 +76,7 @@ describe('CancelRegistration (ADR-030)', () => {
     await harness.cancel.execute(afterRequired.continuation!);
 
     expect(harness.database.state.accounts.get(accountId!)).toMatchObject({ status: 'expired', birthDate: null });
-    expect(harness.database.state.profiles.get(accountId!)).toEqual({ displayName: null, region: null });
+    expect(harness.database.state.profiles.get(accountId!)).toEqual({ displayName: null, ufCode: null, municipalityCode: null });
     expect(harness.database.state.acceptances.size).toBe(0);
     expect(harness.telemetry.events.at(-1)).toMatchObject({ outcome: 'account_incomplete' });
   });

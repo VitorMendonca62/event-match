@@ -8,6 +8,7 @@ import { useCaseProvider } from '../../shared/infrastructure/nest/use-case.provi
 import { PersistenceModule } from '../../shared/infrastructure/persistence/persistence.module';
 import { CatalogModule } from '../catalog/catalog.module';
 import { INTEREST_CATALOG_READER_PORT } from '../catalog/domain/ports/interest-catalog-reader.port';
+import { MUNICIPALITY_CATALOG_READER_PORT } from '../catalog/domain/ports/municipality-catalog-reader.port';
 import { PROFILE_WRITER_PORT } from '../profiles/domain/ports/profile-writer.port';
 import { ProfilesModule } from '../profiles/profiles.module';
 import { ContactRetention } from './application/services/contact-retention';
@@ -159,6 +160,7 @@ const useCases = [
     ID_GENERATOR_PORT,
     CLOCK_PORT,
     REGISTRATION_TELEMETRY_PORT,
+    MUNICIPALITY_CATALOG_READER_PORT,
   ]),
   useCaseProvider(CompleteRegistration, [
     UNIT_OF_WORK_PORT,

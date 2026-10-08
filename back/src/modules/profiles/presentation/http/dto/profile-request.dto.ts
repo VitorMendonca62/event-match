@@ -4,6 +4,7 @@ import { Type } from 'class-transformer';
 import { PRONOUN_SELECTIONS, USAGE_INTENTS, type EditableProfileVisibility, type PronounSelection, type UsageIntent } from '../../../domain/entities/profile';
 import { AVAILABILITY_SLOTS, PREFERRED_DISTANCES, type AvailabilitySlot, type PreferredDistance } from '../../../domain/value-objects/availability';
 import { SOCIAL_PROVIDERS, type EditableSocialLinkVisibility, type SocialProvider } from '../../../domain/value-objects/social-link';
+import { FEDERATIVE_UNIT_CODES } from '../../../../catalog/domain/value-objects/location';
 
 export class UpdateSocialLinkDto {
   @ApiProperty({ format: 'uuid', required: false }) @IsOptional() @IsUUID() readonly id?: string;
@@ -16,7 +17,8 @@ export class UpdateSocialLinkDto {
 export class UpdateProfileDto {
   @ApiProperty({ minimum: 1 }) @IsInt() @Min(1) readonly revision!: number;
   @ApiProperty({ minLength: 1, maxLength: 60 }) @IsString() @MinLength(1) @MaxLength(60) readonly displayName!: string;
-  @ApiProperty({ minLength: 2, maxLength: 80 }) @IsString() @MinLength(2) @MaxLength(80) readonly region!: string;
+  @ApiProperty({ enum: FEDERATIVE_UNIT_CODES, example: 'PE' }) @IsEnum(FEDERATIVE_UNIT_CODES) readonly ufCode!: string;
+  @ApiProperty({ pattern: '^\\d{7}$', example: '2611606' }) @IsString() @Matches(/^\d{7}$/u) readonly municipalityCode!: string;
   @ApiProperty({ enum: USAGE_INTENTS, isArray: true }) @IsArray() @ArrayMinSize(1) @ArrayUnique() @IsEnum(USAGE_INTENTS, { each: true }) readonly usageIntents!: UsageIntent[];
   @ApiProperty({ type: [String], format: 'uuid', minItems: 3 }) @IsArray() @ArrayMinSize(3) @ArrayUnique() @IsUUID(undefined, { each: true }) readonly interestIds!: string[];
   @ApiProperty({ nullable: true, minLength: 1, maxLength: 500 }) @ValidateIf((_object, value) => value !== null) @IsDefined() @IsString() @MinLength(1) @MaxLength(500) readonly presentation!: string | null;

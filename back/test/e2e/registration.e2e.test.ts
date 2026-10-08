@@ -108,7 +108,7 @@ async function incompleteAccount(contact: string): Promise<string> {
   const required = await call('PUT', '/api/v1/registration/required-data', {
     token: password.continuation,
     key: key(),
-    body: { displayName: 'Ana', region: 'Recife - PE', usageIntents: ['friendship'] },
+    body: { displayName: 'Ana', ufCode: 'PE', municipalityCode: '2611606', usageIntents: ['friendship'] },
   });
   expect(required.body.data).toMatchObject({ stage: 'account_incomplete' });
   return required.continuation!;
@@ -380,7 +380,7 @@ describe('Registration API v1 (e2e, container + fake Brevo)', () => {
 
   test('the published OpenAPI document describes the registration contract', async () => {
     const document = await fetch(new URL('/docs-json', baseUrl)).then((response) => response.json());
-    expect(document.info.version).toBe('0.16.0');
+    expect(document.info.version).toBe('0.17.0');
     expect(Object.keys(document.paths)).toEqual(
       expect.arrayContaining([
         '/api/v1/registration/eligibility',

@@ -159,7 +159,8 @@ describe('registration HTTP flow (PostgreSQL integration)', () => {
       // Another replica continues the journey: state lives only in PostgreSQL.
       const required = await nodeB.flow.saveRequiredData(as(password.continuation!), {
         displayName: 'Ana',
-        region: 'Recife - PE',
+        ufCode: 'PE',
+        municipalityCode: '2611606',
         usageIntents: ['friendship'],
       });
       await nodeA.flow.complete(as(required.continuation!), {

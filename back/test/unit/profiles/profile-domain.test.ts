@@ -6,7 +6,7 @@ import { ProfilePreviewProjector } from '../../../src/modules/profiles/domain/se
 
 const state = {
   accountId: '0192f4c4-7d1a-7b8e-9d3f-3a6c1e2b4f50', revision: 1,
-  displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'] as const,
+  displayName: 'Ana', location: { ufCode: 'PE' as const, municipalityCode: '2611606', municipalityName: 'Recife' }, usageIntents: ['friendship'] as const,
   interests: [
     { id: '1', slug: 'cinema', label: 'Cinema' }, { id: '2', slug: 'corrida', label: 'Corrida' }, { id: '3', slug: 'livros', label: 'Livros' },
   ], presentation: null, photoVisibility: 'private' as const, presentationVisibility: 'private' as const, photo: null,
@@ -28,7 +28,7 @@ describe('Profile (ADR-038)', () => {
   });
   test('completion has six stable items and preview omits private fields', () => {
     const completion = new ProfileCompletion().calculate(state); expect(completion).toEqual({ complete: false, completedCount: 4, totalCount: 6, missing: ['photo', 'presentation'] });
-    expect(new ProfilePreviewProjector().project(state, PRONOUN_LABELS)).toEqual({ displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'], interests: state.interests });
+    expect(new ProfilePreviewProjector().project(state, PRONOUN_LABELS)).toEqual({ displayName: 'Ana', location: state.location, usageIntents: ['friendship'], interests: state.interests });
   });
   test('normalizes optional identity and projects only authenticated groups', () => {
     const updated = Profile.restore(state).update({ ...state, pronounSelection: 'other', customPronouns: ' elu / delu ', pronounsVisibility: 'authenticated', profession: ' Pessoa desenvolvedora ', professionVisibility: 'authenticated', languages: [{ code: 'bzs', label: 'Libras', active: true }], languagesVisibility: 'authenticated' }).snapshot();

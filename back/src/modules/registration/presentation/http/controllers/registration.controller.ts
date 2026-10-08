@@ -260,7 +260,7 @@ export class RegistrationController {
 
   @Put('required-data')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Save display name, region and usage intents; creates the incomplete account' })
+  @ApiOperation({ summary: 'Save display name, structured location and usage intents; creates the incomplete account' })
   @ApiContinuationCommand()
   @ApiOkResponse({ type: StageResponseDto, headers: continuationHeader })
   @ApiUnprocessableEntityResponse({ type: UnprocessableRegistrationResponseDto })

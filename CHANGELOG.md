@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.19.0 — 2026-10-08
+
+Localização estruturada por UF e município (SDD-023; ADR-052 e ADR-053). Breaking change coordenada: frontend/workspace `0.19.0`, backend `0.17.0`, contrato v1.
+
+- Cadastro e perfil deixam de aceitar `region` textual e passam a exigir `ufCode` + `municipalityCode` IBGE. `GET /profiles/me` e a prévia projetam `location` com município, UF e códigos estáveis; completude passa a exigir localização.
+- Migration `0013_structured_location_catalog` cria o catálogo local versionado das 27 UFs e 5.571 municípios oficiais do IBGE, com checksum, fonte, busca normalizada limitada a 20 resultados e Brasília (`5300108`) em `DF`. O runtime não consulta o IBGE.
+- Novos endpoints públicos `/api/v1/catalog/federative-units` e `/api/v1/catalog/municipalities?uf=XX&q=...`, além dos proxies BFF sem credencial, cookie ou sessão. A UI usa seleção UF → combobox de município com debounce, cancelamento, estados de erro e suporte a teclado.
+- A troca é forward-only e destrutiva para dados legados de desenvolvimento/teste: `profile.region` é removido sem inferência e a migration falha fechada se houver perfil legado, exigindo ambiente limpo. Rollback antes de produção é operacional, restaurando schema/seed anterior; correções posteriores exigem nova migration/ADR.
+
 ## 0.18.0 — 2026-10-07
 
 Padronização dos proxies BFF de catálogos (SDD-021; ADR-050). Refactor interno do frontend/workspace; backend permanece em `0.16.0` e não há migration ou alteração de contrato NestJS.

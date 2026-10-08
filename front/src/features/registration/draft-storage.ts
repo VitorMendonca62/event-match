@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { DISPLAY_NAME_MAX, REGION_MAX, USAGE_INTENTS } from './contracts';
+import { DISPLAY_NAME_MAX, USAGE_INTENTS } from './contracts';
 import { STEPS } from './flow-machine';
 
 /**
@@ -18,7 +18,9 @@ export const registrationDraftSchema = z.strictObject({
   touchedAt: z.iso.datetime(),
   localStep: z.enum(LOCAL_STEPS),
   displayName: z.string().max(DISPLAY_NAME_MAX).optional(),
-  region: z.string().max(REGION_MAX).optional(),
+  ufCode: z.string().max(2).optional(),
+  municipalityCode: z.string().max(7).optional(),
+  municipalityName: z.string().max(120).optional(),
   usageIntents: z.array(z.enum(USAGE_INTENTS)).max(USAGE_INTENTS.length).optional(),
   interestIds: z.array(z.uuid()).max(50).optional(),
 });
@@ -82,7 +84,9 @@ function pickAllowed(source: DraftPatch): DraftPatch {
   const allowed: DraftPatch = {};
   if (source.localStep !== undefined) allowed.localStep = source.localStep;
   if (source.displayName !== undefined) allowed.displayName = source.displayName;
-  if (source.region !== undefined) allowed.region = source.region;
+  if (source.ufCode !== undefined) allowed.ufCode = source.ufCode;
+  if (source.municipalityCode !== undefined) allowed.municipalityCode = source.municipalityCode;
+  if (source.municipalityName !== undefined) allowed.municipalityName = source.municipalityName;
   if (source.usageIntents !== undefined) allowed.usageIntents = source.usageIntents;
   if (source.interestIds !== undefined) allowed.interestIds = source.interestIds;
   return allowed;

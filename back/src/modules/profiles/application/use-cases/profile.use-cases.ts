@@ -14,6 +14,8 @@ import { normalizeSocialLinkDrafts, toSocialProfileUrl, type SocialLinkDraft } f
 import type { ProfileTelemetryPort } from '../../domain/ports/outbound/profile-telemetry.port';
 import { observed } from '../services/profile-telemetry';
 import type { ProfileMediaPolicy } from './profile-media.use-cases';
+import type { MunicipalityCatalogReaderPort } from '../../../catalog/domain/ports/municipality-catalog-reader.port';
+import type { UfCode } from '../../../catalog/domain/value-objects/location';
 
 const PRONOUN_LABELS_PT_BR = { ela_dela: 'Ela/dela', ele_dele: 'Ele/dele', elu_delu: 'Elu/delu' } as const;
 
@@ -40,7 +42,7 @@ async function hydrateProfile(
 
 function ownView(profile: ReturnType<Profile['snapshot']>, hasActivePhoto = profile.photo !== null) {
   return {
-    revision: profile.revision, displayName: profile.displayName, region: profile.region,
+    revision: profile.revision, displayName: profile.displayName, location: profile.location,
     usageIntents: profile.usageIntents, interests: profile.interests, presentation: profile.presentation,
     photoVisibility: profile.photoVisibility, presentationVisibility: profile.presentationVisibility, photo: profile.photo,
     pronounSelection: profile.pronounSelection, customPronouns: profile.customPronouns, pronounsVisibility: profile.pronounsVisibility,
@@ -61,7 +63,7 @@ function ownView(profile: ReturnType<Profile['snapshot']>, hasActivePhoto = prof
 }
 
 export type UpdateOwnProfileInput = Readonly<{
-  accountId: string; revision: number; displayName: string; region: string;
+  accountId: string; revision: number; displayName: string; ufCode: string; municipalityCode: string;
   usageIntents: readonly UsageIntent[]; interestIds: readonly string[]; presentation: string | null;
   photoVisibility: EditableProfileVisibility; presentationVisibility: EditableProfileVisibility;
   pronounSelection: import('../../domain/entities/profile').PronounSelection | null; customPronouns: string | null;
@@ -96,13 +98,20 @@ export class GetOwnProfile {
 }
 
 export class UpdateOwnProfile {
-  constructor(private readonly uow: UnitOfWorkPort, private readonly profiles: ProfileRepositoryPort, private readonly catalog: InterestCatalogReaderPort, private readonly languages: LanguageCatalogReaderPort, private readonly preferences: ActivityPreferenceCatalogReaderPort, private readonly media: ProfileMediaRepositoryPort, private readonly images: ProfileImageStorePort, private readonly telemetry: ProfileTelemetryPort, private readonly mediaPolicy: ProfileMediaPolicy) {}
+  constructor(private readonly uow: UnitOfWorkPort, private readonly profiles: ProfileRepositoryPort, private readonly catalog: InterestCatalogReaderPort, private readonly languages: LanguageCatalogReaderPort, private readonly preferences: ActivityPreferenceCatalogReaderPort, private readonly municipalities: MunicipalityCatalogReaderPort, private readonly media: ProfileMediaRepositoryPort, private readonly images: ProfileImageStorePort, private readonly telemetry: ProfileTelemetryPort, private readonly mediaPolicy: ProfileMediaPolicy) {}
   async execute(input: UpdateOwnProfileInput) {
     return observed(this.telemetry, 'profile.update', async () => {
     const updated = await this.uow.execute(async (context) => {
       const current = await this.profiles.findOwn(context, input.accountId);
       if (!current) throw new ProfileError('PROFILE_NOT_FOUND');
       if (current.revision !== input.revision) throw new ProfileError('PROFILE_REVISION_CONFLICT');
+      const location = await this.municipalities.findByCodeAndUf(context, {
+        ufCode: input.ufCode as UfCode,
+        municipalityCode: input.municipalityCode,
+      });
+      if (!location) throw new ProfileError('INVALID_LOCATION', 'invalid_location');
+      const sameLocation = current.location.ufCode === input.ufCode && current.location.municipalityCode === input.municipalityCode;
+      if (!location.active && !sameLocation) throw new ProfileError('INVALID_LOCATION', 'invalid_location');
       const interests = await this.catalog.findActiveByIds(context, input.interestIds);
       if (interests.length !== new Set(input.interestIds).size) throw new ProfileError('INACTIVE_INTEREST');
       const summaries = await this.catalog.listActive(context);
@@ -133,7 +142,9 @@ export class UpdateOwnProfile {
         activityPreferences: catalogPreferences.filter(({ code }) => currentPreferenceCodes.includes(code)),
       };
       const next = Profile.restore(hydratedCurrent).update({
-        displayName: input.displayName, region: input.region, usageIntents: input.usageIntents,
+        displayName: input.displayName,
+        location: { ufCode: location.ufCode, municipalityCode: location.municipalityCode, municipalityName: location.municipalityName },
+        usageIntents: input.usageIntents,
         interests: summaries.filter((item) => selected.has(item.id)), presentation: input.presentation,
         photoVisibility: input.photoVisibility, presentationVisibility: input.presentationVisibility,
         pronounSelection: input.pronounSelection, customPronouns: input.customPronouns,

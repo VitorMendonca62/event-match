@@ -36,11 +36,12 @@ describe('hexagonal boundaries', () => {
     }
   });
 
-  test('the profile repository owns profile tables and reads language metadata only through the catalog port', () => {
+  test('the profile repository owns profile tables and reads catalog metadata only through ports', () => {
     const repository = readFileSync(
       join(modulesRoot, 'profiles/infrastructure/persistence/drizzle-profile-repository.adapter.ts'),
       'utf8',
     );
-    expect(repository).not.toMatch(/catalog|language\.code|language\.labelPtBr/);
+    expect(repository).not.toMatch(/infrastructure\/persistence\/schema\/catalog\.schema|language\.code|language\.labelPtBr/);
+    expect(repository).toMatch(/MUNICIPALITY_CATALOG_READER_PORT/);
   });
 });

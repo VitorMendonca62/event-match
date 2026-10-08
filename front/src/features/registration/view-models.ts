@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
 import type { LegalDocumentKind } from './contracts';
+import type { FederativeUnitOption } from '@/features/location/contracts';
 
 /**
  * Minimal props serialized from the RSC to the client flow (`server-serialization`): only public
@@ -8,6 +9,7 @@ import type { LegalDocumentKind } from './contracts';
  * contract requires for submission.
  */
 export type InterestOption = Readonly<{ id: string; label: string }>;
+export type FederativeUnitView = FederativeUnitOption;
 
 type LegalDocumentMeta = Readonly<{
   id: string;

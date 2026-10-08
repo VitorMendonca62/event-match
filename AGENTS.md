@@ -48,6 +48,19 @@ Ainda não existem manifests. Estes são os comandos-alvo e devem ser confirmado
 
 Não use npm, pnpm ou yarn sem ADR aceito. Não crie scripts ausentes apenas para fazer validações passarem.
 
+### Execução de testes em ambientes restritos
+
+Alguns testes do backend abrem uma porta efêmera (`supertest`) e os testes de integração/E2E iniciam Docker com PostgreSQL descartável. Em sessões com sandbox de rede/processos, execute esses comandos **fora do sandbox**, por aprovação explícita, em vez de classificá-los como falha de produto:
+
+| Comando | Motivo |
+|---|---|
+| `bun run --cwd back test` | O Supertest precisa fazer bind em porta efêmera. |
+| `scripts/test-back-integration.sh` | Sobe PostgreSQL descartável e fornece `DATABASE_INTEGRATION_URL`. |
+| `bun run --cwd back test:e2e` | Sobe os containers de E2E e expõe portas locais temporárias. |
+| `bun run --cwd front test:e2e` | Sobe Docker, Next.js e Playwright com portas temporárias. |
+
+Os scripts descartam os containers e volumes no `trap` de saída. Não registre segredos ou o conteúdo de `back/.env.test.local`; use apenas os comandos existentes.
+
 ## 3. Arquitetura e padrões
 
 | Área | Padrão |

@@ -33,10 +33,10 @@ describe('registration contracts', () => {
     expect(passwordRequestSchema.safeParse({ password: 'curta', passwordConfirmation: 'curta' }).success).toBe(false);
     expect(passwordRequestSchema.safeParse({ password: 'uma frase longa', passwordConfirmation: 'outra frase' }).success).toBe(false);
     expect(
-      requiredDataRequestSchema.safeParse({ displayName: 'x'.repeat(61), region: 'Recife', usageIntents: ['friendship'] }).success,
+      requiredDataRequestSchema.safeParse({ displayName: 'x'.repeat(61), ufCode: 'PE', municipalityCode: '2611606', usageIntents: ['friendship'] }).success,
     ).toBe(false);
     expect(
-      requiredDataRequestSchema.safeParse({ displayName: 'Ana', region: 'Recife', usageIntents: ['friendship', 'friendship'] })
+      requiredDataRequestSchema.safeParse({ displayName: 'Ana', ufCode: 'PE', municipalityCode: '2611606', usageIntents: ['friendship', 'friendship'] })
         .success,
     ).toBe(false);
   });

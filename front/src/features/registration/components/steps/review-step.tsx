@@ -17,7 +17,7 @@ import type { StepBaseProps } from './step-types';
 
 type ReviewStepProps = StepBaseProps &
   Readonly<{
-    profile: Partial<RequiredDataRequest>;
+    profile: Partial<RequiredDataRequest> & { municipalityName?: string };
     interests: readonly InterestOption[];
     documents: Catalog<LegalDocumentView>;
     accepted: readonly string[];
@@ -97,7 +97,7 @@ export function ReviewStep({
     >
       <dl className="divide-y divide-border border-y border-border">
         <Row term="Nome de exibição">{profile.displayName ?? '—'}</Row>
-        <Row term="Bairro ou cidade">{profile.region ?? '—'}</Row>
+        <Row term="Município / estado">{profile.municipalityName ? `${profile.municipalityName} — ${profile.ufCode ?? '—'}` : profile.municipalityCode ?? '—'}</Row>
         <Row term="O que procura">
           {profile.usageIntents?.map((intent) => USAGE_INTENT_LABELS[intent].label).join(', ') || '—'}
         </Row>

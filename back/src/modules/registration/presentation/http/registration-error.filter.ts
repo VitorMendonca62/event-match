@@ -15,7 +15,7 @@ const STATUS: Record<RegistrationErrorCode, HttpStatus> = {
   WEAK_PASSWORD: HttpStatus.UNPROCESSABLE_ENTITY,
   INVALID_BIRTH_DATE: HttpStatus.UNPROCESSABLE_ENTITY,
   INVALID_DISPLAY_NAME: HttpStatus.UNPROCESSABLE_ENTITY,
-  INVALID_REGION: HttpStatus.UNPROCESSABLE_ENTITY,
+  INVALID_LOCATION: HttpStatus.UNPROCESSABLE_ENTITY,
   INVALID_USAGE_INTENTS: HttpStatus.UNPROCESSABLE_ENTITY,
   ACCOUNT_CANNOT_BE_ACTIVATED: HttpStatus.UNPROCESSABLE_ENTITY,
   FLOW_UNAUTHORIZED: HttpStatus.UNAUTHORIZED,
@@ -42,7 +42,7 @@ const REASONS: Partial<Record<RegistrationErrorCode, string>> = {
   WEAK_PASSWORD: 'weak_password',
   INVALID_BIRTH_DATE: 'invalid_birth_date',
   INVALID_DISPLAY_NAME: 'invalid_display_name',
-  INVALID_REGION: 'invalid_region',
+  INVALID_LOCATION: 'invalid_location',
   INVALID_USAGE_INTENTS: 'invalid_usage_intents',
   ACCOUNT_CANNOT_BE_ACTIVATED: 'activation_unavailable',
 };

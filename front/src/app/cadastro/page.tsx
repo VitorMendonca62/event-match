@@ -54,6 +54,7 @@ export default async function RegistrationPage({ searchParams }: RegistrationPag
       notice={notice}
       documents={toDocumentViews(view.documents)}
       interests={view.interests}
+      federativeUnits={view.federativeUnits}
     />
   );
 }

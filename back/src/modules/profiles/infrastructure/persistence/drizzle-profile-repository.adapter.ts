@@ -1,19 +1,23 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { and, asc, eq } from 'drizzle-orm';
 
 import type { TransactionContext } from '../../../../shared/application/ports/unit-of-work.port';
 import { resolveExecutor } from '../../../../shared/infrastructure/persistence/resolve-executor';
 import type { Profile, ProfileState, UsageIntent } from '../../domain/entities/profile';
+import { MUNICIPALITY_CATALOG_READER_PORT, type MunicipalityCatalogReaderPort } from '../../../catalog/domain/ports/municipality-catalog-reader.port';
+import type { UfCode } from '../../../catalog/domain/value-objects/location';
 import { toCanonicalOrder, type AvailabilitySlot } from '../../domain/value-objects/availability';
 import type { PersistedProfileState, ProfileRepositoryPort } from '../../domain/ports/outbound/profile-repository.port';
 import { accountInterest, profile, profileActivityPreference, profileAvailabilitySlot, profileLanguage, profilePhotoAsset, profileSocialLink, profileUsageIntent } from './schema/profiles.schema';
 
 @Injectable()
 export class DrizzleProfileRepositoryAdapter implements ProfileRepositoryPort {
+  constructor(@Inject(MUNICIPALITY_CATALOG_READER_PORT) private readonly municipalityCatalog: MunicipalityCatalogReaderPort) {}
+
   async findOwn(context: TransactionContext, accountId: string): Promise<PersistedProfileState | null> {
     const database = resolveExecutor(context);
     const [row] = await database.select().from(profile).where(eq(profile.accountId, accountId)).limit(1);
-    if (!row?.displayName || !row.region) return null;
+    if (!row?.displayName || !row.ufCode || !row.municipalityCode) return null;
     const [intents, interests, languages, preferences, availability, photos, socialLinks] = await Promise.all([
       database.select({ value: profileUsageIntent.usageIntent }).from(profileUsageIntent).where(eq(profileUsageIntent.accountId, accountId)),
       database.select({ id: accountInterest.interestId }).from(accountInterest).where(eq(accountInterest.accountId, accountId)),
@@ -36,8 +40,13 @@ export class DrizzleProfileRepositoryAdapter implements ProfileRepositoryPort {
       }).from(profileSocialLink)
         .where(eq(profileSocialLink.accountId, accountId)).orderBy(asc(profileSocialLink.position)),
     ]);
+    const location = row.ufCode && row.municipalityCode
+      ? await this.municipalityCatalog.findByCodeAndUf(context, { ufCode: row.ufCode as UfCode, municipalityCode: row.municipalityCode })
+      : null;
+    if (!location) return null;
     return {
-      accountId, revision: row.revision, displayName: row.displayName, region: row.region,
+      accountId, revision: row.revision, displayName: row.displayName,
+      location: { ufCode: location.ufCode, municipalityCode: location.municipalityCode, municipalityName: location.municipalityName },
       usageIntents: intents.map(({ value }) => value as UsageIntent), interests: interests.map(({ id }) => ({ id, slug: '', label: '' })),
       presentation: row.presentation, photoVisibility: row.photoVisibility as ProfileState['photoVisibility'],
       presentationVisibility: row.presentationVisibility as ProfileState['presentationVisibility'],
@@ -66,7 +75,7 @@ export class DrizzleProfileRepositoryAdapter implements ProfileRepositoryPort {
     const database = resolveExecutor(context);
     const value = aggregate.snapshot();
     const changed = await database.update(profile).set({
-      displayName: value.displayName, region: value.region, presentation: value.presentation,
+      displayName: value.displayName, ufCode: value.location.ufCode, municipalityCode: value.location.municipalityCode, presentation: value.presentation,
       photoVisibility: value.photoVisibility, presentationVisibility: value.presentationVisibility,
       pronounSelection: value.pronounSelection, customPronouns: value.customPronouns,
       pronounsVisibility: value.pronounsVisibility, profession: value.profession,

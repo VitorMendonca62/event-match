@@ -4,7 +4,8 @@ export const PROFILE_WRITER_PORT = Symbol('PROFILE_WRITER_PORT');
 
 export interface RequiredProfileData {
   readonly displayName: string;
-  readonly region: string;
+  readonly ufCode: string;
+  readonly municipalityCode: string;
 }
 
 /** Writes profile data owned by the profiles context inside the caller's unit of work. */

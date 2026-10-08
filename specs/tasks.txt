@@ -276,8 +276,10 @@ Estimativa inicial:
 
 TASK 20 — Região estruturada por estado e município
 
+Status: planejada e pronta para implementação — SDD-023, ADR-052 e ADR-053 aceitas em 2026-10-08.
+
 Objetivo:
-Substituir a região aproximada em texto livre por uma seleção estruturada de Unidade da Federação e município, sem depender do IBGE em tempo de execução nem apagar regiões legadas.
+Substituir a região aproximada em texto livre por uma seleção estruturada de Unidade da Federação e município, sem depender do IBGE em tempo de execução nem inferir códigos a partir de regiões legadas.
 
 Valor para a pessoa usuária:
 Como participante, quero escolher meu estado e minha cidade em listas confiáveis, para evitar erros de digitação e receber futuramente encontros compatíveis com minha região.
@@ -291,7 +293,7 @@ Escopo:
 - Disponibilizar as 27 UFs e os municípios ativos de cada UF, com código IBGE estável, nome e estado.
 - No cadastro e no perfil, selecionar primeiro a UF e depois pesquisar/selecionar o município correspondente.
 - Manter o catálogo no backend/PostgreSQL e servi-lo por contratos próprios; o frontend não acessa o IBGE nem embute a lista inteira no bundle.
-- Preservar regiões legadas em texto até que a própria pessoa escolha UF e município, sem inferência automática ambígua.
+- Remover `profile.region` na migration de transição, sem inferência automática ambígua, conforme ADR-053.
 - Preparar atualização versionada do catálogo para criação, renomeação, fusão ou desativação de município.
 - Atualizar cadastro, perfil, prévia, documentação, observabilidade segura e testes.
 
@@ -303,7 +305,7 @@ Fora de escopo:
 Critérios de aceite:
 - A lista de municípios depende da UF selecionada e aceita somente código ativo pertencente àquela UF.
 - Cadastro novo não conclui sem UF e município válidos; negar localização do aparelho não impede a seleção manual.
-- Perfil legado continua legível e editável até a pessoa substituir o texto por uma seleção estruturada.
+- Perfil legado de desenvolvimento/teste não é convertido; após a migration, a localização deve ser preenchida pelos fluxos estruturados.
 - O contrato persiste o código IBGE e projeta nome/UF; nomes não são usados como identidade do município.
 - O catálogo não torna endereço, bairro ou posição exata disponíveis em respostas ou logs.
 
@@ -313,7 +315,7 @@ Dúvidas e bloqueios para o planejamento:
 
 Estimativa inicial:
 - Complexidade Fibonacci: 8.
-- Risco de deploy: médio/alto, por alterar um campo obrigatório compartilhado entre cadastro e perfil e exigir compatibilidade com texto legado.
+- Risco de deploy: médio/alto, por remover um campo compartilhado e exigir publicação coordenada de backend, BFF e frontend.
 
 ---
 

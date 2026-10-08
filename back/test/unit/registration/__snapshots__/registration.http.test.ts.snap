@@ -21,10 +21,16 @@ exports[`registration HTTP contract v1 the OpenAPI contract is versioned and doc
   "/api/v1/catalog/activity-preferences": {
     "get": [],
   },
+  "/api/v1/catalog/federative-units": {
+    "get": [],
+  },
   "/api/v1/catalog/interests": {
     "get": [],
   },
   "/api/v1/catalog/languages": {
+    "get": [],
+  },
+  "/api/v1/catalog/municipalities": {
     "get": [],
   },
   "/api/v1/profiles/me": {

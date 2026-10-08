@@ -11,6 +11,11 @@ export class ProfileCompletionDto {
   @ApiProperty({ type: [String] }) missing!: string[];
 }
 export class ProfileInterestDto { @ApiProperty() id!: string; @ApiProperty() slug!: string; @ApiProperty() label!: string; }
+export class ProfileLocationDto {
+  @ApiProperty({ example: 'PE' }) ufCode!: string;
+  @ApiProperty({ example: '2611606' }) municipalityCode!: string;
+  @ApiProperty({ example: 'Recife' }) municipalityName!: string;
+}
 export class ProfilePhotoResponseDto {
   @ApiProperty({ format: 'uri' }) deliveryUrl!: string;
   @ApiProperty({ example: 512 }) width!: 512;
@@ -36,7 +41,7 @@ export class PreviewSocialLinkDto {
 export class OwnProfileResponseDto {
   @ApiProperty() revision!: number;
   @ApiProperty() displayName!: string;
-  @ApiProperty() region!: string;
+  @ApiProperty({ type: ProfileLocationDto }) location!: ProfileLocationDto;
   @ApiProperty({ type: [String] }) usageIntents!: string[];
   @ApiProperty({ type: [ProfileInterestDto] }) interests!: ProfileInterestDto[];
   @ApiProperty({ nullable: true }) presentation!: string | null;
@@ -62,7 +67,7 @@ export class InternalOwnProfileResponseDto extends OwnProfileResponseDto {
 }
 export class ProfilePreviewResponseDto {
   @ApiProperty() displayName!: string;
-  @ApiProperty() region!: string;
+  @ApiProperty({ type: ProfileLocationDto }) location!: ProfileLocationDto;
   @ApiProperty({ type: [String] }) usageIntents!: string[];
   @ApiProperty({ type: [ProfileInterestDto] }) interests!: ProfileInterestDto[];
   @ApiPropertyOptional() presentation?: string;

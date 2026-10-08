@@ -16,10 +16,10 @@ const TOKEN = 'B'.repeat(43);
 const BFF = { 'X-EventMatch-BFF-Token': process.env.BFF_INTERNAL_TOKEN!, Authorization: `Bearer ${TOKEN}` };
 const ORIGIN = Buffer.alloc(32, 9).toString('base64url');
 const INTERESTS = [1, 2, 3].map((number) => ({ id: `00000000-0000-7000-8000-00000000000${number}`, slug: `interest-${number}`, label: `Interest ${number}` }));
-const PROFILE = { revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'], interests: INTERESTS, presentation: null, photoVisibility: 'private', presentationVisibility: 'private', photo: null, pronounSelection: null, customPronouns: null, pronounsVisibility: 'private', profession: null, professionVisibility: 'private', languages: [], languagesVisibility: 'private', activityPreferences: [], activityPreferencesVisibility: 'private', availabilitySlots: [], preferredDistance: null, socialLinks: [], completion: { complete: false, completedCount: 4, totalCount: 6, missing: ['photo', 'presentation'] }, invitationSubject: `v1.${'A'.repeat(43)}` };
+const PROFILE = { revision: 1, displayName: 'Ana', location: { ufCode: 'PE', municipalityCode: '2611606', municipalityName: 'Recife' }, usageIntents: ['friendship'], interests: INTERESTS, presentation: null, photoVisibility: 'private', presentationVisibility: 'private', photo: null, pronounSelection: null, customPronouns: null, pronounsVisibility: 'private', profession: null, professionVisibility: 'private', languages: [], languagesVisibility: 'private', activityPreferences: [], activityPreferencesVisibility: 'private', availabilitySlots: [], preferredDistance: null, socialLinks: [], completion: { complete: false, completedCount: 4, totalCount: 6, missing: ['photo', 'presentation'] }, invitationSubject: `v1.${'A'.repeat(43)}` };
 const getOwn = { execute: mock(async () => PROFILE) };
 const updateOwn = { execute: mock(async () => ({ ...PROFILE, revision: 2 })) };
-const previewOwn = { execute: mock(async () => ({ displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'], interests: INTERESTS })) };
+const previewOwn = { execute: mock(async () => ({ displayName: 'Ana', location: PROFILE.location, usageIntents: ['friendship'], interests: INTERESTS })) };
 const grant = { execute: mock(async () => ({ uploadId: crypto.randomUUID(), uploadUrl: 'https://api.cloudinary.com/upload', cloudName: 'fixture', apiKey: 'public', publicId: 'profiles/photo', timestamp: 1, expiresAt: new Date('2026-10-01T12:05:00Z'), uploadPreset: 'profile', signature: 'signed' })) };
 const finalize = { execute: mock(async () => ({ activated: true })) };
 const remove = { execute: mock(async () => ({ removed: true })) };
@@ -58,7 +58,7 @@ describe('profile HTTP contract v1 (SDD-015)', () => {
   });
 
   test('validates updates, accepts UUIDv7 interests and rejects unknown properties', async () => {
-    const body = { revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'], interestIds: INTERESTS.map(({ id }) => id), presentation: null, photoVisibility: 'private', presentationVisibility: 'authenticated', pronounSelection: null, customPronouns: null, pronounsVisibility: 'private', profession: null, professionVisibility: 'private', languageCodes: [], languagesVisibility: 'private', activityPreferenceCodes: ['small_group'], activityPreferencesVisibility: 'authenticated', availabilitySlots: [], preferredDistance: null, socialLinks: [] };
+    const body = { revision: 1, displayName: 'Ana', ufCode: 'PE', municipalityCode: '2611606', usageIntents: ['friendship'], interestIds: INTERESTS.map(({ id }) => id), presentation: null, photoVisibility: 'private', presentationVisibility: 'authenticated', pronounSelection: null, customPronouns: null, pronounsVisibility: 'private', profession: null, professionVisibility: 'private', languageCodes: [], languagesVisibility: 'private', activityPreferenceCodes: ['small_group'], activityPreferencesVisibility: 'authenticated', availabilitySlots: [], preferredDistance: null, socialLinks: [] };
     await http().put('/api/v1/profiles/me').set(BFF).send(body).expect(200);
     expect(sessions.execute).toHaveBeenLastCalledWith({ token: TOKEN, capability: 'profile_write', allowRotation: false });
     expect(updateOwn.execute).toHaveBeenCalledWith({ accountId: '00000000-0000-7000-8000-000000000099', ...body });
@@ -78,7 +78,7 @@ describe('profile HTTP contract v1 (SDD-015)', () => {
   });
 
   test('maps language errors to 422 with only the allowlisted reason', async () => {
-    const body = { revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'], interestIds: INTERESTS.map(({ id }) => id), presentation: null, photoVisibility: 'private', presentationVisibility: 'private', pronounSelection: null, customPronouns: null, pronounsVisibility: 'private', profession: 'Produtora', professionVisibility: 'private', languageCodes: ['pt', 'eo'], languagesVisibility: 'private', activityPreferenceCodes: [], activityPreferencesVisibility: 'private', availabilitySlots: [], preferredDistance: null, socialLinks: [] };
+    const body = { revision: 1, displayName: 'Ana', ufCode: 'PE', municipalityCode: '2611606', usageIntents: ['friendship'], interestIds: INTERESTS.map(({ id }) => id), presentation: null, photoVisibility: 'private', presentationVisibility: 'private', pronounSelection: null, customPronouns: null, pronounsVisibility: 'private', profession: 'Produtora', professionVisibility: 'private', languageCodes: ['pt', 'eo'], languagesVisibility: 'private', activityPreferenceCodes: [], activityPreferencesVisibility: 'private', availabilitySlots: [], preferredDistance: null, socialLinks: [] };
     for (const [code, reason] of [['UNKNOWN_LANGUAGE', 'unknown_language'], ['INACTIVE_LANGUAGE', 'inactive_language']] as const) {
       updateOwn.execute.mockImplementationOnce(async () => { throw new ProfileError(code, reason); });
       const response = await http().put('/api/v1/profiles/me').set(BFF).send(body).expect(422);
@@ -91,7 +91,7 @@ describe('profile HTTP contract v1 (SDD-015)', () => {
   });
 
   test('maps activity preference errors to 422 and validates the selection shape (ADR-044)', async () => {
-    const body = { revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'], interestIds: INTERESTS.map(({ id }) => id), presentation: null, photoVisibility: 'private', presentationVisibility: 'private', pronounSelection: null, customPronouns: null, pronounsVisibility: 'private', profession: null, professionVisibility: 'private', languageCodes: [], languagesVisibility: 'private', activityPreferenceCodes: ['small_group', 'retired_option'], activityPreferencesVisibility: 'authenticated', availabilitySlots: [], preferredDistance: null, socialLinks: [] };
+    const body = { revision: 1, displayName: 'Ana', ufCode: 'PE', municipalityCode: '2611606', usageIntents: ['friendship'], interestIds: INTERESTS.map(({ id }) => id), presentation: null, photoVisibility: 'private', presentationVisibility: 'private', pronounSelection: null, customPronouns: null, pronounsVisibility: 'private', profession: null, professionVisibility: 'private', languageCodes: [], languagesVisibility: 'private', activityPreferenceCodes: ['small_group', 'retired_option'], activityPreferencesVisibility: 'authenticated', availabilitySlots: [], preferredDistance: null, socialLinks: [] };
     for (const [code, reason] of [['UNKNOWN_ACTIVITY_PREFERENCE', 'unknown_activity_preference'], ['INACTIVE_ACTIVITY_PREFERENCE', 'inactive_activity_preference']] as const) {
       updateOwn.execute.mockImplementationOnce(async () => { throw new ProfileError(code, reason); });
       const response = await http().put('/api/v1/profiles/me').set(BFF).send(body).expect(422);

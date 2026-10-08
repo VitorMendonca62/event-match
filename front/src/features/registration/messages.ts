@@ -25,7 +25,7 @@ const REASONS: Record<PublicErrorReason, string> = {
   weak_password: 'Essa senha é muito comum. Escolha outra, de preferência uma frase longa.',
   invalid_birth_date: 'Confira a data de nascimento.',
   invalid_display_name: 'Confira o nome. Use até 60 caracteres, sem conteúdo ofensivo.',
-  invalid_region: 'Confira a região. Use até 80 caracteres.',
+  invalid_location: 'Escolha um estado e um município válidos.',
   invalid_usage_intents: 'Escolha pelo menos uma forma de usar o EventMatch.',
   activation_unavailable:
     'Não foi possível ativar sua conta com estes dados. Revise a data de nascimento, os documentos e os interesses.',

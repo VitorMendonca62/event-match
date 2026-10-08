@@ -16,10 +16,19 @@ import { DrizzleActivityPreferenceCatalogReaderAdapter } from './infrastructure/
 import { ListActiveActivityPreferences } from './application/use-cases/list-active-activity-preferences.use-case';
 import { ActivityPreferencesController } from './presentation/http/controllers/activity-preferences.controller';
 import { NoStoreMiddleware } from '../../shared/presentation/http/no-store.middleware';
+import { ListActiveFederativeUnits } from './application/use-cases/list-active-federative-units.use-case';
+import { SearchMunicipalities } from './application/use-cases/search-municipalities.use-case';
+import { FEDERATIVE_UNIT_CATALOG_READER_PORT } from './domain/ports/federative-unit-catalog-reader.port';
+import { MUNICIPALITY_CATALOG_ADMIN_PORT } from './domain/ports/municipality-catalog-admin.port';
+import { MUNICIPALITY_CATALOG_READER_PORT } from './domain/ports/municipality-catalog-reader.port';
+import { DrizzleFederativeUnitCatalogReaderAdapter } from './infrastructure/persistence/drizzle-federative-unit-catalog-reader.adapter';
+import { DrizzleMunicipalityCatalogAdminAdapter } from './infrastructure/persistence/drizzle-municipality-catalog-admin.adapter';
+import { DrizzleMunicipalityCatalogReaderAdapter } from './infrastructure/persistence/drizzle-municipality-catalog-reader.adapter';
+import { LocationCatalogController } from './presentation/http/controllers/location.controller';
 
 @Module({
   imports: [PersistenceModule],
-  controllers: [InterestsController, LanguagesController, ActivityPreferencesController],
+  controllers: [InterestsController, LanguagesController, ActivityPreferencesController, LocationCatalogController],
   providers: [
     { provide: INTEREST_CATALOG_READER_PORT, useClass: DrizzleInterestCatalogReaderAdapter },
     useCaseProvider(ListActiveInterests, [UNIT_OF_WORK_PORT, INTEREST_CATALOG_READER_PORT]),
@@ -27,11 +36,16 @@ import { NoStoreMiddleware } from '../../shared/presentation/http/no-store.middl
     useCaseProvider(ListActiveLanguages, [UNIT_OF_WORK_PORT, LANGUAGE_CATALOG_READER_PORT]),
     { provide: ACTIVITY_PREFERENCE_CATALOG_READER_PORT, useClass: DrizzleActivityPreferenceCatalogReaderAdapter },
     useCaseProvider(ListActiveActivityPreferences, [UNIT_OF_WORK_PORT, ACTIVITY_PREFERENCE_CATALOG_READER_PORT]),
+    { provide: FEDERATIVE_UNIT_CATALOG_READER_PORT, useClass: DrizzleFederativeUnitCatalogReaderAdapter },
+    { provide: MUNICIPALITY_CATALOG_READER_PORT, useClass: DrizzleMunicipalityCatalogReaderAdapter },
+    { provide: MUNICIPALITY_CATALOG_ADMIN_PORT, useClass: DrizzleMunicipalityCatalogAdminAdapter },
+    useCaseProvider(ListActiveFederativeUnits, [UNIT_OF_WORK_PORT, FEDERATIVE_UNIT_CATALOG_READER_PORT]),
+    useCaseProvider(SearchMunicipalities, [UNIT_OF_WORK_PORT, MUNICIPALITY_CATALOG_READER_PORT]),
   ],
-  exports: [INTEREST_CATALOG_READER_PORT, LANGUAGE_CATALOG_READER_PORT, ACTIVITY_PREFERENCE_CATALOG_READER_PORT],
+  exports: [INTEREST_CATALOG_READER_PORT, LANGUAGE_CATALOG_READER_PORT, ACTIVITY_PREFERENCE_CATALOG_READER_PORT, MUNICIPALITY_CATALOG_READER_PORT],
 })
 export class CatalogModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(NoStoreMiddleware).forRoutes(InterestsController, LanguagesController, ActivityPreferencesController);
+    consumer.apply(NoStoreMiddleware).forRoutes(InterestsController, LanguagesController, ActivityPreferencesController, LocationCatalogController);
   }
 }

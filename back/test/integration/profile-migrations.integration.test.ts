@@ -8,40 +8,21 @@ import { createEphemeralDatabase, MIGRATIONS_CONFIG, type EphemeralDatabase } fr
 const adminUrl = process.env.DATABASE_INTEGRATION_URL;
 if (!adminUrl) throw new Error('DATABASE_INTEGRATION_URL is required for PostgreSQL integration tests.');
 
-function migrationsThrough0006(): string {
+function migrationsThrough(tag: string): string {
   const folder = mkdtempSync(join(tmpdir(), 'eventmatch-migrations-'));
   cpSync(MIGRATIONS_CONFIG.migrationsFolder, folder, { recursive: true });
   const journalPath = join(folder, 'meta', '_journal.json');
   const journal = JSON.parse(readFileSync(journalPath, 'utf8')) as { entries: { tag: string }[] };
-  journal.entries = journal.entries.filter((entry) => entry.tag <= '0006_authenticated_session');
+  journal.entries = journal.entries.filter((entry) => entry.tag <= tag);
   writeFileSync(journalPath, JSON.stringify(journal));
   return folder;
 }
 
-function seedStatement(file: string, insert: string): string {
-  const migration = readFileSync(join(MIGRATIONS_CONFIG.migrationsFolder, file), 'utf8');
-  const migrationBlock = migration
-    .split('--> statement-breakpoint')
-    .find((candidate) => candidate.includes(insert))
-    ?.trim();
-  const seedStart = migrationBlock?.indexOf(insert) ?? -1;
-  if (!migrationBlock || seedStart < 0)
-    throw new Error(`seed statement not found in ${file}`);
-  return migrationBlock.slice(seedStart);
-}
+const migrationsThrough0006 = () => migrationsThrough('0006_authenticated_session');
+const migrationsThrough0012 = () => migrationsThrough('0012_profile_social_links');
 
-const languageSeedStatement = () => seedStatement('0008_profile_optional_identity.sql', 'INSERT INTO "language"');
-const activityPreferenceSeedStatement = () => seedStatement('0009_profile_activity_preferences.sql', 'INSERT INTO "activity_preference"');
-
-describe('migrations 0007 to 0012 over existing 0006 profile data', () => {
-  let database: EphemeralDatabase;
-  let folder: string;
-
-  beforeAll(async () => {
-    folder = migrationsThrough0006();
-    database = await createEphemeralDatabase(adminUrl, { initialMigrationsFolder: folder });
-
-    await database.pool.query(`
+async function seedLegacyProfile(database: EphemeralDatabase): Promise<void> {
+  await database.pool.query(`
       insert into contact_verification (
         id, purpose, channel, contact_hash, contact_ciphertext, otp_digest,
         expires_at, last_sent_at, delivery_idempotency_key, status
@@ -70,6 +51,33 @@ describe('migrations 0007 to 0012 over existing 0006 profile data', () => {
         ('30000000-0000-7000-8000-000000000007', '00000000-0000-7000-8000-000000000002', now()),
         ('30000000-0000-7000-8000-000000000007', '00000000-0000-7000-8000-000000000003', now());
     `);
+}
+
+function seedStatement(file: string, insert: string): string {
+  const migration = readFileSync(join(MIGRATIONS_CONFIG.migrationsFolder, file), 'utf8');
+  const migrationBlock = migration
+    .split('--> statement-breakpoint')
+    .find((candidate) => candidate.includes(insert))
+    ?.trim();
+  const seedStart = migrationBlock?.indexOf(insert) ?? -1;
+  if (!migrationBlock || seedStart < 0)
+    throw new Error(`seed statement not found in ${file}`);
+  return migrationBlock.slice(seedStart);
+}
+
+const languageSeedStatement = () => seedStatement('0008_profile_optional_identity.sql', 'INSERT INTO "language"');
+const activityPreferenceSeedStatement = () => seedStatement('0009_profile_activity_preferences.sql', 'INSERT INTO "activity_preference"');
+
+describe('migrations 0007 to 0012 over existing 0006 profile data', () => {
+  let database: EphemeralDatabase;
+  let folder: string;
+  let targetFolder: string;
+
+  beforeAll(async () => {
+    folder = migrationsThrough0006();
+    targetFolder = migrationsThrough0012();
+    database = await createEphemeralDatabase(adminUrl, { initialMigrationsFolder: folder, migrationsFolder: targetFolder });
+    await seedLegacyProfile(database);
 
     await database.migrate();
   });
@@ -77,9 +85,10 @@ describe('migrations 0007 to 0012 over existing 0006 profile data', () => {
   afterAll(async () => {
     await database?.drop();
     rmSync(folder, { recursive: true, force: true });
+    rmSync(targetFolder, { recursive: true, force: true });
   });
 
-  test('preserves legacy profile data and applies private defaults', async () => {
+  test('preserves the legacy profile until the destructive SDD-023 migration is explicitly applied', async () => {
     const { rows } = await database.pool.query(`
       select display_name, region, presentation, photo_visibility, presentation_visibility, revision
       from profile where account_id = '30000000-0000-7000-8000-000000000007'
@@ -240,7 +249,7 @@ describe('migrations 0007 to 0012 over existing 0006 profile data', () => {
     await expect(database.pool.query(`insert into profile_social_link (id, account_id, provider, canonical_identifier, position, visibility) values ('70000000-0000-7000-8000-000000000003', $1, 'instagram', 'other', 3, 'private')`, [id])).rejects.toMatchObject({ code: '23505' });
     await expect(database.pool.query(`insert into profile_social_link (id, account_id, provider, canonical_identifier, position, visibility) values ('70000000-0000-7000-8000-000000000003', $1, 'x', 'bad-handle', 3, 'private')`, [id])).rejects.toMatchObject({ code: '23514' });
     await expect(database.pool.query(`insert into profile_social_link (id, account_id, provider, canonical_identifier, position, visibility) values ('70000000-0000-7000-8000-000000000003', $1, 'instagram', 'other', 2, 'private')`, [id])).rejects.toMatchObject({ code: '23505' });
-    await expect(database.pool.query(`insert into profile_social_link (id, account_id, provider, canonical_identifier, position, visibility) values ('70000000-0000-7000-8000-000000000003', $1, 'instagram', 'other', 3, 'public')`, [id])).resolves.toBeDefined();
+    await expect(database.pool.query(`insert into profile_social_link (id, account_id, provider, canonical_identifier, position, visibility) values ('70000000-0000-7000-8000-000000000003', $1, 'x', 'other_handle', 3, 'public')`, [id])).resolves.toBeDefined();
 
     const client = await database.pool.connect();
     try {
@@ -251,6 +260,80 @@ describe('migrations 0007 to 0012 over existing 0006 profile data', () => {
     } finally {
       await client.query('rollback');
       client.release();
+    }
+  });
+});
+
+describe('migration 0013 structured location catalog', () => {
+  let database: EphemeralDatabase;
+  let folder: string;
+
+  beforeAll(async () => {
+    folder = migrationsThrough0012();
+    database = await createEphemeralDatabase(adminUrl, { initialMigrationsFolder: folder });
+  });
+
+  afterAll(async () => {
+    await database?.drop();
+    rmSync(folder, { recursive: true, force: true });
+  });
+
+  test('loads the versioned catalog on an empty profile table', async () => {
+    await database.migrate();
+
+    const units = await database.pool.query(`select count(*)::int as count from federative_unit where active`);
+    const municipalities = await database.pool.query(`select count(*)::int as count from municipality where active`);
+    const brasilia = await database.pool.query(`select code, uf_code, name from municipality where code = '5300108'`);
+    expect(units.rows).toEqual([{ count: 27 }]);
+    expect(municipalities.rows).toEqual([{ count: 5571 }]);
+    expect(brasilia.rows).toEqual([{ code: '5300108', uf_code: 'DF', name: 'Brasília' }]);
+
+    await database.pool.query(`
+      insert into contact_verification (
+        id, purpose, channel, contact_hash, contact_ciphertext, otp_digest,
+        expires_at, last_sent_at, delivery_idempotency_key, status
+      ) values (
+        '10000000-0000-7000-8000-000000000099', 'registration', 'email', '\\x01', '\\x02', '\\x03',
+        now(), now(), '11000000-0000-7000-8000-000000000099', 'consumed'
+      );
+      insert into registration (
+        id, verification_id, channel, status, last_updated_at, expires_at
+      ) values (
+        '20000000-0000-7000-8000-000000000099', '10000000-0000-7000-8000-000000000099',
+        'email', 'converted', now(), now()
+      );
+      insert into account (
+        id, registration_id, status, birth_date, last_updated_at, activated_at
+      ) values (
+        '30000000-0000-7000-8000-000000000099', '20000000-0000-7000-8000-000000000099',
+        'active', '1990-05-10', now(), now()
+      );
+    `);
+    await expect(database.pool.query(`
+      insert into profile (account_id, display_name, uf_code, municipality_code)
+      values ('30000000-0000-7000-8000-000000000099', 'UF incompatível', 'DF', '2611606')
+    `)).rejects.toMatchObject({ code: '23503' });
+
+    await database.pool.query(`
+      insert into profile (account_id, display_name, uf_code, municipality_code)
+      values ('30000000-0000-7000-8000-000000000099', 'Brasília histórica', 'DF', '5300108')
+    `);
+    await database.pool.query(`update municipality set active = false where code = '5300108'`);
+    const inactive = await database.pool.query(`select code from municipality where code = '5300108' and active = false`);
+    expect(inactive.rows).toEqual([{ code: '5300108' }]);
+    const historicalProfile = await database.pool.query(`select municipality_code from profile where account_id = '30000000-0000-7000-8000-000000000099'`);
+    expect(historicalProfile.rows).toEqual([{ municipality_code: '5300108' }]);
+  });
+
+  test('refuses to erase legacy profile data silently', async () => {
+    const legacyFolder = migrationsThrough0012();
+    const legacy = await createEphemeralDatabase(adminUrl, { initialMigrationsFolder: legacyFolder });
+    try {
+      await seedLegacyProfile(legacy);
+      await expect(legacy.migrate()).rejects.toThrow('SDD-023 requires an empty profile table');
+    } finally {
+      await legacy.drop();
+      rmSync(legacyFolder, { recursive: true, force: true });
     }
   });
 });
