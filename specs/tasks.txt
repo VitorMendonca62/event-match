@@ -121,6 +121,7 @@ Critérios de aceite:
 Dúvidas e bloqueios para o planejamento:
 - Pendente de definição: vocabulários, texto livre permitido, finalidades, audiências, duração do consentimento e tratamento de alergias.
 - Exige avaliação jurídica/privacidade antes de exposição contextual em produção.
+- Plano: `specs/sdd-021-acessibilidade-alimentacao-privacidade-contextual/tasks.md` (`blocked` até aceite das ADRs 050–051 e resolução dos bloqueios de produto/jurídico).
 
 Estimativa inicial:
 - Complexidade Fibonacci: 8.
