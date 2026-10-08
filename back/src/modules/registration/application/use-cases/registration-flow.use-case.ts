@@ -184,12 +184,12 @@ export class RegistrationFlow {
 
   async saveRequiredData(
     credentials: FlowCredentials,
-    input: { displayName: string; region: string; usageIntents: readonly string[] },
+    input: { displayName: string; ufCode: string; municipalityCode: string; usageIntents: readonly string[] },
   ): Promise<FlowResult<StageBody>> {
     const admitted = await this.gate.admit<StageBody>(
       credentials,
       'required_data',
-      { displayName: input.displayName, region: input.region, usageIntents: [...input.usageIntents] },
+      { displayName: input.displayName, ufCode: input.ufCode, municipalityCode: input.municipalityCode, usageIntents: [...input.usageIntents] },
       ['registration_in_progress'],
     );
     return this.gate.run(admitted, (admission) =>

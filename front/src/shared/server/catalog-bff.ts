@@ -2,6 +2,7 @@ import 'server-only';
 
 import { envelopeSchema, interestListDataSchema, interestSchema } from '@/features/registration/contracts';
 import { activityPreferenceListDataSchema, languageListDataSchema } from '@/features/profile/contracts';
+import { federativeUnitListDataSchema, municipalityListDataSchema, ufCodeSchema } from '@/features/location/contracts';
 import type { BffEnv } from '@/shared/config/bff-env.server';
 import { callBackend } from './backend-client';
 import { jsonResponse } from './bff-proxy';
@@ -21,6 +22,9 @@ type CatalogDefinition = Readonly<{
 const strictInterestListDataSchema = interestListDataSchema
   .extend({ interests: z.array(interestSchema.strict()) })
   .strict();
+
+const strictFederativeUnitListDataSchema = federativeUnitListDataSchema.strict();
+const strictMunicipalityListDataSchema = municipalityListDataSchema.strict();
 
 const GENERIC_MESSAGES: Readonly<Record<number, string>> = {
   400: 'Invalid request.',
@@ -53,6 +57,13 @@ const ACTIVITY_PREFERENCES: CatalogDefinition = {
   path: '/catalog/activity-preferences?locale=pt-BR',
   responseSchema: activityPreferenceListDataSchema,
   successMessage: 'Preferências de atividades disponíveis.',
+  invalidSuccessStatus: 503,
+};
+
+const FEDERATIVE_UNITS: CatalogDefinition = {
+  path: '/catalog/federative-units',
+  responseSchema: strictFederativeUnitListDataSchema,
+  successMessage: 'Estados disponíveis.',
   invalidSuccessStatus: 503,
 };
 
@@ -95,4 +106,28 @@ export function proxyLanguageCatalog(deps: CatalogBffDeps): Promise<Response> {
 
 export function proxyActivityPreferenceCatalog(deps: CatalogBffDeps): Promise<Response> {
   return proxyCatalog(deps, ACTIVITY_PREFERENCES);
+}
+
+export function proxyFederativeUnitCatalog(deps: CatalogBffDeps): Promise<Response> {
+  return proxyCatalog(deps, FEDERATIVE_UNITS);
+}
+
+const municipalityQuerySchema = z.strictObject({
+  uf: ufCodeSchema,
+  q: z.string().trim().min(2).max(80).regex(/^[\p{L}\p{N} .'-]+$/u).transform((value) => value.normalize('NFC')).optional(),
+});
+
+export async function proxyMunicipalityCatalog(request: Request, deps: CatalogBffDeps): Promise<Response> {
+  const url = new URL(request.url);
+  if ([...url.searchParams.keys()].some((key) => key !== 'uf' && key !== 'q')) return jsonResponse({ data: {}, message: GENERIC_MESSAGES[400], statusCode: 400 });
+  const parsed = municipalityQuerySchema.safeParse({ uf: url.searchParams.get('uf'), q: url.searchParams.get('q') });
+  if (!parsed.success) return jsonResponse({ data: {}, message: GENERIC_MESSAGES[400], statusCode: 400 });
+  const path = `/catalog/municipalities?uf=${encodeURIComponent(parsed.data.uf)}${parsed.data.q ? `&q=${encodeURIComponent(parsed.data.q)}` : ''}`;
+  const upstream = await callBackend({ method: 'GET', path, internal: false }, deps.env, deps.fetchImpl);
+  const envelope = envelopeSchema.safeParse(upstream.body);
+  const data = envelope.success ? strictMunicipalityListDataSchema.safeParse(envelope.data.data) : undefined;
+  if (upstream.status === 200 && envelope.success && data?.success) {
+    return jsonResponse({ data: data.data, message: 'Municípios disponíveis.', statusCode: 200 });
+  }
+  return jsonResponse({ data: {}, message: upstream.status === 400 ? GENERIC_MESSAGES[400] : 'Catálogo indisponível.', statusCode: upstream.status === 400 ? 400 : 503 });
 }

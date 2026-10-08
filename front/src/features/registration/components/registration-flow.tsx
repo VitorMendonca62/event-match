@@ -13,7 +13,7 @@ import { type FlowStage, type RequiredDataRequest, snapshotDataSchema, type Veri
 import { browserSessionStorage, clearDraft, type DraftPatch, readDraft, writeDraft } from '../draft-storage';
 import { nextLocalStep, previousStep, reconcileStep, type Step, stepForStage } from '../flow-machine';
 import { MESSAGES, messageForFailure } from '../messages';
-import type { Catalog, InterestOption, LegalDocumentView } from '../view-models';
+import type { Catalog, FederativeUnitView, InterestOption, LegalDocumentView } from '../view-models';
 import { ProgressRail } from './progress-rail';
 import { BirthStep } from './steps/birth-step';
 import { ContactStep } from './steps/contact-step';
@@ -25,6 +25,7 @@ import { ReviewStep } from './steps/review-step';
 import type { Failure } from './steps/step-types';
 
 export type FlowNotice = 'email-verified' | 'link-failed' | 'expired' | null;
+type RegistrationProfileDraft = Partial<RequiredDataRequest> & { municipalityName?: string };
 
 export type RegistrationFlowProps = Readonly<{
   stage: FlowStage | null;
@@ -33,6 +34,7 @@ export type RegistrationFlowProps = Readonly<{
   notice: FlowNotice;
   documents: Catalog<LegalDocumentView>;
   interests: Catalog<InterestOption>;
+  federativeUnits: Catalog<FederativeUnitView>;
 }>;
 
 type Banner = Readonly<{ tone: 'success' | 'error' | 'warning'; title: string; text: string; restart?: boolean }>;
@@ -51,7 +53,7 @@ const INITIAL_BANNERS: Record<Exclude<FlowNotice, null>, Banner> = {
  * Client island of `/cadastro`: holds the step machine, the in-memory acceptances and the allowed
  * local draft. The remote stage from the backend is authoritative on load, `409` and `401`.
  */
-export function RegistrationFlow({ stage: initialStage, expiresAt, nextResendAt, notice, documents, interests }: RegistrationFlowProps) {
+export function RegistrationFlow({ stage: initialStage, expiresAt, nextResendAt, notice, documents, interests, federativeUnits }: RegistrationFlowProps) {
   const router = useRouter();
   const headingRef = useRef<HTMLHeadingElement>(null);
   const [refreshing, startRefresh] = useTransition();
@@ -62,7 +64,7 @@ export function RegistrationFlow({ stage: initialStage, expiresAt, nextResendAt,
   );
   const [banner, setBanner] = useState<Banner | null>(notice ? INITIAL_BANNERS[notice] : null);
   // `null` until the person edits; before that the values come from the restored draft.
-  const [editedProfile, setProfile] = useState<Partial<RequiredDataRequest> | null>(null);
+  const [editedProfile, setProfile] = useState<RegistrationProfileDraft | null>(null);
   const [editedInterests, setInterestIds] = useState<string[] | null>(null);
   // Acceptances live only in memory until the final submit (plan §4.5).
   const [acceptedDocuments, setAcceptedDocuments] = useState<string[]>([]);
@@ -78,9 +80,11 @@ export function RegistrationFlow({ stage: initialStage, expiresAt, nextResendAt,
     () => (isClient && initialStage !== null ? readDraft(browserSessionStorage(), new Date()) : undefined),
     [isClient, initialStage],
   );
-  const profile: Partial<RequiredDataRequest> = editedProfile ?? {
+  const profile: RegistrationProfileDraft = editedProfile ?? {
     displayName: restored?.displayName,
-    region: restored?.region,
+    ufCode: restored?.ufCode as RequiredDataRequest['ufCode'] | undefined,
+    municipalityCode: restored?.municipalityCode,
+    municipalityName: restored?.municipalityName,
     usageIntents: restored?.usageIntents,
   };
   const interestIds = editedInterests ?? restored?.interestIds ?? [];
@@ -263,13 +267,16 @@ export function RegistrationFlow({ stage: initialStage, expiresAt, nextResendAt,
             key={restored ? 'restored' : 'empty'}
             {...base}
             initial={profile}
+            initialMunicipalityName={editedProfile?.municipalityName ?? restored?.municipalityName}
+            federativeUnits={federativeUnits.status === 'ready' ? federativeUnits.items : []}
             onDraft={(patch) => {
               setProfile({ ...profile, ...patch });
               persist(patch);
             }}
             onSaved={(data, saved) => {
-              setProfile(saved);
-              persist(saved);
+              const next = { ...profile, ...saved };
+              setProfile(next);
+              persist(next);
               advance('interests', data.stage);
               refreshCatalogs();
             }}

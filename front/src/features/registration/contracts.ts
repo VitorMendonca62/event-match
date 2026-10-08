@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { structuredLocationSchema, ufCodeSchema } from '@/features/location/contracts';
 
 /**
  * Transport schemas of the registration contract v1 (SDD-009 OpenAPI, ADR-020). They reproduce
@@ -27,7 +28,7 @@ export const PUBLIC_ERROR_REASONS = [
   'weak_password',
   'invalid_birth_date',
   'invalid_display_name',
-  'invalid_region',
+  'invalid_location',
   'invalid_usage_intents',
   'activation_unavailable',
 ] as const;
@@ -36,7 +37,6 @@ export type PublicErrorReason = (typeof PUBLIC_ERROR_REASONS)[number];
 export const PASSWORD_MIN = 8;
 export const PASSWORD_MAX = 256;
 export const DISPLAY_NAME_MAX = 60;
-export const REGION_MAX = 80;
 export const CONTACT_MAX = 254;
 export const MIN_INTERESTS = 3;
 
@@ -67,7 +67,8 @@ export const passwordRequestSchema = z
   .refine((body) => body.password === body.passwordConfirmation);
 export const requiredDataRequestSchema = z.strictObject({
   displayName: z.string().trim().min(1).max(DISPLAY_NAME_MAX),
-  region: z.string().trim().min(1).max(REGION_MAX),
+  ufCode: ufCodeSchema,
+  municipalityCode: structuredLocationSchema.shape.municipalityCode,
   usageIntents: z
     .array(z.enum(USAGE_INTENTS))
     .min(1)

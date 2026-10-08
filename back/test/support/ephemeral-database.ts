@@ -25,7 +25,7 @@ export interface EphemeralDatabase {
  */
 export async function createEphemeralDatabase(
   adminUrl: string,
-  options: { initialMigrationsFolder?: string } = {},
+  options: { initialMigrationsFolder?: string; migrationsFolder?: string } = {},
 ): Promise<EphemeralDatabase> {
   const name = `eventmatch_it_${randomBytes(6).toString('hex')}`;
   const admin = new Pool({ connectionString: adminUrl, max: 1 });
@@ -49,11 +49,15 @@ export async function createEphemeralDatabase(
     url.pathname = `/${name}`;
     const databasePool = new Pool({ connectionString: url.toString(), max: 2 });
     pool = databasePool;
-    const migrateDatabase = () => migrate(drizzle({ client: databasePool }), MIGRATIONS_CONFIG);
+    const migrationsConfig = {
+      ...MIGRATIONS_CONFIG,
+      migrationsFolder: options.migrationsFolder ?? MIGRATIONS_CONFIG.migrationsFolder,
+    };
+    const migrateDatabase = () => migrate(drizzle({ client: databasePool }), migrationsConfig);
     // A partial folder lets tests seed legacy rows before the remaining migrations run.
     await migrate(drizzle({ client: databasePool }), {
-      ...MIGRATIONS_CONFIG,
-      migrationsFolder: options.initialMigrationsFolder ?? MIGRATIONS_CONFIG.migrationsFolder,
+      ...migrationsConfig,
+      migrationsFolder: options.initialMigrationsFolder ?? migrationsConfig.migrationsFolder,
     });
 
     return { url: url.toString(), pool: databasePool, migrate: migrateDatabase, drop: release };

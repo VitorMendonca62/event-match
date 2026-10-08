@@ -200,7 +200,9 @@ test('perfil: adiciona, substitui e remove a foto com persistência após reload
 
 test('perfil: salvar leva a página ao topo', async ({ page }) => {
   await openProfile(page, 'perfil-scroll-topo');
-  await page.getByRole('textbox', { name: 'Região aproximada' }).fill('Centro, Recife');
+  await page.getByLabel('Estado').selectOption('PE');
+  await page.getByRole('combobox', { name: 'Município' }).fill('Recife');
+  await page.getByRole('option', { name: 'Recife', exact: true }).click();
   const save = page.getByRole('button', { name: 'Salvar perfil' });
   await save.scrollIntoViewIfNeeded();
   expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);

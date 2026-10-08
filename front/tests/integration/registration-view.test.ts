@@ -15,6 +15,9 @@ function routedBackend(stage: string | null, order: string[] = []) {
       if (stage === null) return new Response(JSON.stringify({ data: {}, message: 'x', statusCode: 401 }), { status: 401 });
       return Response.json({ data: { stage, expiresAt: '2099-01-01T00:00:00.000Z' }, message: 'x', statusCode: 200 });
     }
+    if (path.endsWith('/federative-units')) {
+      return Response.json({ data: { federativeUnits: [{ code: 'PE', name: 'Pernambuco' }] }, message: 'x', statusCode: 200 });
+    }
     if (path.endsWith('/legal-documents')) {
       return Response.json({
         data: {
@@ -29,18 +32,20 @@ function routedBackend(stage: string | null, order: string[] = []) {
 }
 
 describe('loadRegistrationView', () => {
-  test('without a continuation nothing is fetched', async () => {
+  test('without a continuation loads the public federative-unit catalog for the first screen', async () => {
     const calls: string[] = [];
     const view = await loadRegistrationView(undefined, { env, fetchImpl: routedBackend('age_eligible', calls) });
     expect(view.stage).toBeNull();
-    expect(calls).toHaveLength(0);
+    expect(calls).toHaveLength(1);
+    expect(view.federativeUnits).toEqual({ status: 'ready', items: [{ code: 'PE', name: 'Pernambuco' }] });
   });
 
   test('snapshot and catalogs start in parallel and only public fields are serialized', async () => {
     const order: string[] = [];
     const view = await loadRegistrationView(TOKEN, { env, fetchImpl: routedBackend('account_incomplete', order) });
-    expect(order.slice(0, 3).every((entry) => entry.startsWith('start'))).toBe(true);
-    expect(order).toHaveLength(3);
+    expect(order.slice(0, 4).every((entry) => entry.startsWith('start'))).toBe(true);
+    expect(order).toHaveLength(4);
+    expect(view.federativeUnits).toEqual({ status: 'ready', items: [{ code: 'PE', name: 'Pernambuco' }] });
     expect(view.interests).toEqual({ status: 'ready', items: [{ id: UUID, label: 'Café' }] });
     expect(view.documents).toEqual({
       status: 'ready',

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { proxyActivityPreferenceCatalog, proxyInterestCatalog, proxyLanguageCatalog } from '../../src/shared/server/catalog-bff';
+import { proxyActivityPreferenceCatalog, proxyFederativeUnitCatalog, proxyInterestCatalog, proxyLanguageCatalog, proxyMunicipalityCatalog } from '../../src/shared/server/catalog-bff';
 import type { CatalogBffDeps } from '../../src/shared/server/catalog-bff';
 import { fakeBackend, testEnv } from './bff-fixtures';
 
@@ -32,6 +32,16 @@ const catalogs = [
     data: { activityPreferences: [{ code: 'outdoor', label: 'Ao ar livre' }] },
     proxy: proxyActivityPreferenceCatalog,
     successMessage: 'Preferências de atividades disponíveis.',
+    invalidSuccessStatus: 503,
+    invalidSuccessMessage: 'Catálogo indisponível.',
+    badRequestMessage: 'Catálogo indisponível.',
+  },
+  {
+    name: 'federative units',
+    path: 'http://backend.test/api/v1/catalog/federative-units',
+    data: { federativeUnits: [{ code: 'PE', name: 'Pernambuco' }] },
+    proxy: proxyFederativeUnitCatalog,
+    successMessage: 'Estados disponíveis.',
     invalidSuccessStatus: 503,
     invalidSuccessMessage: 'Catálogo indisponível.',
     badRequestMessage: 'Catálogo indisponível.',
@@ -119,4 +129,48 @@ describe('catalog BFF (ADR-050)', () => {
       expect(backend.calls).toHaveLength(1);
     });
   }
+
+  test('municipalities validates the public query and forwards only the allowlisted filters', async () => {
+    const backend = fakeBackend(200, { municipalities: [{ code: '2611606', name: 'São Paulo', ufCode: 'SP' }] });
+    const response = await proxyMunicipalityCatalog(
+      new Request('http://app.test/api/catalog/municipalities?uf=SP&q=s%C3%A3o'),
+      depsFor(catalogs[0]!, backend.fetchImpl),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      data: { municipalities: [{ code: '2611606', name: 'São Paulo', ufCode: 'SP' }] },
+      message: 'Municípios disponíveis.',
+      statusCode: 200,
+    });
+    expect(backend.calls[0]?.url).toBe('http://backend.test/api/v1/catalog/municipalities?uf=SP&q=s%C3%A3o');
+    expect(backend.calls[0]?.init.headers.get('authorization')).toBeNull();
+    expect(backend.calls[0]?.init.headers.get('x-eventmatch-bff-token')).toBeNull();
+  });
+
+  test('municipalities rejects invalid or extra filters before contacting the backend', async () => {
+    for (const path of [
+      '/api/catalog/municipalities?uf=XX&q=Recife',
+      '/api/catalog/municipalities?uf=PE&q=R',
+      '/api/catalog/municipalities?uf=PE&q=Recife&active=true',
+    ]) {
+      const backend = fakeBackend(200, { municipalities: [] });
+      const response = await proxyMunicipalityCatalog(new Request(`http://app.test${path}`), depsFor(catalogs[0]!, backend.fetchImpl));
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({ data: {}, message: 'Invalid request.', statusCode: 400 });
+      expect(backend.calls).toHaveLength(0);
+    }
+  });
+
+  test('municipalities closes malformed, unavailable and upstream error responses', async () => {
+    const malformed = malformedBackend({ data: { municipalities: [{ code: '2611606', name: 'Recife', ufCode: 'PE', active: true }] }, message: 'upstream', statusCode: 200 });
+    const serverError = fakeBackend(500, { secret: 'never' });
+    const response = await proxyMunicipalityCatalog(new Request('http://app.test/api/catalog/municipalities?uf=PE&q=Recife'), depsFor(catalogs[0]!, malformed.fetchImpl));
+    const unavailable = await proxyMunicipalityCatalog(new Request('http://app.test/api/catalog/municipalities?uf=PE&q=Recife'), depsFor(catalogs[0]!, serverError.fetchImpl));
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ data: {}, message: 'Catálogo indisponível.', statusCode: 503 });
+    expect(unavailable.status).toBe(503);
+    expect(await unavailable.text()).not.toContain('secret');
+  });
 });

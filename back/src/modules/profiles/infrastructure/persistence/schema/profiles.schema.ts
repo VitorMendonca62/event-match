@@ -1,13 +1,14 @@
 import { sql } from 'drizzle-orm';
-import { check, customType, index, integer, pgTable, primaryKey, smallint, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { char, check, customType, foreignKey, index, integer, pgTable, primaryKey, smallint, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { account } from '../../../../registration/infrastructure/persistence/schema/registration.schema';
-import { activityPreference, interest, language } from '../../../../catalog/infrastructure/persistence/schema/catalog.schema';
+import { activityPreference, interest, language, municipality } from '../../../../catalog/infrastructure/persistence/schema/catalog.schema';
 const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => 'bytea' });
 
 export const profile = pgTable('profile', {
   accountId: uuid('account_id').primaryKey().references(() => account.id, { onDelete: 'cascade' }),
   displayName: text('display_name'),
-  region: text('region'),
+  ufCode: char('uf_code', { length: 2 }),
+  municipalityCode: char('municipality_code', { length: 7 }),
   presentation: text('presentation'),
   photoVisibility: text('photo_visibility').notNull().default('private'),
   presentationVisibility: text('presentation_visibility').notNull().default('private'),
@@ -24,7 +25,7 @@ export const profile = pgTable('profile', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   check('profile_display_name_length_check', sql`char_length(${table.displayName}) between 1 and 60`),
-  check('profile_region_length_check', sql`char_length(${table.region}) between 2 and 80`),
+  check('profile_location_pair_check', sql`(${table.ufCode} is null and ${table.municipalityCode} is null) or (${table.ufCode} is not null and ${table.municipalityCode} is not null)`),
   check('profile_presentation_length_check', sql`${table.presentation} is null or char_length(${table.presentation}) between 1 and 500`),
   check('profile_photo_visibility_check', sql`${table.photoVisibility} in ('private', 'authenticated', 'public')`),
   check('profile_presentation_visibility_check', sql`${table.presentationVisibility} in ('private', 'authenticated', 'public')`),
@@ -38,6 +39,7 @@ export const profile = pgTable('profile', {
   check('profile_activity_preferences_visibility_check', sql`${table.activityPreferencesVisibility} in ('private', 'authenticated', 'public')`),
   check('profile_preferred_distance_check', sql`${table.preferredDistance} is null or ${table.preferredDistance} in ('up_to_2km', 'up_to_5km', 'up_to_10km', 'up_to_25km', 'same_city')`),
   check('profile_pronouns_prefer_private_check', sql`${table.pronounSelection} is distinct from 'prefer_not_to_say' or ${table.pronounsVisibility} = 'private'`),
+  foreignKey({ columns: [table.ufCode, table.municipalityCode], foreignColumns: [municipality.ufCode, municipality.code], name: 'profile_location_municipality_fk' }),
 ]);
 
 export const profileUsageIntent = pgTable('profile_usage_intent', {

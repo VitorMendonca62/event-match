@@ -5,7 +5,7 @@ import { ownProfileSchema, profilePreviewSchema, updateProfileSchema, type OwnPr
 
 const interestIds = [crypto.randomUUID(), crypto.randomUUID(), crypto.randomUUID()];
 const base: OwnProfile = {
-  revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'], interests: interestIds.map((id, index) => ({ id, slug: `interest-${index}`, label: `Interesse ${index}` })),
+  revision: 1, displayName: 'Ana', location: { ufCode: 'PE', municipalityCode: '2611606', municipalityName: 'Recife' }, usageIntents: ['friendship'], interests: interestIds.map((id, index) => ({ id, slug: `interest-${index}`, label: `Interesse ${index}` })),
   presentation: null, photoVisibility: 'private', presentationVisibility: 'private', photo: null, pronounSelection: null, customPronouns: null,
   pronounsVisibility: 'private', profession: null, professionVisibility: 'private', languages: [], languagesVisibility: 'private', activityPreferences: [], activityPreferencesVisibility: 'private', availabilitySlots: [], preferredDistance: null,
   socialLinks: [], completion: { complete: false, completedCount: 4, totalCount: 6, missing: ['photo', 'presentation'] },
@@ -40,9 +40,9 @@ describe('profile social links field (SDD-020 / ADR-049)', () => {
     const link = { id: crypto.randomUUID(), provider: 'x' as const, identifier: 'ana_silva', position: 1, visibility: 'authenticated' as const, url: 'https://x.com/ana_silva' };
     expect(ownProfileSchema.safeParse({ ...base, socialLinks: [link] }).success).toBeTrue();
     expect(ownProfileSchema.safeParse({ ...base, socialLinks: [{ ...link, visibility: 'public' }] }).success).toBeTrue();
-    expect(profilePreviewSchema.safeParse({ displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'], interests: [], socialLinks: [{ provider: 'x', identifier: 'ana_silva', url: link.url }] }).success).toBeTrue();
-    expect(profilePreviewSchema.safeParse({ displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'], interests: [], socialLinks: [{ ...link }] }).success).toBeFalse();
-    const body = { revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'], interestIds, presentation: null, photoVisibility: 'private', presentationVisibility: 'private', pronounSelection: null, customPronouns: null, pronounsVisibility: 'private', profession: null, professionVisibility: 'private', languageCodes: [], languagesVisibility: 'private', activityPreferenceCodes: [], activityPreferencesVisibility: 'private', availabilitySlots: [], preferredDistance: null, socialLinks: [{ provider: 'x', identifierOrUrl: 'https://x.com/ana_silva', position: 1, visibility: 'private' }] };
+    expect(profilePreviewSchema.safeParse({ displayName: 'Ana', location: base.location, usageIntents: ['friendship'], interests: [], socialLinks: [{ provider: 'x', identifier: 'ana_silva', url: link.url }] }).success).toBeTrue();
+    expect(profilePreviewSchema.safeParse({ displayName: 'Ana', location: base.location, usageIntents: ['friendship'], interests: [], socialLinks: [{ ...link }] }).success).toBeFalse();
+    const body = { revision: 1, displayName: 'Ana', ufCode: 'PE', municipalityCode: '2611606', usageIntents: ['friendship'], interestIds, presentation: null, photoVisibility: 'private', presentationVisibility: 'private', pronounSelection: null, customPronouns: null, pronounsVisibility: 'private', profession: null, professionVisibility: 'private', languageCodes: [], languagesVisibility: 'private', activityPreferenceCodes: [], activityPreferencesVisibility: 'private', availabilitySlots: [], preferredDistance: null, socialLinks: [{ provider: 'x', identifierOrUrl: 'https://x.com/ana_silva', position: 1, visibility: 'private' }] };
     expect(updateProfileSchema.safeParse(body).success).toBeTrue();
     expect(updateProfileSchema.safeParse({ ...body, socialLinks: [{ ...body.socialLinks[0], visibility: 'public' }] }).success).toBeFalse();
     expect(updateProfileSchema.safeParse({ ...body, socialLinks: [{ ...body.socialLinks[0], provider: 'x' }, { ...body.socialLinks[0], provider: 'x', position: 2 }] }).success).toBeFalse();

@@ -7,7 +7,8 @@ import {
   legalDocumentListDataSchema,
   snapshotDataSchema,
 } from '../../features/registration/contracts';
-import type { Catalog, InterestOption, LegalDocumentSource } from '../../features/registration/view-models';
+import { federativeUnitListDataSchema } from '../../features/location/contracts';
+import type { Catalog, FederativeUnitView, InterestOption, LegalDocumentSource } from '../../features/registration/view-models';
 import type { BffEnv } from '../config/bff-env.server';
 import { callBackend } from './backend-client';
 
@@ -19,6 +20,7 @@ export type RegistrationView = Readonly<{
   sessionExpired: boolean;
   documents: Catalog<LegalDocumentSource>;
   interests: Catalog<InterestOption>;
+  federativeUnits: Catalog<FederativeUnitView>;
 }>;
 
 type Deps = Readonly<{ env: BffEnv; fetchImpl?: typeof fetch }>;
@@ -51,6 +53,13 @@ async function fetchInterests(deps: Deps): Promise<Catalog<InterestOption>> {
   return { status: 'ready', items: data.data.interests.map(({ id, label }) => ({ id, label })) };
 }
 
+async function fetchFederativeUnits(deps: Deps): Promise<Catalog<FederativeUnitView>> {
+  const upstream = await callBackend({ method: 'GET', path: '/catalog/federative-units', internal: false }, deps.env, deps.fetchImpl);
+  const envelope = envelopeSchema.safeParse(upstream.body);
+  const data = upstream.status === 200 && envelope.success ? federativeUnitListDataSchema.safeParse(envelope.data.data) : undefined;
+  return data?.success ? { status: 'ready', items: data.data.federativeUnits } : { status: 'unavailable' };
+}
+
 const DEFERRED = { status: 'deferred' } as const;
 
 /**
@@ -60,7 +69,7 @@ const DEFERRED = { status: 'deferred' } as const;
  */
 export async function loadRegistrationView(continuation: string | undefined, deps: Deps): Promise<RegistrationView> {
   if (!continuation) {
-    return { stage: null, sessionExpired: false, documents: DEFERRED, interests: DEFERRED };
+    return { stage: null, sessionExpired: false, documents: DEFERRED, interests: DEFERRED, federativeUnits: await fetchFederativeUnits(deps) };
   }
 
   const snapshotPromise = callBackend(
@@ -69,6 +78,7 @@ export async function loadRegistrationView(continuation: string | undefined, dep
     deps.fetchImpl,
   );
   const catalogsPromise = Promise.all([fetchDocuments(deps), fetchInterests(deps)]);
+  const federativeUnitsPromise = fetchFederativeUnits(deps);
 
   const snapshot = await snapshotPromise;
   const envelope = envelopeSchema.safeParse(snapshot.body);
@@ -76,7 +86,7 @@ export async function loadRegistrationView(continuation: string | undefined, dep
 
   if (!data?.success) {
     void catalogsPromise;
-    return { stage: null, sessionExpired: snapshot.status === 401, documents: DEFERRED, interests: DEFERRED };
+    return { stage: null, sessionExpired: snapshot.status === 401, documents: DEFERRED, interests: DEFERRED, federativeUnits: await federativeUnitsPromise };
   }
 
   const { stage, expiresAt, nextResendAt } = data.data;
@@ -87,8 +97,8 @@ export async function loadRegistrationView(continuation: string | undefined, dep
   const needsInterests = stage === 'account_incomplete';
   if (!needsDocuments) {
     void catalogsPromise;
-    return { ...base, documents: DEFERRED, interests: DEFERRED };
+    return { ...base, documents: DEFERRED, interests: DEFERRED, federativeUnits: await federativeUnitsPromise };
   }
-  const [documents, interests] = await catalogsPromise;
-  return { ...base, documents, interests: needsInterests ? interests : DEFERRED };
+  const [[documents, interests], federativeUnits] = await Promise.all([catalogsPromise, federativeUnitsPromise]);
+  return { ...base, documents, interests: needsInterests ? interests : DEFERRED, federativeUnits };
 }

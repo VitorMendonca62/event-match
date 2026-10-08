@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { structuredLocationSchema } from '@/features/location/contracts';
 
 export const usageIntentSchema = z.enum(['friendship', 'activity_company', 'explore_city', 'networking']);
 export const visibilitySchema = z.enum(['private', 'authenticated']);
@@ -38,11 +39,11 @@ export type AvailabilitySlot = z.infer<typeof availabilitySlotSchema>;
 export type PreferredDistance = z.infer<typeof preferredDistanceSchema>;
 export const completionSchema = z.object({
   complete: z.boolean(), completedCount: z.number().int().min(0).max(6), totalCount: z.literal(6),
-  missing: z.array(z.enum(['display_name', 'region', 'usage_intents', 'interests', 'photo', 'presentation'])),
+  missing: z.array(z.enum(['display_name', 'location', 'usage_intents', 'interests', 'photo', 'presentation'])),
 }).strict();
 export const profilePhotoSchema = z.object({ deliveryUrl: z.url(), width: z.literal(512), height: z.literal(512) }).strict();
 export const ownProfileSchema = z.object({
-  revision: z.number().int().positive(), displayName: z.string(), region: z.string(),
+  revision: z.number().int().positive(), displayName: z.string(), location: structuredLocationSchema,
   usageIntents: z.array(usageIntentSchema), interests: z.array(interestSchema),
   presentation: z.string().nullable(), photoVisibility: z.enum(['private', 'authenticated', 'public']),
   presentationVisibility: z.enum(['private', 'authenticated', 'public']), photo: profilePhotoSchema.nullable(),
@@ -60,7 +61,7 @@ export const ownProfileSchema = z.object({
 export type OwnProfile = z.infer<typeof ownProfileSchema>;
 export const internalOwnProfileSchema = ownProfileSchema.extend({ invitationSubject: z.string().regex(/^v1\.[A-Za-z0-9_-]{43}$/) }).strict();
 export const updateProfileSchema = z.object({
-  revision: z.number().int().positive(), displayName: z.string().trim().min(1).max(60), region: z.string().trim().min(2).max(80),
+  revision: z.number().int().positive(), displayName: z.string().trim().min(1).max(60), ufCode: structuredLocationSchema.shape.ufCode, municipalityCode: structuredLocationSchema.shape.municipalityCode,
   usageIntents: z.array(usageIntentSchema).min(1).refine((items) => new Set(items).size === items.length),
   interestIds: z.array(z.uuid()).min(3).refine((items) => new Set(items).size === items.length),
   presentation: z.string().trim().min(1).max(500).nullable(), photoVisibility: visibilitySchema, presentationVisibility: visibilitySchema,
@@ -81,7 +82,7 @@ export const updateProfileSchema = z.object({
   if (value.pronounSelection === 'prefer_not_to_say' && value.pronounsVisibility !== 'private') context.addIssue({ code: 'custom', path: ['pronounsVisibility'], message: 'Esta escolha deve permanecer privada.' });
 });
 export const profilePreviewSchema = z.object({
-  displayName: z.string(), region: z.string(), usageIntents: z.array(usageIntentSchema), interests: z.array(interestSchema),
+  displayName: z.string(), location: structuredLocationSchema, usageIntents: z.array(usageIntentSchema), interests: z.array(interestSchema),
   presentation: z.string().optional(), photo: profilePhotoSchema.optional(),
   pronouns: z.string().optional(), profession: z.string().optional(), languages: z.array(languageSchema).optional(),
   activityPreferences: z.array(activityPreferenceSchema).optional(),

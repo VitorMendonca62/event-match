@@ -3,7 +3,7 @@ import { toSocialProfileUrl } from '../value-objects/social-link';
 
 export type ProfilePreview = Readonly<{
   displayName: string;
-  region: string;
+  location: Readonly<{ ufCode: string; municipalityCode: string; municipalityName: string }>;
   usageIntents: ProfileState['usageIntents'];
   interests: ProfileState['interests'];
   presentation?: string;
@@ -21,7 +21,7 @@ export class ProfilePreviewProjector {
   project(profile: ProfileState, pronounLabels: PronounLabels): ProfilePreview {
     return {
       displayName: profile.displayName,
-      region: profile.region,
+      location: profile.location,
       usageIntents: profile.usageIntents,
       interests: profile.interests,
       ...(profile.presentationVisibility === 'authenticated' && profile.presentation ? { presentation: profile.presentation } : {}),

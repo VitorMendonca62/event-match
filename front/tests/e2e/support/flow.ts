@@ -4,7 +4,8 @@ import { lastOtp } from './brevo';
 
 /** Fictional data only (`example.test`, invented birth date and password). */
 export const ADULT_BIRTH_DATE = '1990-05-15';
-export const MINOR_BIRTH_DATE = new Date(Date.now() - 10 * 365.25 * 86_400_000).toISOString().slice(0, 10);
+// Fixed calendar value avoids a browser/date-boundary race with the field's `max` attribute.
+export const MINOR_BIRTH_DATE = '2010-05-15';
 export const PASSWORD = 'Cafe-com-pao-na-praca-2031!';
 export const DOCUMENT_TITLES = ['Termos de Uso', 'Política de Privacidade', 'Regras de Convivência'] as const;
 
@@ -80,7 +81,10 @@ export async function fillPassword(page: Page, options: { accept?: boolean } = {
 
 export async function fillRequiredData(page: Page): Promise<void> {
   await page.getByLabel('Nome de exibição').fill('Ana Teste');
-  await page.getByLabel('Bairro ou cidade').fill('Boa Vista, Recife');
+  await page.getByLabel('Estado').selectOption('PE');
+  const municipality = page.getByRole('combobox', { name: 'Município' });
+  await municipality.fill('Recife');
+  await page.getByRole('option', { name: 'Recife', exact: true }).click();
   await page
     .getByRole('group', { name: 'O que você procura no EventMatch?' })
     .getByRole('checkbox')

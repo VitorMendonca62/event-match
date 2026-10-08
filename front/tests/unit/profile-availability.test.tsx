@@ -4,7 +4,7 @@ import { ProfileAvailabilityField } from '../../src/features/profile/components/
 import { ownProfileSchema, profilePreviewSchema, type OwnProfile } from '../../src/features/profile/contracts';
 
 const base: OwnProfile = {
-  revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'], interests: [], presentation: null,
+  revision: 1, displayName: 'Ana', location: { ufCode: 'PE', municipalityCode: '2611606', municipalityName: 'Recife' }, usageIntents: ['friendship'], interests: [], presentation: null,
   photoVisibility: 'private', presentationVisibility: 'private', photo: null, pronounSelection: null, customPronouns: null,
   pronounsVisibility: 'private', profession: null, professionVisibility: 'private', languages: [], languagesVisibility: 'private',
   activityPreferences: [], activityPreferencesVisibility: 'private', availabilitySlots: [], preferredDistance: null, socialLinks: [],
@@ -41,7 +41,7 @@ describe('availability and distance field (SDD-018 / ADR-045)', () => {
     expect(ownProfileSchema.safeParse({ ...base, availabilitySlots: ['sat_evening'], preferredDistance: 'same_city' }).success).toBeTrue();
     expect(ownProfileSchema.safeParse({ ...base, availabilitySlots: ['sat_evening', 'sat_evening'] }).success).toBeFalse();
     expect(ownProfileSchema.safeParse({ ...base, preferredDistance: 'up_to_100km' }).success).toBeFalse();
-    const preview = { displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'], interests: [] };
+    const preview = { displayName: 'Ana', location: { ufCode: 'PE', municipalityCode: '2611606', municipalityName: 'Recife' }, usageIntents: ['friendship'], interests: [] };
     expect(profilePreviewSchema.safeParse({ ...preview, availabilitySlots: ['sat_evening'] }).success).toBeFalse();
     expect(profilePreviewSchema.safeParse({ ...preview, preferredDistance: 'same_city' }).success).toBeFalse();
   });

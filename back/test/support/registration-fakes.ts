@@ -1,5 +1,7 @@
 import type { TransactionContext, UnitOfWorkPort } from '../../src/shared/application/ports/unit-of-work.port';
 import type { InterestCatalogReaderPort, InterestRef } from '../../src/modules/catalog/domain/ports/interest-catalog-reader.port';
+import type { MunicipalityCatalogReaderPort } from '../../src/modules/catalog/domain/ports/municipality-catalog-reader.port';
+import type { UfCode } from '../../src/modules/catalog/domain/value-objects/location';
 import type { ProfileWriterPort, RequiredProfileData } from '../../src/modules/profiles/domain/ports/profile-writer.port';
 import { ContactRetention } from '../../src/modules/registration/application/services/contact-retention';
 import { RegistrationFlowGate } from '../../src/modules/registration/application/services/registration-flow-gate';
@@ -74,7 +76,7 @@ interface State {
   rateWindows: Map<string, { request: number; resend: number }>;
   termsDocuments: Map<string, FakeTermsDocument>;
   acceptances: Map<string, { accountId: string; documentId: string }>;
-  profiles: Map<string, { displayName: string | null; region: string | null }>;
+  profiles: Map<string, { displayName: string | null; ufCode: string | null; municipalityCode: string | null }>;
   usageIntents: Map<string, string[]>;
   interests: Map<string, string[]>;
   catalog: Set<string>;
@@ -358,10 +360,19 @@ class InMemoryProfileWriter implements ProfileWriterPort {
   }
   async erasePersonalData(_: TransactionContext, accountIds: readonly string[]) {
     accountIds.forEach((id) => {
-      this.database.state.profiles.set(id, { displayName: null, region: null });
+      this.database.state.profiles.set(id, { displayName: null, ufCode: null, municipalityCode: null });
       this.database.state.usageIntents.delete(id);
       this.database.state.interests.delete(id);
     });
+  }
+}
+
+class InMemoryMunicipalityCatalog implements MunicipalityCatalogReaderPort {
+  async searchActive() { return []; }
+  async findByCodeAndUf(_: TransactionContext, input: { ufCode: UfCode; municipalityCode: string }) {
+    return input.ufCode === 'PE' && input.municipalityCode === '2611606'
+      ? { ufCode: 'PE' as const, municipalityCode: '2611606', municipalityName: 'Recife', active: true }
+      : null;
   }
 }
 
@@ -568,6 +579,7 @@ export function createRegistrationHarness() {
   const terms = new InMemoryTermsRepository(database);
   const profiles = new InMemoryProfileWriter(database);
   const catalog = new InMemoryInterestCatalog(database);
+  const municipalities = new InMemoryMunicipalityCatalog();
   const contacts = new FakeContactProtector();
   const secrets = new FakeVerificationSecret();
   const clock = new FakeClock();
@@ -585,7 +597,7 @@ export function createRegistrationHarness() {
   const verify = new VerifyContact(uow, verifications, secrets, clock, telemetry);
   const verifyByLink = new VerifyContactByLink(uow, verifications, secrets, clock, telemetry);
   const start = new StartRegistration(uow, verifications, registrations, retention, new FakePasswordHasher(), new FakeCommonPasswordChecker(), ids, clock, telemetry);
-  const saveRequiredData = new SaveRequiredData(uow, registrations, accounts, profiles, ids, clock, telemetry);
+  const saveRequiredData = new SaveRequiredData(uow, registrations, accounts, profiles, ids, clock, telemetry, municipalities);
   const complete = new CompleteRegistration(uow, accounts, profiles, catalog, terms, ids, clock, telemetry);
 
   return {
@@ -638,7 +650,8 @@ export async function createIncompleteAccount(
   const { accountId } = await harness.saveRequiredData.execute({
     registrationId,
     displayName: 'Ana',
-    region: 'Recife - PE',
+    ufCode: 'PE',
+    municipalityCode: '2611606',
     usageIntents: ['friendship'],
   });
   return accountId;

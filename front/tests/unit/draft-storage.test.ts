@@ -40,8 +40,8 @@ describe('registration draft storage', () => {
   test('writes schema v1 with an allowlist and renews touchedAt', () => {
     const storage = memoryStorage();
     writeDraft(storage, { localStep: 'required_data', displayName: 'Ana' }, T0);
-    const draft = writeDraft(storage, { region: 'Recife' }, later(60_000));
-    expect(draft).toMatchObject({ schemaVersion: 1, localStep: 'required_data', displayName: 'Ana', region: 'Recife' });
+    const draft = writeDraft(storage, { ufCode: 'PE', municipalityCode: '2611606', municipalityName: 'Recife' }, later(60_000));
+    expect(draft).toMatchObject({ schemaVersion: 1, localStep: 'required_data', displayName: 'Ana', ufCode: 'PE', municipalityCode: '2611606', municipalityName: 'Recife' });
     expect(draft?.touchedAt).toBe(later(60_000).toISOString());
   });
 

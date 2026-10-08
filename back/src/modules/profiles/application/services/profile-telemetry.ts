@@ -5,6 +5,7 @@ const ERROR_EVENT: Record<ProfileError['code'], { outcome: ProfileEventOutcome; 
   PROFILE_NOT_FOUND: { outcome: 'not_found', status: 404 },
   PROFILE_REVISION_CONFLICT: { outcome: 'conflict', status: 409 },
   INVALID_PROFILE_CONTENT: { outcome: 'invalid', status: 400 },
+  INVALID_LOCATION: { outcome: 'invalid', status: 400 },
   INACTIVE_INTEREST: { outcome: 'invalid', status: 400 },
   UNKNOWN_LANGUAGE: { outcome: 'invalid', status: 422 },
   INACTIVE_LANGUAGE: { outcome: 'invalid', status: 422 },

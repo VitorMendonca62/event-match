@@ -8,14 +8,17 @@ import type {
 } from '../../domain/ports/outbound/persistence.ports';
 import type { RegistrationTelemetryPort } from '../../domain/ports/outbound/registration-telemetry.port';
 import type { ClockPort, IdGeneratorPort } from '../../domain/ports/outbound/runtime.ports';
-import { DisplayName, Region, UsageIntent } from '../../domain/value-objects/profile-fields';
+import { DisplayName, UsageIntent } from '../../domain/value-objects/profile-fields';
 import { REGISTRATION_POLICY } from '../../domain/value-objects/verification-policy';
 import type { TransactionHook } from '../contracts/transaction-hook';
+import type { MunicipalityCatalogReaderPort } from '../../../catalog/domain/ports/municipality-catalog-reader.port';
+import { isIbgeMunicipalityCode, isUfCode, type UfCode } from '../../../catalog/domain/value-objects/location';
 
 export interface SaveRequiredDataInput {
   readonly registrationId: string;
   readonly displayName: string;
-  readonly region: string;
+  readonly ufCode: string;
+  readonly municipalityCode: string;
   readonly usageIntents: readonly string[];
 }
 
@@ -36,10 +39,11 @@ export class SaveRequiredData {
     private readonly ids: IdGeneratorPort,
     private readonly clock: ClockPort,
     private readonly telemetry: RegistrationTelemetryPort,
+    private readonly municipalities: MunicipalityCatalogReaderPort,
   ) {}
 
   /**
-   * RF004 required data (display name, region, usage intent): creates the incomplete account, its
+   * RF004 required data (display name, location, usage intent): creates the incomplete account, its
    * contact, credential and profile, closing the registration. The birth date belongs to activation.
    */
   async execute(
@@ -47,7 +51,7 @@ export class SaveRequiredData {
     withinTransaction?: TransactionHook<SaveRequiredDataResult>,
   ): Promise<SaveRequiredDataResult> {
     const displayName = DisplayName.create(input.displayName);
-    const region = Region.create(input.region);
+    if (!isUfCode(input.ufCode) || !isIbgeMunicipalityCode(input.municipalityCode)) throw new RegistrationError('INVALID_LOCATION');
     const usageIntents = UsageIntent.createSelection(input.usageIntents);
 
     const outcome = await this.uow.execute(async (context) => {
@@ -60,6 +64,12 @@ export class SaveRequiredData {
         return { kind: 'expired' as const };
       }
 
+      const municipality = await this.municipalities.findByCodeAndUf(context, {
+        ufCode: input.ufCode as UfCode,
+        municipalityCode: input.municipalityCode,
+      });
+      if (!municipality?.active) throw new RegistrationError('INVALID_LOCATION');
+
       const retained = registration.retainedDataAt(now);
       const account = Account.createIncomplete(
         { id: this.ids.next(), registrationId: registration.id },
@@ -68,7 +78,8 @@ export class SaveRequiredData {
       await this.accounts.insertIncomplete(context, { account, channel: registration.channel, retained });
       await this.profiles.upsertRequired(context, account.id, {
         displayName: displayName.value,
-        region: region.value,
+        ufCode: municipality.ufCode,
+        municipalityCode: municipality.municipalityCode,
       });
       await this.profiles.replaceUsageIntents(
         context,

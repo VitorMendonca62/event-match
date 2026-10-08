@@ -50,7 +50,6 @@ export function ProfilePhotoEditor({
   profile,
   onProfile,
 }: Readonly<{ profile: OwnProfile; onProfile: (profile: OwnProfile) => void }>) {
-  console.log(profile)
   const router = useRouter();
   const [file, setFile] = useState<File>();
   const [preview, setPreview] = useState<string>();

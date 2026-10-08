@@ -7,6 +7,7 @@ import {
   type PreferredDistance,
 } from '../value-objects/availability';
 import { validateSocialLinks, type SocialLink } from '../value-objects/social-link';
+import type { StructuredLocation } from '../../../catalog/domain/value-objects/location';
 
 export const USAGE_INTENTS = ['friendship', 'activity_company', 'explore_city', 'networking'] as const;
 export type UsageIntent = (typeof USAGE_INTENTS)[number];
@@ -18,13 +19,14 @@ export const PRONOUN_SELECTIONS = ['ela_dela', 'ele_dele', 'elu_delu', 'other', 
 export type PronounSelection = (typeof PRONOUN_SELECTIONS)[number];
 export type ProfileLanguage = Readonly<{ code: string; label: string; active: boolean }>;
 export type ProfileActivityPreference = Readonly<{ code: string; label: string; active: boolean }>;
+export type ProfileLocation = StructuredLocation;
 export const MAX_ACTIVITY_PREFERENCES = 5;
 
 export type ProfileState = Readonly<{
   accountId: string;
   revision: number;
   displayName: string;
-  region: string;
+  location: ProfileLocation;
   usageIntents: readonly UsageIntent[];
   interests: readonly ProfileInterest[];
   presentation: string | null;
@@ -66,7 +68,6 @@ export class Profile {
 
   update(input: Omit<ProfileState, 'accountId' | 'revision' | 'photo'>): Profile {
     const displayName = normalizeText(input.displayName);
-    const region = normalizeText(input.region);
     const presentation = input.presentation === null ? null : normalizeText(input.presentation);
     const customPronouns = input.customPronouns === null ? null : normalizeText(input.customPronouns);
     const profession = input.profession === null ? null : normalizeText(input.profession);
@@ -77,7 +78,7 @@ export class Profile {
     const allowedIntents = new Set<string>(USAGE_INTENTS);
     const valid =
       displayName.length >= 1 && displayName.length <= 60 &&
-      region.length >= 2 && region.length <= 80 &&
+      isValidLocation(input.location) &&
       intents.length === input.usageIntents.length && intents.length >= 1 && intents.every((item) => allowedIntents.has(item)) &&
       interests.length === input.interests.length && interests.length >= 3 &&
       (!presentation || (presentation.length <= 500 && !hasControlCharacter(presentation) && !CONTACT_PATTERN.test(presentation))) &&
@@ -111,7 +112,7 @@ export class Profile {
     return new Profile({
       ...this.state,
       displayName,
-      region,
+      location: input.location,
       usageIntents: intents,
       interests,
       presentation: presentation || null,
@@ -134,4 +135,8 @@ export class Profile {
   }
 
   snapshot(): ProfileState { return this.state; }
+}
+
+function isValidLocation(location: ProfileLocation): boolean {
+  return /^[A-Z]{2}$/u.test(location.ufCode) && /^\d{7}$/u.test(location.municipalityCode) && location.municipalityName.trim().length > 0;
 }

@@ -2,6 +2,7 @@ export type ProfileErrorCode =
   | 'PROFILE_NOT_FOUND'
   | 'PROFILE_REVISION_CONFLICT'
   | 'INVALID_PROFILE_CONTENT'
+  | 'INVALID_LOCATION'
   | 'INACTIVE_INTEREST'
   | 'UNKNOWN_LANGUAGE'
   | 'INACTIVE_LANGUAGE'
@@ -13,6 +14,7 @@ export type ProfileErrorCode =
   | 'MEDIA_UNAVAILABLE';
 
 export type ProfileErrorReason =
+  | 'invalid_location'
   | 'unknown_language'
   | 'inactive_language'
   | 'unknown_activity_preference'

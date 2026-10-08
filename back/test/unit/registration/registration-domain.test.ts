@@ -6,7 +6,7 @@ import { Registration } from '../../../src/modules/registration/domain/entities/
 import { BirthDate } from '../../../src/modules/registration/domain/value-objects/birth-date';
 import { ContactIdentifier } from '../../../src/modules/registration/domain/value-objects/contact-identifier';
 import { Password } from '../../../src/modules/registration/domain/value-objects/password';
-import { DisplayName, Region, UsageIntent } from '../../../src/modules/registration/domain/value-objects/profile-fields';
+import { DisplayName, UsageIntent } from '../../../src/modules/registration/domain/value-objects/profile-fields';
 import { RegistrationFlowSession } from '../../../src/modules/registration/domain/entities/registration-flow-session';
 import { coversRequiredTerms } from '../../../src/modules/registration/domain/value-objects/terms-document-kind';
 import { REGISTRATION_POLICY as policy, rateWindowStart } from '../../../src/modules/registration/domain/value-objects/verification-policy';
@@ -59,7 +59,6 @@ describe('registration value objects', () => {
     expect(DisplayName.create('  Ana  ').value).toBe('Ana');
     expect(() => DisplayName.create('   ')).toThrow('INVALID_DISPLAY_NAME');
     expect(() => DisplayName.create('a'.repeat(61))).toThrow('INVALID_DISPLAY_NAME');
-    expect(() => Region.create(' x ')).toThrow('INVALID_REGION');
     expect(UsageIntent.createSelection(['friendship', 'friendship', 'networking']).map((intent) => intent.value)).toEqual([
       'friendship',
       'networking',

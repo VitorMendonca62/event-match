@@ -6,6 +6,7 @@ const STATUS = {
   PROFILE_NOT_FOUND: HttpStatus.NOT_FOUND,
   PROFILE_REVISION_CONFLICT: HttpStatus.CONFLICT,
   INVALID_PROFILE_CONTENT: HttpStatus.BAD_REQUEST,
+  INVALID_LOCATION: HttpStatus.BAD_REQUEST,
   INACTIVE_INTEREST: HttpStatus.BAD_REQUEST,
   UNKNOWN_LANGUAGE: HttpStatus.UNPROCESSABLE_ENTITY,
   INACTIVE_LANGUAGE: HttpStatus.UNPROCESSABLE_ENTITY,
@@ -18,7 +19,7 @@ const STATUS = {
 } as const;
 const MESSAGE: Record<keyof typeof STATUS, string> = {
   PROFILE_NOT_FOUND: 'Profile not found.', PROFILE_REVISION_CONFLICT: 'Profile changed. Reload before saving again.',
-  INVALID_PROFILE_CONTENT: 'Profile content is invalid.', INACTIVE_INTEREST: 'One or more interests are unavailable.',
+  INVALID_PROFILE_CONTENT: 'Profile content is invalid.', INVALID_LOCATION: 'The selected municipality is not available for this state.', INACTIVE_INTEREST: 'One or more interests are unavailable.',
   UNKNOWN_LANGUAGE: 'One or more languages are unknown.', INACTIVE_LANGUAGE: 'One or more languages are inactive.',
   UNKNOWN_ACTIVITY_PREFERENCE: 'One or more activity preferences are unknown.',
   INACTIVE_ACTIVITY_PREFERENCE: 'One or more activity preferences are inactive.',

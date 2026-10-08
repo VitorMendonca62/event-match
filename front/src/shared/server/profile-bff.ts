@@ -50,7 +50,11 @@ export async function proxyProfile(request: Request, deps: Deps): Promise<Respon
     const reason = z.object({ reason: z.enum(['unknown_language', 'inactive_language', 'unknown_activity_preference', 'inactive_activity_preference']) }).strict().safeParse(dataOf(upstream.body));
     return response(422, reason.success ? reason.data : {});
   }
-  if ([400, 403, 409].includes(upstream.status)) return response(upstream.status);
+  if (upstream.status === 400) {
+    const reason = z.object({ reason: z.literal('invalid_location') }).strict().safeParse(dataOf(upstream.body));
+    return response(400, reason.success ? reason.data : {});
+  }
+  if ([403, 409].includes(upstream.status)) return response(upstream.status);
   return response(503);
 }
 

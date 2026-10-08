@@ -19,6 +19,8 @@ import { ProfileLanguagePicker } from './profile-language-picker';
 import { ProfileActivityPreferencesField } from './profile-activity-preferences-field';
 import { ProfileAvailabilityField } from './profile-availability-field';
 import { ProfileSocialLinksField } from './profile-social-links-field';
+import { LocationField } from '@/features/location/components/location-field';
+import type { FederativeUnitOption } from '@/features/location/contracts';
 
 function parseSocialLinks(value: FormDataEntryValue | null): unknown {
   if (typeof value !== 'string') return undefined;
@@ -29,11 +31,13 @@ export function ProfileForm({
   initial,
   interestOptions,
   languageOptions,
+  federativeUnits,
   activityPreferenceOptions,
 }: Readonly<{
   initial: OwnProfile;
   interestOptions: OwnProfile['interests'];
   languageOptions: readonly LanguageOption[];
+  federativeUnits: readonly FederativeUnitOption[];
   activityPreferenceOptions: readonly ActivityPreferenceOption[] | null;
 }>) {
   const router = useRouter();
@@ -67,7 +71,8 @@ export function ProfileForm({
     const body = {
       revision: profile.revision,
       displayName: String(form.get('displayName') ?? ''),
-      region: String(form.get('region') ?? ''),
+      ufCode: String(form.get('ufCode') ?? ''),
+      municipalityCode: String(form.get('municipalityCode') ?? ''),
       usageIntents: form.getAll('usageIntents'),
       interestIds: form.getAll('interestIds'),
       presentation: presentation.trim() || null,
@@ -104,6 +109,8 @@ export function ProfileForm({
                     ? 'Escolha até 28 períodos, sem repetições.'
                   : issue.path[0] === 'preferredDistance'
                       ? 'Escolha uma faixa válida ou “Não informar”.'
+                      : issue.path[0] === 'ufCode' || issue.path[0] === 'municipalityCode'
+                        ? 'Escolha um estado e um município válidos.'
                       : issue.path[0] === 'socialLinks'
                         ? issue.message || 'Revise os vínculos sociais.'
                   : issue.code === 'custom' && issue.message
@@ -250,13 +257,14 @@ export function ProfileForm({
           required
           error={errors.displayName}
         />
-        <TextField
-          name="region"
-          label="Região aproximada"
-          maxLength={80}
-          defaultValue={profile.region}
-          required
-          error={errors.region}
+        <LocationField
+          federativeUnits={federativeUnits}
+          initialUfCode={profile.location.ufCode}
+          initialMunicipalityCode={profile.location.municipalityCode}
+          initialMunicipalityName={profile.location.municipalityName}
+          error={errors.ufCode ?? errors.municipalityCode}
+          disabled={pending}
+          onChange={() => setDirty(true)}
         />
       </section>
       <section

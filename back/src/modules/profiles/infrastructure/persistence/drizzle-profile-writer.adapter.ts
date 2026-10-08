@@ -12,10 +12,10 @@ export class DrizzleProfileWriterAdapter implements ProfileWriterPort {
     const now = new Date();
     await resolveExecutor(context)
       .insert(profile)
-      .values({ accountId, displayName: data.displayName, region: data.region, createdAt: now, updatedAt: now })
+      .values({ accountId, displayName: data.displayName, ufCode: data.ufCode, municipalityCode: data.municipalityCode, createdAt: now, updatedAt: now })
       .onConflictDoUpdate({
         target: profile.accountId,
-        set: { displayName: data.displayName, region: data.region, updatedAt: now },
+        set: { displayName: data.displayName, ufCode: data.ufCode, municipalityCode: data.municipalityCode, updatedAt: now },
       });
   }
 
@@ -53,7 +53,7 @@ export class DrizzleProfileWriterAdapter implements ProfileWriterPort {
     const ids = [...accountIds];
     await database
       .update(profile)
-      .set({ displayName: null, region: null, presentation: null, photoVisibility: 'private', presentationVisibility: 'private', pronounSelection: null, customPronouns: null, pronounsVisibility: 'private', profession: null, professionVisibility: 'private', languagesVisibility: 'private', activityPreferencesVisibility: 'private', preferredDistance: null, revision: sql`${profile.revision} + 1`, updatedAt: new Date() })
+      .set({ displayName: null, ufCode: null, municipalityCode: null, presentation: null, photoVisibility: 'private', presentationVisibility: 'private', pronounSelection: null, customPronouns: null, pronounsVisibility: 'private', profession: null, professionVisibility: 'private', languagesVisibility: 'private', activityPreferencesVisibility: 'private', preferredDistance: null, revision: sql`${profile.revision} + 1`, updatedAt: new Date() })
       .where(inArray(profile.accountId, ids));
     await database.update(profilePhotoAsset).set({ state: 'delete_pending', deleteAfter: new Date(), updatedAt: new Date() }).where(inArray(profilePhotoAsset.accountId, ids));
     await database.delete(profileUsageIntent).where(inArray(profileUsageIntent.accountId, ids));

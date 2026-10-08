@@ -84,7 +84,7 @@ export class ErrorReasonDto {
       'weak_password',
       'invalid_birth_date',
       'invalid_display_name',
-      'invalid_region',
+      'invalid_location',
       'invalid_usage_intents',
       'activation_unavailable',
     ],

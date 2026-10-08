@@ -9,7 +9,7 @@ const OPTIONS = [
   ['lively_setting', 'Ambiente movimentado'], ['small_group', 'Grupo pequeno'], ['medium_group', 'Grupo médio'],
 ].map(([code, label]) => ({ code: code!, label: label! }));
 const base: OwnProfile = {
-  revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'], interests: [], presentation: null,
+  revision: 1, displayName: 'Ana', location: { ufCode: 'PE', municipalityCode: '2611606', municipalityName: 'Recife' }, usageIntents: ['friendship'], interests: [], presentation: null,
   photoVisibility: 'private', presentationVisibility: 'private', photo: null, pronounSelection: null, customPronouns: null,
   pronounsVisibility: 'private', profession: null, professionVisibility: 'private', languages: [], languagesVisibility: 'private',
   activityPreferences: [], activityPreferencesVisibility: 'private', availabilitySlots: [], preferredDistance: null, socialLinks: [],
@@ -60,7 +60,7 @@ describe('activity preferences field (SDD-017)', () => {
   test('contracts are strict: the own view carries active, the preview never does', () => {
     expect(ownProfileSchema.safeParse({ ...base, activityPreferences: selected(['outdoor']) }).success).toBeTrue();
     expect(ownProfileSchema.safeParse({ ...base, activityPreferences: selected(['outdoor', 'indoor', 'quiet_setting', 'lively_setting', 'small_group', 'medium_group']) }).success).toBeFalse();
-    const preview = { displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'], interests: [] };
+    const preview = { displayName: 'Ana', location: { ufCode: 'PE', municipalityCode: '2611606', municipalityName: 'Recife' }, usageIntents: ['friendship'], interests: [] };
     expect(profilePreviewSchema.safeParse({ ...preview, activityPreferences: [{ code: 'outdoor', label: 'Ao ar livre' }] }).success).toBeTrue();
     expect(profilePreviewSchema.safeParse({ ...preview, activityPreferences: [{ code: 'outdoor', label: 'Ao ar livre', active: true }] }).success).toBeFalse();
     expect(Object.keys(ACTIVITY_PREFERENCE_REJECTION_MESSAGES).sort()).toEqual(['inactive_activity_preference', 'unknown_activity_preference']);

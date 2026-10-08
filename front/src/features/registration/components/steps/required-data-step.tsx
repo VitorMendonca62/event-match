@@ -6,7 +6,6 @@ import { TextField } from '@/components/server/ui/text-field';
 
 import {
   DISPLAY_NAME_MAX,
-  REGION_MAX,
   type RequiredDataRequest,
   requiredDataRequestSchema,
   type StageData,
@@ -20,6 +19,8 @@ import { useFormError } from '../../use-form-error';
 import { FormError } from '../form-error';
 import { StepFrame } from '../step-frame';
 import type { StepBaseProps } from './step-types';
+import { LocationField } from '@/features/location/components/location-field';
+import type { FederativeUnitOption } from '@/features/location/contracts';
 
 export const USAGE_INTENT_LABELS: Record<UsageIntent, { label: string; description: string }> = {
   friendship: { label: 'Fazer amizades', description: 'Conhecer pessoas para conviver.' },
@@ -31,15 +32,19 @@ export const USAGE_INTENT_LABELS: Record<UsageIntent, { label: string; descripti
 type RequiredDataStepProps = StepBaseProps &
   Readonly<{
     initial: Partial<RequiredDataRequest>;
-    onDraft: (patch: Partial<RequiredDataRequest>) => void;
+    initialMunicipalityName?: string;
+    federativeUnits: readonly FederativeUnitOption[];
+    onDraft: (patch: Partial<RequiredDataRequest> & { municipalityName?: string }) => void;
     onSaved: (stage: StageData, data: RequiredDataRequest) => void;
   }>;
 
-export function RequiredDataStep({ headingRef, onFailure, initial, onDraft, onSaved }: RequiredDataStepProps) {
+export function RequiredDataStep({ headingRef, onFailure, initial, initialMunicipalityName, federativeUnits, onDraft, onSaved }: RequiredDataStepProps) {
   const [displayName, setDisplayName] = useState(initial.displayName ?? '');
-  const [region, setRegion] = useState(initial.region ?? '');
+  const [ufCode, setUfCode] = useState<RequiredDataRequest['ufCode'] | ''>(initial.ufCode ?? '');
+  const [municipalityCode, setMunicipalityCode] = useState(initial.municipalityCode ?? '');
+  const [municipalityName, setMunicipalityName] = useState(initialMunicipalityName ?? '');
   const [intents, setIntents] = useState<UsageIntent[]>(initial.usageIntents ?? []);
-  const [errors, setErrors] = useState<{ displayName?: string; region?: string; intents?: string }>({});
+  const [errors, setErrors] = useState<{ displayName?: string; location?: string; intents?: string }>({});
   const { pending, run } = useCommand();
   const form = useFormError();
 
@@ -52,20 +57,21 @@ export function RequiredDataStep({ headingRef, onFailure, initial, onDraft, onSa
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     form.clear();
-    const body = { displayName: displayName.trim(), region: region.trim(), usageIntents: intents };
+    const body = { displayName: displayName.trim(), ufCode: ufCode || undefined, municipalityCode, usageIntents: intents };
     const nextErrors = {
       displayName: body.displayName ? undefined : 'Informe um nome de exibição.',
-      region: body.region ? undefined : 'Informe seu bairro ou cidade.',
+      location: body.ufCode && body.municipalityCode ? undefined : 'Escolha seu estado e município.',
       intents: intents.length ? undefined : 'Escolha pelo menos uma opção.',
     };
     setErrors(nextErrors);
-    if (!requiredDataRequestSchema.safeParse(body).success) return;
+    const parsedBody = requiredDataRequestSchema.safeParse(body);
+    if (!parsedBody.success) return;
 
-    onDraft({ displayName: body.displayName, region: body.region });
-    const result = await run({ path: '/api/registration/required-data', method: 'PUT', body }, stageDataSchema);
+    onDraft({ displayName: parsedBody.data.displayName, ufCode: parsedBody.data.ufCode, municipalityCode: parsedBody.data.municipalityCode, municipalityName });
+    const result = await run({ path: '/api/registration/required-data', method: 'PUT', body: parsedBody.data }, stageDataSchema);
     if (!result) return;
     if (result.kind === 'ok') {
-      onSaved(result.data, body);
+      onSaved(result.data, parsedBody.data);
       return;
     }
     if (result.kind === 'unprocessable') {
@@ -83,7 +89,7 @@ export function RequiredDataStep({ headingRef, onFailure, initial, onDraft, onSa
       headingRef={headingRef}
       why={
         <p>
-          Seu nome aparece para quem participa dos mesmos encontros. A região serve para sugerir atividades
+          Seu nome aparece para quem participa dos mesmos encontros. A localização ajuda a sugerir atividades
           perto de você — nunca mostramos endereço exato.
         </p>
       }
@@ -102,17 +108,19 @@ export function RequiredDataStep({ headingRef, onFailure, initial, onDraft, onSa
           error={errors.displayName}
           disabled={pending}
         />
-        <TextField
-          label="Bairro ou cidade"
-          hint="Por exemplo: Boa Vista, Recife."
-          name="region"
-          autoComplete="address-level2"
-          required
-          maxLength={REGION_MAX}
-          value={region}
-          onChange={(event) => setRegion(event.target.value)}
-          error={errors.region}
+        <LocationField
+          federativeUnits={federativeUnits}
+          initialUfCode={ufCode || undefined}
+          initialMunicipalityCode={initial.municipalityCode}
+          initialMunicipalityName={initialMunicipalityName}
+          error={errors.location}
           disabled={pending}
+          onChange={(value) => {
+            setUfCode(value.ufCode);
+            setMunicipalityCode(value.municipalityCode);
+            setMunicipalityName(value.municipalityName);
+            onDraft({ ufCode: value.ufCode || undefined, municipalityCode: value.municipalityCode, municipalityName: value.municipalityName });
+          }}
         />
         <fieldset className="space-y-3" aria-describedby={errors.intents ? 'intents-error' : 'intents-hint'}>
           <legend className="font-semibold">O que você procura no EventMatch?</legend>

@@ -85,6 +85,13 @@
       "when": 1791856800000,
       "tag": "0012_profile_social_links",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791856800002,
+      "tag": "0013_structured_location_catalog",
+      "breakpoints": true
     }
   ]
 }
