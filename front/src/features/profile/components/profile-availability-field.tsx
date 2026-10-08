@@ -15,6 +15,7 @@ import {
   PREFERRED_DISTANCE_LABELS,
   PREFERRED_DISTANCE_SHORT_LABELS,
 } from '../messages';
+import { ProfileGroup } from './profile-sections';
 
 type Props = Readonly<{
   initial: OwnProfile;
@@ -89,24 +90,22 @@ export function ProfileAvailabilityField({ initial, availabilityError, preferred
   }
 
   return (
-    <section aria-labelledby="profile-availability" className="space-y-6 border-t border-border pt-10">
-      <div>
-        <h2 id="profile-availability" className="text-xl font-bold">
-          Quando e até onde você costuma ir
-        </h2>
-        <p id="availability-hint" className="mt-1 max-w-[65ch] text-muted-foreground">
-          É opcional e só você vê estas informações. Quando a descoberta existir, elas poderão ajudar a sugerir encontros — por enquanto, a distância ainda não filtra nada.
-        </p>
-      </div>
+    <ProfileGroup
+      anchor="agenda"
+      headingId="profile-availability"
+      title="Quando e até onde você costuma ir"
+      introId="availability-hint"
+      intro="É opcional e só você vê estas informações. Quando a descoberta existir, elas poderão ajudar a sugerir encontros — por enquanto, a distância ainda não filtra nada."
+    >
       <fieldset aria-describedby={availabilityDescriptionIds} className="space-y-4">
-        <legend className="font-semibold">Disponibilidade geral</legend>
+        <legend className="text-lg font-bold">Disponibilidade geral</legend>
         <div className="overflow-hidden rounded-2xl border-2 border-border bg-surface p-3 sm:p-4">
           <table className="w-full table-fixed border-collapse text-center">
             <caption className="mb-3 text-left text-sm text-muted-foreground">
               Marque os períodos em que costuma participar de encontros.
             </caption>
             <colgroup>
-              <col className="w-[5.25rem]" />
+              <col className="w-[5.25rem] sm:w-32" />
               {AVAILABILITY_PERIODS.map((period) => <col key={period} />)}
             </colgroup>
             <thead>
@@ -174,7 +173,7 @@ export function ProfileAvailabilityField({ initial, availabilityError, preferred
         </p>
         <div className="space-y-3">
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-            <label htmlFor="preferred-distance-range" className="font-semibold">Até onde você costuma se deslocar?</label>
+            <label htmlFor="preferred-distance-range" className="text-lg font-bold">Até onde você costuma se deslocar?</label>
             <span id="preferred-distance-value" aria-live="polite" aria-atomic="true" className="font-semibold text-foreground">
               {DISTANCE_OPTIONS[distanceIndex(preferredDistance)].label}
             </span>
@@ -204,7 +203,7 @@ export function ProfileAvailabilityField({ initial, availabilityError, preferred
                   onClick={() => chooseDistance(index)}
                   aria-label={label}
                   aria-pressed={isSelected}
-                  className={`min-h-11 rounded-lg border-2 px-2 text-xs leading-tight transition-colors ${isSelected ? 'border-primary bg-primary-muted font-semibold text-foreground' : 'border-border text-muted-foreground hover:border-muted-foreground hover:text-foreground'}`}
+                  className={`min-h-11 rounded-lg border-2 px-2 text-sm leading-tight transition-colors ${isSelected ? 'border-primary bg-primary-muted font-semibold text-foreground' : 'border-border text-muted-foreground hover:border-muted-foreground hover:text-foreground'}`}
                 >
                   {shortLabel}
                 </button>
@@ -212,9 +211,9 @@ export function ProfileAvailabilityField({ initial, availabilityError, preferred
             })}
           </div>
         </div>
-        <p className="text-sm text-muted-foreground">Só você vê estas informações.</p>
+                <p className="text-sm text-muted-foreground">Só você vê estas informações.</p>
         {preferredDistanceError ? <p id="preferred-distance-error" className="font-semibold text-error">{preferredDistanceError}</p> : null}
       </fieldset>
-    </section>
+    </ProfileGroup>
   );
 }

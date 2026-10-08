@@ -1,3 +1,37 @@
+# Finish review — reorganização do perfil em grupos (TASK 28)
+
+- Data: 2026-10-08
+- Superfície: `/perfil`
+- Build path: code-led; direção “Índice fixo + grupos” escolhida pela pessoa usuária antes da edição
+- Direction contract: `../surfaces/src-app-perfil-page-tsx.md` (STRUCTURE e layout atualizados nesta entrega)
+- Revisor: passe in-thread; o agente `impeccable-finish-reviewer` não está disponível neste harness.
+- Disposição final: `ship`
+
+## Diagnóstico que motivou a mudança
+
+- Página única de 6.593 px (desktop) / 8.565 px (mobile) sem índice e com “Salvar perfil” apenas no fim.
+- No desktop, ~40% da largura ficava com o título; o formulário ocupava ~560 px, quebrando “Segunda-/feira” e espremendo a distância.
+- Sete cartões de visibilidade em `primary-muted` repetiam a mesma frase e pesavam mais que os próprios dados.
+
+## Resultado
+
+- Desktop 5.251 px e mobile 7.573 px, com índice e ações sempre visíveis; nenhuma rolagem horizontal (390, 1440 e zoom de 200%).
+- Quatro grupos com status salvo no índice; o grupo ativo é marcado com `aria-current="location"`.
+- Controles de visibilidade em linha: o nome acessível (“Compartilhar … futuramente?”) e a descrição longa (via `aria-describedby`) foram preservados; o estado aparece em palavras, não só pela cor.
+
+## Passes visuais
+
+1. Primeiro passe (desktop e mobile em conjunto): títulos de cartaz com espaço entre palavras colapsado, campos de redes sociais estourando a largura no mobile, desalinhamento de 8 px em Estado/Município e em Pronomes/Profissão e faixa mobile do índice sem acompanhar o grupo ativo. Tudo corrigido em lote.
+2. Confirmação: alinhamentos medidos no DOM e `scrollWidth` igual ao viewport. Encerrado.
+
+## Validação
+
+- `bun run --cwd front typecheck`, `lint` e `test` (175 testes) verdes.
+- `bun run --cwd front test:e2e perfil acessibilidade teclado`: 39 aprovados e 1 pulado (teclado no mobile, pulado por desenho), com axe sem violações graves.
+- As capturas `perfil-*.png` desta pasta foram regeneradas pela suíte com o novo layout.
+
+---
+
 # Finish review — preferências de atividades do perfil (SDD-017)
 
 - Data: 2026-10-06 (revisão final após `code-reviewer`)

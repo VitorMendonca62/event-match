@@ -55,9 +55,9 @@ export function ProfilePronounsField({ initial, error, onDirty }: Readonly<{ ini
   const selectedOption = OPTIONS.find((option) => option.value === selection) ?? OPTIONS[0];
 
   return (
-    <fieldset className="space-y-4" aria-describedby={groupError ? 'pronouns-error' : undefined}>
+    <fieldset className="flex min-w-0 flex-col space-y-4" aria-describedby={groupError ? 'pronouns-error' : undefined}>
       <legend className="font-semibold">Pronomes</legend>
-      <p className="text-sm text-muted-foreground">Escolha como prefere ser mencionada, mencionado ou mencionade.</p>
+      <p className="-mt-2 text-sm text-muted-foreground @2xl:min-h-10">Como prefere ser mencionada, mencionado ou mencionade.</p>
       <div className="relative" ref={rootRef}>
         <input name="pronounSelection" type="hidden" value={selection ?? ''} />
         <button
@@ -142,10 +142,9 @@ export function ProfilePronounsField({ initial, error, onDirty }: Readonly<{ ini
           </div>
         ) : null}
       </div>
-      {preferPrivate ? <p className="text-sm text-muted-foreground">A escolha fica registrada somente para você.</p> : null}
       {selection === 'other' ? <TextField name="customPronouns" label="Como devemos escrever?" maxLength={40} defaultValue={initial.customPronouns ?? ''} error={error} /> : <input type="hidden" name="customPronouns" value="" />}
       {groupError ? <p id="pronouns-error" className="font-semibold text-error">{groupError}</p> : null}
-      <ProfileVisibilityToggle key={preferPrivate ? 'refused' : 'open'} name="pronounsVisibility" question="Compartilhar pronomes futuramente?" description={preferPrivate ? '“Prefiro não informar” permanece sempre privado.' : 'Ative para mostrar a pessoas autenticadas quando esse recurso estiver disponível.'} defaultChecked={!preferPrivate && shareByDefault} disabled={preferPrivate} />
+      <ProfileVisibilityToggle key={preferPrivate ? 'refused' : 'open'} name="pronounsVisibility" question="Compartilhar pronomes futuramente?" description={preferPrivate ? '“Prefiro não informar” permanece sempre privado.' : 'Ative para mostrar a pessoas autenticadas quando esse recurso estiver disponível.'} note={preferPrivate ? '“Prefiro não informar” permanece sempre privado.' : undefined} defaultChecked={!preferPrivate && shareByDefault} disabled={preferPrivate} />
     </fieldset>
   );
 }

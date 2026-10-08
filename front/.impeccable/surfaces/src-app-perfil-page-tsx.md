@@ -7,7 +7,7 @@ related_targets: ["src/app/perfil/previa/page.tsx", "src/app/inicio/page.tsx"]
 
 # Completar perfil - surface brief
 
-Scope: convite em `/inicio`, edição em `/perfil` e prévia autenticada em `/perfil/previa`, incluindo a identidade opcional da SDD-016, as preferências de atividades da SDD-017 e a disponibilidade/distância da SDD-018. Mode: **Operate**. Extensão confirmada em 2026-09-30 do mundo "Convite Cívico"; direção da identidade opcional confirmada em 2026-10-03; preferências de atividades confirmadas em 2026-10-06 (SDD-017/ADR-044); disponibilidade/distância confirmadas em 2026-10-06 (SDD-018/ADR-045); nenhuma mudança durável em `DESIGN.md`.
+Scope: convite em `/inicio`, edição em `/perfil` e prévia autenticada em `/perfil/previa`, incluindo a identidade opcional da SDD-016, as preferências de atividades da SDD-017 e a disponibilidade/distância da SDD-018. Mode: **Operate**. Reorganização em grupos com índice fixo confirmada em 2026-10-08 (TASK 28). Extensão confirmada em 2026-09-30 do mundo "Convite Cívico"; direção da identidade opcional confirmada em 2026-10-03; preferências de atividades confirmadas em 2026-10-06 (SDD-017/ADR-044); disponibilidade/distância confirmadas em 2026-10-06 (SDD-018/ADR-045); nenhuma mudança durável em `DESIGN.md`.
 
 ## Job e audiência
 
@@ -28,7 +28,7 @@ Pessoa adulta com conta ativa, novata ou veterana, chega a `/inicio` com foto ou
 
 THESIS: completar o perfil é preparar uma apresentação para uma atividade em grupo, não montar uma vitrine pessoal nem atravessar outro cadastro obrigatório.
 
-STRUCTURE: em `/inicio`, o item antes indisponível vira uma linha acionável com progresso curto e duas decisões claras: completar ou adiar. `/perfil` é uma superfície de trabalho contínua, sem wizard e sem cards aninhados: foto e dados básicos vêm primeiro; apresentação vem logo depois como núcleo da futura projeção; “Identidade e comunicação” reúne pronomes, profissão e idiomas; “Presença social (opcional)” vem imediatamente depois; “O que você busca” reúne intenções e interesses; “Como você gosta dos encontros” vem logo após interesses, sem card, com uma frase que separa do que a pessoa gosta (interesses) de como prefere o encontro (preferências); ações de salvar permanecem próximas ao conteúdo alterado. `/perfil/previa` remove os controles de edição e apresenta somente a projeção autorizada do perfil.
+STRUCTURE: em `/inicio`, o item antes indisponível vira uma linha acionável com progresso curto e duas decisões claras: completar ou adiar. `/perfil` é uma superfície de trabalho contínua, sem wizard, sem abas e sem cards aninhados, organizada em quatro grupos com título de cartaz (`h2`) e subseções (`h3`): **Sobre você** (foto, dados básicos e apresentação), **Identidade e comunicação** (pronomes e profissão lado a lado quando há largura, idiomas e “Presença social (opcional)”), **Interesses e encontros** (“O que você busca”, interesses e “Como você gosta dos encontros”, com a frase que separa interesses de preferências) e **Quando e até onde você costuma ir**. Um índice “Seções do perfil” leva a cada grupo: no desktop fica numa barra lateral fixa com o status salvo de cada grupo (ex.: “Falta foto”, “4 interesses · 2 preferências”) e, no mobile, vira uma faixa horizontal fixa no topo. “Salvar perfil” e “Ver prévia” ficam sempre visíveis (barra lateral no desktop, barra fixa no rodapé no mobile) com o estado “Tudo salvo”/“Alterações não salvas”. Os controles de visibilidade são uma linha compacta (cadeado/pessoas, pergunta, estado em palavras e switch); a regra comum de privacidade é explicada uma vez na introdução da página. `/perfil/previa` remove os controles de edição e apresenta somente a projeção autorizada do perfil.
 
 FOCAL MOMENT: a foto recortada e a apresentação aparecem juntas na prévia, permitindo conferir como a pessoa será apresentada sem publicar para terceiros nesta entrega.
 
@@ -70,7 +70,7 @@ VISUAL AUTHORITY: herdar marca, tipografia, tokens, bordas, foco âmbar, ritmo e
 - O seletor de foto aceita arrastar/soltar e seleção por arquivo, mas mantém um botão nativo claramente rotulado. O editor abre em diálogo modal, mostra a imagem completa com um quadrado de recorte arrastável e redimensionável, e oferece sliders e botões de ajuste para posição e ampliação, com equivalência por teclado.
 - A navegação entre edição e prévia usa ações nomeadas e rotas reais, preservando voltar/atualizar; não simula abas que perdem estado silenciosamente.
 - Ao pedir a prévia com alterações não salvas, um diálogo explica que somente dados persistidos serão exibidos e oferece salvar antes de avançar ou descartar o rascunho e continuar.
-- Mobile empilha as seções e mantém alvos de pelo menos 44 px. Desktop usa uma coluna principal legível com prévia da foto ao lado apenas quando houver largura real.
+- Mobile empilha as seções, mantém alvos de pelo menos 44 px e reserva `scroll-padding` para o índice fixo e a barra de ações, de modo que campos focados nunca fiquem cobertos. Desktop usa barra lateral de 15rem com índice e ações e uma coluna de conteúdo larga; Estado/Município e Pronomes/Profissão usam duas colunas por container query apenas quando há largura real.
 - Motion limita-se a feedback de estado e respeita `prefers-reduced-motion`; nenhum upload depende de animação para comunicar progresso.
 
 ## Restrições confirmadas
