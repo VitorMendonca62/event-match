@@ -3,7 +3,7 @@
 - **Slug:** redes-sociais-opcionais
 - **Autor do plano:** Code-Planner (SDD)
 - **Data:** 2026-10-07
-- **Status:** ready
+- **Status:** implemented — implementação revisada; validação completa concluída em ambiente com Docker.
 - **Versão-alvo:** workspace/front `0.17.0`; back `0.16.0` (próximas versões menores disponíveis)
 - **Tipo:** feature
 - **Impacto público:** additive
@@ -20,11 +20,11 @@ Rastreabilidade: `docs/DER-EventMatch-MVP.md` RF015 e RF081; RN009, RN014 e RN11
 
 ### Inclui
 
-- [ ] Vínculos sociais opcionais, removíveis, ordenáveis, privados por padrão e independentes da foto principal, interesses, completude e capacidades.
-- [ ] Persistir somente provedor permitido e identificador canônico; derivar URL de saída a partir da configuração confiável do provedor.
-- [ ] Aceitar URL colada ou identificador apenas como entrada, normalizar no backend e rejeitar esquemas, hosts, credenciais, portas, query strings, fragmentos, redirecionadores e caminhos que não sejam perfil pessoal permitido.
-- [ ] Visibilidade individual `private | authenticated` no contrato editável; `public` continua reservado e sem exposição real nesta entrega.
-- [ ] Atualizar visão própria, prévia, DTOs/OpenAPI, BFF, documentação e testes, sem fazer fetch remoto.
+- [x] Vínculos sociais opcionais, removíveis, com ordem interna estável, privados por padrão e independentes da foto principal, interesses, completude e capacidades.
+- [x] Persistir somente provedor permitido e identificador canônico; derivar URL de saída a partir da configuração confiável do provedor.
+- [x] Aceitar URL colada ou identificador apenas como entrada, normalizar no backend e rejeitar esquemas, hosts, credenciais, portas, query strings, fragmentos, redirecionadores e caminhos que não sejam perfil pessoal permitido.
+- [x] Visibilidade individual `private | authenticated` no contrato editável; `public` continua reservado e sem exposição real nesta entrega.
+- [x] Atualizar visão própria, prévia, DTOs/OpenAPI, BFF, documentação e testes, sem fazer fetch remoto.
 
 ### Exclui
 
@@ -155,8 +155,9 @@ Compatibilidade: leitura aditiva; a escrita exige a chave nova para preservar o 
 ### 4.3 UX e acessibilidade (`impeccable`)
 
 - Inserir “Presença social (opcional)” em `/perfil`, após “Identidade e comunicação” e antes de “O que você busca”. Explicar que o EventMatch não verifica os perfis externos e que links ficam privados inicialmente.
-- Seleção de provedor controlada, campo claramente rotulado para identificador ou link, ajuda específica por provedor e erro associado. Nunca usar placeholder como único rótulo.
-- Itens permitem remover, mover para cima/baixo e escolher audiência. Reordenação por teclado é equivalente a qualquer drag-and-drop; todos os alvos têm pelo menos 44 px, foco visível e anúncio de posição.
+- A interface exibe três campos fixos — Instagram, LinkedIn e X — com a marca visual, nome, rótulo persistente, ajuda específica por provedor e erro associado. Nunca usar placeholder como único rótulo.
+- Não há controle de adicionar, remover ou reordenar provedores na interface. Um único toggle “Compartilhar redes sociais futuramente?” aplica `authenticated` a todos os campos preenchidos quando ativo e `private` quando desativado; vínculos legados com audiências mistas são preservados até o toggle ser alterado.
+- Todos os alvos interativos têm pelo menos 44 px e foco visível.
 - A prévia mostra somente o que estaria compartilhado; em nenhuma tela desta entrega um vínculo abre automaticamente, faz preview remoto ou parece uma confirmação de identidade.
 - Atualizar o surface brief antes da UI. Validar desktop, mobile, teclado, leitor de tela e zoom de 200%; executar detector e finish review em no máximo dois passes.
 
@@ -200,7 +201,7 @@ Compatibilidade: leitura aditiva; a escrita exige a chave nova para preservar o 
 
 - Schemas estritos, serialização mínima, recusa de `public`, rótulos e ordenação.
 - BFF não faz fetch para valor de link e retorna falha neutra para upstream inválido.
-- Playwright: adicionar, editar, mover por teclado, remover, salvar/recarregar, preview, conflito de abas, mobile, axe e zoom 200%.
+- Playwright: preencher os três campos fixos, alternar o compartilhamento futuro, salvar/recarregar, remover deixando um campo vazio, preview, conflito de abas, mobile, axe e zoom 200%.
 
 Ao implementar: `bun run --cwd back lint`, `bun run --cwd back typecheck`, `bun run --cwd back test`, `bun run --cwd back test:e2e`, `bun run --cwd front lint`, `bun run --cwd front typecheck`, `bun run --cwd front test`, `bun run --cwd front test:e2e`, ambos os builds e `bun run --cwd back db:migrate` em banco descartável.
 
@@ -227,9 +228,9 @@ Rollout: flag de UI desligada → migration → backend → frontend → smoke/E
 
 - [x] Decisões citam `docs/` e ADRs.
 - [x] Um ADR `proposed` foi criado para cada decisão material.
-- [x] Nenhum código de produção foi escrito.
+- [x] Código de produção, migration e testes foram implementados.
 - [x] Contratos front/back, OpenAPI e PostgreSQL estão explícitos.
 - [x] Performance, segurança e observabilidade foram tratadas.
 - [x] `vercel-react-best-practices`, `nestjs-expert`, `nextjs-architecture`, `nestjs-hexagonal-architecture` e Impeccable foram aplicadas conforme o escopo.
-- [x] Testes, migration e rollback estão planejados.
+- [x] Testes, migration e rollback estão implementados ou definidos; backend e frontend E2E foram executados com sucesso.
 - [x] Perguntas em aberto foram exauridas.

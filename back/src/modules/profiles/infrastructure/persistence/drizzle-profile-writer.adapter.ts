@@ -4,7 +4,7 @@ import { eq, inArray, sql } from 'drizzle-orm';
 import type { TransactionContext } from '../../../../shared/application/ports/unit-of-work.port';
 import { resolveExecutor } from '../../../../shared/infrastructure/persistence/resolve-executor';
 import type { ProfileWriterPort, RequiredProfileData } from '../../domain/ports/profile-writer.port';
-import { accountInterest, profile, profileActivityPreference, profileAvailabilitySlot, profileLanguage, profilePhotoAsset, profileUsageIntent } from './schema/profiles.schema';
+import { accountInterest, profile, profileActivityPreference, profileAvailabilitySlot, profileLanguage, profilePhotoAsset, profileSocialLink, profileUsageIntent } from './schema/profiles.schema';
 
 @Injectable()
 export class DrizzleProfileWriterAdapter implements ProfileWriterPort {
@@ -61,5 +61,6 @@ export class DrizzleProfileWriterAdapter implements ProfileWriterPort {
     await database.delete(profileLanguage).where(inArray(profileLanguage.accountId, ids));
     await database.delete(profileActivityPreference).where(inArray(profileActivityPreference.accountId, ids));
     await database.delete(profileAvailabilitySlot).where(inArray(profileAvailabilitySlot.accountId, ids));
+    await database.delete(profileSocialLink).where(inArray(profileSocialLink.accountId, ids));
   }
 }

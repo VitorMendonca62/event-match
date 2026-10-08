@@ -78,6 +78,13 @@
       "when": 1791774000001,
       "tag": "0010_profile_availability_distance",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791856800000,
+      "tag": "0012_profile_social_links",
+      "breakpoints": true
     }
   ]
 }

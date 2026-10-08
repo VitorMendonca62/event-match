@@ -26,3 +26,16 @@ export const PREFERRED_DISTANCE_SHORT_LABELS = {
   up_to_2km: 'Até 2 km', up_to_5km: 'Até 5 km', up_to_10km: 'Até 10 km',
   up_to_25km: 'Até 25 km', same_city: 'Toda a cidade',
 } as const;
+export const SOCIAL_PROVIDER_LABELS = {
+  instagram: 'Instagram', linkedin: 'LinkedIn', x: 'X',
+} as const;
+export const SOCIAL_PROVIDER_HELP = {
+  instagram: '',
+  linkedin: 'Use o identificador depois de linkedin.com/in/ ou cole o endereço do perfil.',
+  x: '',
+} as const;
+export const SOCIAL_PROVIDER_PLACEHOLDERS = {
+  instagram: '@pessoa ou instagram.com/pessoa',
+  linkedin: '@pessoa ou linkedin.com/in/pessoa',
+  x: '@pessoa ou x.com/pessoa',
+} as const;

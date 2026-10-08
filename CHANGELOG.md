@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.17.0 — 2026-10-07
+
+Presença social opcional no perfil (SDD-020; ADR-049). Mudança aditiva coordenada: frontend/workspace `0.17.0`, backend `0.16.0`. Rollout: desligar `PROFILE_UI_ENABLED`, aplicar `0012_profile_social_links`, publicar backend e depois frontend, executar smoke de perfil/prévia e religar a UI.
+
+- Perfil aceita zero a três vínculos, um por Instagram, LinkedIn ou X, com posição e audiência independente privada por padrão. A edição aceita identificador ou URL HTTPS allowlisted, normaliza e persiste somente o identificador canônico; a URL é derivada sem fetch, OAuth, verificação ou redirecionamento.
+- `PUT /api/v1/profiles/me` exige `socialLinks[]` no snapshot completo; `GET` próprio expõe os vínculos e a prévia própria expõe apenas os `authenticated`, sem ids ou audiência. Completude, interesses, preferências, capacidades e eventos não mudam.
+- `/perfil` ganha seção acessível após “Identidade e comunicação”, com três campos fixos (Instagram, LinkedIn e X), marca visual, ajuda por provedor, um toggle global de compartilhamento futuro e cópia explícita de não verificação. Não há inclusão, remoção ou ordenação manual; os links são apresentados como links externos simples, sem preview remoto.
+- Migration `0012` é forward-only, com `CHECK`s, unicidades por conta e FK em cascata. Purga e exclusão de dados removem a relação. Rollback operacional desliga a UI e preserva schema/dados para correções forward-only.
+
 ## 0.16.0 — 2026-10-06
 
 Disponibilidade e distância preferida no perfil (SDD-018; ADR-045). Mudança aditiva na leitura: frontend/workspace `0.16.0`, backend `0.15.0`. Rollout coordenado: desligar `PROFILE_UI_ENABLED`, aplicar `0010_profile_availability_distance`, publicar backend e depois frontend, executar smoke de perfil/prévia e religar a UI.

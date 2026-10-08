@@ -6,6 +6,7 @@ import {
   type AvailabilitySlot,
   type PreferredDistance,
 } from '../value-objects/availability';
+import { validateSocialLinks, type SocialLink } from '../value-objects/social-link';
 
 export const USAGE_INTENTS = ['friendship', 'activity_company', 'explore_city', 'networking'] as const;
 export type UsageIntent = (typeof USAGE_INTENTS)[number];
@@ -41,6 +42,7 @@ export type ProfileState = Readonly<{
   activityPreferencesVisibility: ProfileFieldVisibility;
   availabilitySlots: readonly AvailabilitySlot[];
   preferredDistance: PreferredDistance | null;
+  socialLinks: readonly SocialLink[];
 }>;
 
 const CONTACT_PATTERN = /(?:https?:\/\/|www\.|[\w.+-]+@[\w.-]+\.[a-z]{2,}|(?:\+?55\s*)?(?:\(?\d{2}\)?\s*)?9?\d{4}[-\s]?\d{4})/iu;
@@ -58,7 +60,7 @@ export class Profile {
   private constructor(private readonly state: ProfileState) {}
 
   static restore(state: ProfileState): Profile {
-    if (!Number.isInteger(state.revision) || state.revision < 1) throw new ProfileError('INVALID_PROFILE_CONTENT');
+    if (!Number.isInteger(state.revision) || state.revision < 1 || !validateSocialLinks(state.socialLinks)) throw new ProfileError('INVALID_PROFILE_CONTENT');
     return new Profile(state);
   }
 
@@ -102,7 +104,8 @@ export class Profile {
       availabilitySlots.every((slot) => AVAILABILITY_SLOTS.includes(slot as AvailabilitySlot));
     const preferredDistanceValid =
       input.preferredDistance === null || PREFERRED_DISTANCES.includes(input.preferredDistance);
-    if (!valid || !identityValid || !preferencesValid || !availabilityValid || !preferredDistanceValid) {
+    const socialLinksValid = validateSocialLinks(input.socialLinks) && input.socialLinks.every(({ visibility }) => visibility !== 'public');
+    if (!valid || !identityValid || !preferencesValid || !availabilityValid || !preferredDistanceValid || !socialLinksValid) {
       throw new ProfileError('INVALID_PROFILE_CONTENT');
     }
     return new Profile({
@@ -125,6 +128,7 @@ export class Profile {
       activityPreferencesVisibility: input.activityPreferencesVisibility,
       availabilitySlots: toCanonicalOrder(availabilitySlots as AvailabilitySlot[]),
       preferredDistance: input.preferredDistance,
+      socialLinks: [...input.socialLinks].sort((left, right) => left.position - right.position),
       revision: this.state.revision + 1,
     });
   }

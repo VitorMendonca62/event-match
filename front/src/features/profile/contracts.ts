@@ -23,6 +23,17 @@ export const AVAILABILITY_SLOTS = [
 export const availabilitySlotSchema = z.enum(AVAILABILITY_SLOTS);
 export const PREFERRED_DISTANCES = ['up_to_2km', 'up_to_5km', 'up_to_10km', 'up_to_25km', 'same_city'] as const;
 export const preferredDistanceSchema = z.enum(PREFERRED_DISTANCES);
+export const SOCIAL_PROVIDERS = ['instagram', 'linkedin', 'x'] as const;
+export const socialProviderSchema = z.enum(SOCIAL_PROVIDERS);
+export type SocialProvider = z.infer<typeof socialProviderSchema>;
+export const socialLinkSchema = z.object({
+  id: z.uuid(), provider: socialProviderSchema, identifier: z.string().min(1).max(100), position: z.number().int().min(1).max(3),
+  visibility: z.enum(['private', 'authenticated', 'public']), url: z.url(),
+}).strict();
+export const socialLinkInputSchema = z.object({
+  id: z.uuid().optional(), provider: socialProviderSchema, identifierOrUrl: z.string().trim().min(1).max(200), position: z.number().int().min(1).max(3),
+  visibility: visibilitySchema,
+}).strict();
 export type AvailabilitySlot = z.infer<typeof availabilitySlotSchema>;
 export type PreferredDistance = z.infer<typeof preferredDistanceSchema>;
 export const completionSchema = z.object({
@@ -44,6 +55,7 @@ export const ownProfileSchema = z.object({
   activityPreferencesVisibility: z.enum(['private', 'authenticated', 'public']),
   availabilitySlots: z.array(availabilitySlotSchema).max(28).refine((items) => new Set(items).size === items.length),
   preferredDistance: preferredDistanceSchema.nullable(),
+  socialLinks: z.array(socialLinkSchema).max(3).refine((items) => new Set(items.map((item) => item.provider)).size === items.length).refine((items) => new Set(items.map((item) => item.position)).size === items.length),
 }).strict();
 export type OwnProfile = z.infer<typeof ownProfileSchema>;
 export const internalOwnProfileSchema = ownProfileSchema.extend({ invitationSubject: z.string().regex(/^v1\.[A-Za-z0-9_-]{43}$/) }).strict();
@@ -60,7 +72,10 @@ export const updateProfileSchema = z.object({
   activityPreferencesVisibility: visibilitySchema,
   availabilitySlots: z.array(availabilitySlotSchema).max(28).refine((items) => new Set(items).size === items.length),
   preferredDistance: preferredDistanceSchema.nullable(),
+  socialLinks: z.array(socialLinkInputSchema).max(3),
 }).strict().superRefine((value, context) => {
+  if (new Set(value.socialLinks.map((item) => item.provider)).size !== value.socialLinks.length) context.addIssue({ code: 'custom', path: ['socialLinks'], message: 'Escolha no máximo um vínculo por provedor.' });
+  if (new Set(value.socialLinks.map((item) => item.position)).size !== value.socialLinks.length) context.addIssue({ code: 'custom', path: ['socialLinks'], message: 'A ordem dos vínculos sociais é inválida.' });
   if (value.pronounSelection === 'other' && !value.customPronouns) context.addIssue({ code: 'custom', path: ['customPronouns'], message: 'Informe seus pronomes.' });
   if (value.pronounSelection !== 'other' && value.customPronouns !== null) context.addIssue({ code: 'custom', path: ['customPronouns'], message: 'Remova o texto personalizado.' });
   if (value.pronounSelection === 'prefer_not_to_say' && value.pronounsVisibility !== 'private') context.addIssue({ code: 'custom', path: ['pronounsVisibility'], message: 'Esta escolha deve permanecer privada.' });
@@ -70,6 +85,7 @@ export const profilePreviewSchema = z.object({
   presentation: z.string().optional(), photo: profilePhotoSchema.optional(),
   pronouns: z.string().optional(), profession: z.string().optional(), languages: z.array(languageSchema).optional(),
   activityPreferences: z.array(activityPreferenceSchema).optional(),
+  socialLinks: z.array(z.object({ provider: socialProviderSchema, identifier: z.string().min(1).max(100), url: z.url() }).strict()).max(3).optional(),
 }).strict();
 export type ProfilePreview = z.infer<typeof profilePreviewSchema>;
 export const signedUploadGrantSchema = z.object({

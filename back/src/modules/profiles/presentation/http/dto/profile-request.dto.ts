@@ -1,7 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { ArrayMaxSize, ArrayMinSize, ArrayUnique, IsArray, IsDefined, IsEnum, IsIn, IsInt, IsString, IsUUID, Matches, MaxLength, Min, MinLength, ValidateIf } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, ArrayUnique, IsArray, IsDefined, IsEnum, IsIn, IsInt, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, MinLength, ValidateIf, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 import { PRONOUN_SELECTIONS, USAGE_INTENTS, type EditableProfileVisibility, type PronounSelection, type UsageIntent } from '../../../domain/entities/profile';
 import { AVAILABILITY_SLOTS, PREFERRED_DISTANCES, type AvailabilitySlot, type PreferredDistance } from '../../../domain/value-objects/availability';
+import { SOCIAL_PROVIDERS, type EditableSocialLinkVisibility, type SocialProvider } from '../../../domain/value-objects/social-link';
+
+export class UpdateSocialLinkDto {
+  @ApiProperty({ format: 'uuid', required: false }) @IsOptional() @IsUUID() readonly id?: string;
+  @ApiProperty({ enum: SOCIAL_PROVIDERS }) @IsEnum(SOCIAL_PROVIDERS) readonly provider!: SocialProvider;
+  @ApiProperty({ minLength: 1, maxLength: 200, description: 'Handle or HTTPS profile URL; only the canonical identifier is persisted.' }) @IsString() @MinLength(1) @MaxLength(200) readonly identifierOrUrl!: string;
+  @ApiProperty({ minimum: 1, maximum: 3 }) @IsInt() @Min(1) @Max(3) readonly position!: number;
+  @ApiProperty({ enum: ['private', 'authenticated'] }) @IsEnum(['private', 'authenticated']) readonly visibility!: EditableSocialLinkVisibility;
+}
 
 export class UpdateProfileDto {
   @ApiProperty({ minimum: 1 }) @IsInt() @Min(1) readonly revision!: number;
@@ -23,4 +33,5 @@ export class UpdateProfileDto {
   @ApiProperty({ enum: ['private', 'authenticated'] }) @IsEnum(['private', 'authenticated']) readonly activityPreferencesVisibility!: EditableProfileVisibility;
   @ApiProperty({ enum: AVAILABILITY_SLOTS, isArray: true, maxItems: 28, uniqueItems: true }) @IsDefined() @IsArray() @ArrayMaxSize(28) @ArrayUnique() @IsIn(AVAILABILITY_SLOTS, { each: true }) readonly availabilitySlots!: AvailabilitySlot[];
   @ApiProperty({ enum: PREFERRED_DISTANCES, nullable: true }) @ValidateIf((_object, value) => value !== null) @IsDefined() @IsIn(PREFERRED_DISTANCES) readonly preferredDistance!: PreferredDistance | null;
+  @ApiProperty({ type: [UpdateSocialLinkDto], maxItems: 3, uniqueItems: true }) @IsDefined() @IsArray() @ArrayMaxSize(3) @ValidateNested({ each: true }) @Type(() => UpdateSocialLinkDto) readonly socialLinks!: UpdateSocialLinkDto[];
 }

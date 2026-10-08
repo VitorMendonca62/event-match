@@ -360,7 +360,7 @@ describe('registration HTTP contract v1', () => {
       components?: { schemas?: Record<string, { required?: string[]; properties?: Record<string, { nullable?: boolean; maxLength?: number; maxItems?: number }> }> };
     };
 
-    expect(document.info.version).toBe('0.15.0');
+    expect(document.info.version).toBe('0.16.0');
     const contract = Object.fromEntries(
       Object.entries(document.paths)
         .filter(([path]) => path.startsWith('/api/v1/'))

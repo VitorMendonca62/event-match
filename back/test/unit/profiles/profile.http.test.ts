@@ -16,7 +16,7 @@ const TOKEN = 'B'.repeat(43);
 const BFF = { 'X-EventMatch-BFF-Token': process.env.BFF_INTERNAL_TOKEN!, Authorization: `Bearer ${TOKEN}` };
 const ORIGIN = Buffer.alloc(32, 9).toString('base64url');
 const INTERESTS = [1, 2, 3].map((number) => ({ id: `00000000-0000-7000-8000-00000000000${number}`, slug: `interest-${number}`, label: `Interest ${number}` }));
-const PROFILE = { revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'], interests: INTERESTS, presentation: null, photoVisibility: 'private', presentationVisibility: 'private', photo: null, pronounSelection: null, customPronouns: null, pronounsVisibility: 'private', profession: null, professionVisibility: 'private', languages: [], languagesVisibility: 'private', activityPreferences: [], activityPreferencesVisibility: 'private', availabilitySlots: [], preferredDistance: null, completion: { complete: false, completedCount: 4, totalCount: 6, missing: ['photo', 'presentation'] }, invitationSubject: `v1.${'A'.repeat(43)}` };
+const PROFILE = { revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'], interests: INTERESTS, presentation: null, photoVisibility: 'private', presentationVisibility: 'private', photo: null, pronounSelection: null, customPronouns: null, pronounsVisibility: 'private', profession: null, professionVisibility: 'private', languages: [], languagesVisibility: 'private', activityPreferences: [], activityPreferencesVisibility: 'private', availabilitySlots: [], preferredDistance: null, socialLinks: [], completion: { complete: false, completedCount: 4, totalCount: 6, missing: ['photo', 'presentation'] }, invitationSubject: `v1.${'A'.repeat(43)}` };
 const getOwn = { execute: mock(async () => PROFILE) };
 const updateOwn = { execute: mock(async () => ({ ...PROFILE, revision: 2 })) };
 const previewOwn = { execute: mock(async () => ({ displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'], interests: INTERESTS })) };
@@ -58,7 +58,7 @@ describe('profile HTTP contract v1 (SDD-015)', () => {
   });
 
   test('validates updates, accepts UUIDv7 interests and rejects unknown properties', async () => {
-    const body = { revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'], interestIds: INTERESTS.map(({ id }) => id), presentation: null, photoVisibility: 'private', presentationVisibility: 'authenticated', pronounSelection: null, customPronouns: null, pronounsVisibility: 'private', profession: null, professionVisibility: 'private', languageCodes: [], languagesVisibility: 'private', activityPreferenceCodes: ['small_group'], activityPreferencesVisibility: 'authenticated', availabilitySlots: [], preferredDistance: null };
+    const body = { revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'], interestIds: INTERESTS.map(({ id }) => id), presentation: null, photoVisibility: 'private', presentationVisibility: 'authenticated', pronounSelection: null, customPronouns: null, pronounsVisibility: 'private', profession: null, professionVisibility: 'private', languageCodes: [], languagesVisibility: 'private', activityPreferenceCodes: ['small_group'], activityPreferencesVisibility: 'authenticated', availabilitySlots: [], preferredDistance: null, socialLinks: [] };
     await http().put('/api/v1/profiles/me').set(BFF).send(body).expect(200);
     expect(sessions.execute).toHaveBeenLastCalledWith({ token: TOKEN, capability: 'profile_write', allowRotation: false });
     expect(updateOwn.execute).toHaveBeenCalledWith({ accountId: '00000000-0000-7000-8000-000000000099', ...body });
@@ -72,10 +72,13 @@ describe('profile HTTP contract v1 (SDD-015)', () => {
     await http().put('/api/v1/profiles/me').set(BFF).send({ ...body, availabilitySlots: ['mon_morning', 'mon_morning'] }).expect(400);
     await http().put('/api/v1/profiles/me').set(BFF).send({ ...body, availabilitySlots: ['unknown_slot'] }).expect(400);
     await http().put('/api/v1/profiles/me').set(BFF).send({ ...body, preferredDistance: 'up_to_100km' }).expect(400);
+    await http().put('/api/v1/profiles/me').set(BFF).send({ ...body, socialLinks: [{ provider: 'instagram', identifierOrUrl: 'ana', position: 1, visibility: 'public' }] }).expect(400);
+    await http().put('/api/v1/profiles/me').set(BFF).send({ ...body, socialLinks: [{ provider: 'instagram', identifierOrUrl: 'https://evil.test/ana', position: 1, visibility: 'private' }] }).expect(200);
+    await http().put('/api/v1/profiles/me').set(BFF).send({ ...body, socialLinks: undefined }).expect(400);
   });
 
   test('maps language errors to 422 with only the allowlisted reason', async () => {
-    const body = { revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'], interestIds: INTERESTS.map(({ id }) => id), presentation: null, photoVisibility: 'private', presentationVisibility: 'private', pronounSelection: null, customPronouns: null, pronounsVisibility: 'private', profession: 'Produtora', professionVisibility: 'private', languageCodes: ['pt', 'eo'], languagesVisibility: 'private', activityPreferenceCodes: [], activityPreferencesVisibility: 'private', availabilitySlots: [], preferredDistance: null };
+    const body = { revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'], interestIds: INTERESTS.map(({ id }) => id), presentation: null, photoVisibility: 'private', presentationVisibility: 'private', pronounSelection: null, customPronouns: null, pronounsVisibility: 'private', profession: 'Produtora', professionVisibility: 'private', languageCodes: ['pt', 'eo'], languagesVisibility: 'private', activityPreferenceCodes: [], activityPreferencesVisibility: 'private', availabilitySlots: [], preferredDistance: null, socialLinks: [] };
     for (const [code, reason] of [['UNKNOWN_LANGUAGE', 'unknown_language'], ['INACTIVE_LANGUAGE', 'inactive_language']] as const) {
       updateOwn.execute.mockImplementationOnce(async () => { throw new ProfileError(code, reason); });
       const response = await http().put('/api/v1/profiles/me').set(BFF).send(body).expect(422);
@@ -88,7 +91,7 @@ describe('profile HTTP contract v1 (SDD-015)', () => {
   });
 
   test('maps activity preference errors to 422 and validates the selection shape (ADR-044)', async () => {
-    const body = { revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'], interestIds: INTERESTS.map(({ id }) => id), presentation: null, photoVisibility: 'private', presentationVisibility: 'private', pronounSelection: null, customPronouns: null, pronounsVisibility: 'private', profession: null, professionVisibility: 'private', languageCodes: [], languagesVisibility: 'private', activityPreferenceCodes: ['small_group', 'retired_option'], activityPreferencesVisibility: 'authenticated', availabilitySlots: [], preferredDistance: null };
+    const body = { revision: 1, displayName: 'Ana', region: 'Centro', usageIntents: ['friendship'], interestIds: INTERESTS.map(({ id }) => id), presentation: null, photoVisibility: 'private', presentationVisibility: 'private', pronounSelection: null, customPronouns: null, pronounsVisibility: 'private', profession: null, professionVisibility: 'private', languageCodes: [], languagesVisibility: 'private', activityPreferenceCodes: ['small_group', 'retired_option'], activityPreferencesVisibility: 'authenticated', availabilitySlots: [], preferredDistance: null, socialLinks: [] };
     for (const [code, reason] of [['UNKNOWN_ACTIVITY_PREFERENCE', 'unknown_activity_preference'], ['INACTIVE_ACTIVITY_PREFERENCE', 'inactive_activity_preference']] as const) {
       updateOwn.execute.mockImplementationOnce(async () => { throw new ProfileError(code, reason); });
       const response = await http().put('/api/v1/profiles/me').set(BFF).send(body).expect(422);
@@ -111,13 +114,16 @@ describe('profile HTTP contract v1 (SDD-015)', () => {
   test('documents availability and distance as own-only fields', async () => {
     const response = await http().get('/api/v1/profiles/me').set(BFF).expect(200);
     expect(response.body.data).toMatchObject({ availabilitySlots: [], preferredDistance: null });
-    const document = SwaggerModule.createDocument(app, new DocumentBuilder().setTitle('EventMatch API').setVersion('0.15.0').build());
+    const document = SwaggerModule.createDocument(app, new DocumentBuilder().setTitle('EventMatch API').setVersion('0.16.0').build());
     const update = document.components?.schemas?.UpdateProfileDto as { required?: string[]; properties?: Record<string, { maxItems?: number; nullable?: boolean }> } | undefined;
     const own = document.components?.schemas?.OwnProfileResponseDto as { required?: string[]; properties?: Record<string, { nullable?: boolean }> } | undefined;
     expect(update?.required).toEqual(expect.arrayContaining(['availabilitySlots', 'preferredDistance']));
     expect(update?.properties?.availabilitySlots?.maxItems).toBe(28);
     expect(update?.properties?.preferredDistance?.nullable).toBe(true);
     expect(own?.required).toEqual(expect.arrayContaining(['availabilitySlots', 'preferredDistance']));
+    expect(update?.required).toEqual(expect.arrayContaining(['socialLinks']));
+    expect(update?.properties?.socialLinks?.maxItems).toBe(3);
+    expect(own?.required).toEqual(expect.arrayContaining(['socialLinks']));
   });
 
   test('creates a grant only with a trusted fingerprint and validates finalize ids', async () => {
@@ -131,8 +137,8 @@ describe('profile HTTP contract v1 (SDD-015)', () => {
   });
 
   test('publishes every profile path and the additive API version', () => {
-    const document = SwaggerModule.createDocument(app, new DocumentBuilder().setTitle('EventMatch API').setVersion('0.15.0').build());
-    expect(document.info.version).toBe('0.15.0');
+    const document = SwaggerModule.createDocument(app, new DocumentBuilder().setTitle('EventMatch API').setVersion('0.16.0').build());
+    expect(document.info.version).toBe('0.16.0');
     for (const path of ['/api/v1/profiles/me', '/api/v1/profiles/me/preview', '/api/v1/profiles/me/photo/uploads', '/api/v1/profiles/me/photo/uploads/{uploadId}/finalize', '/api/v1/profiles/me/photo']) expect(document.paths[path]).toBeDefined();
     const schemas = document.components?.schemas ?? {};
     const responseSchema = (path: string, method: 'get' | 'put' | 'post' | 'delete', status: string) => {

@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { check, customType, index, integer, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { check, customType, index, integer, pgTable, primaryKey, smallint, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { account } from '../../../../registration/infrastructure/persistence/schema/registration.schema';
 import { activityPreference, interest, language } from '../../../../catalog/infrastructure/persistence/schema/catalog.schema';
 const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => 'bytea' });
@@ -83,6 +83,24 @@ export const profileAvailabilitySlot = pgTable('profile_availability_slot', {
   check('profile_availability_slot_weekday_check', sql`${table.weekday} in ('mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun')`),
   check('profile_availability_slot_period_check', sql`${table.period} in ('early_hours', 'morning', 'afternoon', 'evening')`),
   index('profile_availability_slot_weekday_period_index').on(table.weekday, table.period),
+]);
+
+export const profileSocialLink = pgTable('profile_social_link', {
+  id: uuid('id').primaryKey(),
+  accountId: uuid('account_id').notNull().references(() => account.id, { onDelete: 'cascade' }),
+  provider: text('provider').notNull(),
+  canonicalIdentifier: text('canonical_identifier').notNull(),
+  position: smallint('position').notNull(),
+  visibility: text('visibility').notNull().default('private'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  check('profile_social_link_provider_check', sql`${table.provider} in ('instagram', 'linkedin', 'x')`),
+  check('profile_social_link_identifier_check', sql`char_length(${table.canonicalIdentifier}) between 1 and 100 and ${table.canonicalIdentifier} = lower(${table.canonicalIdentifier}) and ${table.canonicalIdentifier} !~ '\\s' and ((${table.provider} = 'instagram' and ${table.canonicalIdentifier} ~ '^[a-z0-9._]{1,30}$') or (${table.provider} = 'linkedin' and ${table.canonicalIdentifier} ~ '^[a-z0-9-]{3,100}$') or (${table.provider} = 'x' and ${table.canonicalIdentifier} ~ '^[a-z0-9_]{1,15}$'))`),
+  check('profile_social_link_position_check', sql`${table.position} between 1 and 3`),
+  check('profile_social_link_visibility_check', sql`${table.visibility} in ('private', 'authenticated', 'public')`),
+  uniqueIndex('profile_social_link_account_provider_unique').on(table.accountId, table.provider),
+  uniqueIndex('profile_social_link_account_position_unique').on(table.accountId, table.position),
 ]);
 
 export const profilePhotoAsset = pgTable('profile_photo_asset', {

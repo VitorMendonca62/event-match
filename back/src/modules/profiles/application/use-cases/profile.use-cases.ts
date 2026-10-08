@@ -10,6 +10,7 @@ import type { ProfileInvitationSubjectPort } from '../../domain/ports/outbound/p
 import type { ProfileImageStorePort, ProfileMediaRepositoryPort } from '../../domain/ports/outbound/profile-media.ports';
 import { ProfileCompletion } from '../../domain/services/profile-completion';
 import { ProfilePreviewProjector } from '../../domain/services/profile-preview-projector';
+import { normalizeSocialLinkDrafts, toSocialProfileUrl, type SocialLinkDraft } from '../../domain/value-objects/social-link';
 import type { ProfileTelemetryPort } from '../../domain/ports/outbound/profile-telemetry.port';
 import { observed } from '../services/profile-telemetry';
 import type { ProfileMediaPolicy } from './profile-media.use-cases';
@@ -47,6 +48,14 @@ function ownView(profile: ReturnType<Profile['snapshot']>, hasActivePhoto = prof
     languages: profile.languages, languagesVisibility: profile.languagesVisibility,
     activityPreferences: profile.activityPreferences, activityPreferencesVisibility: profile.activityPreferencesVisibility,
     availabilitySlots: profile.availabilitySlots, preferredDistance: profile.preferredDistance,
+    socialLinks: profile.socialLinks.map((link) => ({
+      id: link.id,
+      provider: link.provider,
+      identifier: link.canonicalIdentifier,
+      position: link.position,
+      visibility: link.visibility,
+      url: toSocialProfileUrl(link),
+    })),
     completion: new ProfileCompletion().calculate(profile, hasActivePhoto),
   };
 }
@@ -60,6 +69,7 @@ export type UpdateOwnProfileInput = Readonly<{
   languageCodes: readonly string[]; languagesVisibility: EditableProfileVisibility;
   activityPreferenceCodes: readonly string[]; activityPreferencesVisibility: EditableProfileVisibility;
   availabilitySlots: readonly AvailabilitySlot[]; preferredDistance: PreferredDistance | null;
+  socialLinks: readonly SocialLinkDraft[];
 }>;
 
 export class GetOwnProfile {
@@ -113,6 +123,9 @@ export class UpdateOwnProfile {
       if (foundPreferences.length !== requestedPreferences.size) throw new ProfileError('UNKNOWN_ACTIVITY_PREFERENCE', 'unknown_activity_preference');
       const currentPreferences = new Set(current.activityPreferenceCodes);
       if (foundPreferences.some(({ code, active }) => !active && !currentPreferences.has(code))) throw new ProfileError('INACTIVE_ACTIVITY_PREFERENCE', 'inactive_activity_preference');
+      const currentSocialLinkIds = new Set(current.socialLinks.map((link) => link.id));
+      if (input.socialLinks.some((link) => link.id !== undefined && !currentSocialLinkIds.has(link.id))) throw new ProfileError('INVALID_PROFILE_CONTENT');
+      const socialLinks = normalizeSocialLinkDrafts(input.socialLinks, () => crypto.randomUUID());
       const { activityPreferenceCodes: currentPreferenceCodes, ...currentRest } = current;
       const hydratedCurrent = {
         ...currentRest,
@@ -130,6 +143,7 @@ export class UpdateOwnProfile {
         // findByCodes returns catalog order, so the payload order is ignored.
         activityPreferences: foundPreferences, activityPreferencesVisibility: input.activityPreferencesVisibility,
         availabilitySlots: input.availabilitySlots, preferredDistance: input.preferredDistance,
+        socialLinks,
       });
       if (await this.profiles.updateIfRevision(context, next, input.revision) === 'conflict') throw new ProfileError('PROFILE_REVISION_CONFLICT');
       return { profile: next.snapshot(), photo: this.mediaPolicy.enabled ? await this.media.findActive(context, input.accountId) : null };

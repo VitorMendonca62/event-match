@@ -1,4 +1,5 @@
 import type { ProfileState } from '../entities/profile';
+import { toSocialProfileUrl } from '../value-objects/social-link';
 
 export type ProfilePreview = Readonly<{
   displayName: string;
@@ -11,6 +12,7 @@ export type ProfilePreview = Readonly<{
   profession?: string;
   languages?: ReadonlyArray<{ code: string; label: string }>;
   activityPreferences?: ReadonlyArray<{ code: string; label: string }>;
+  socialLinks?: ReadonlyArray<{ provider: ProfileState['socialLinks'][number]['provider']; identifier: string; url: string }>;
 }>;
 
 export type PronounLabels = Readonly<Record<Exclude<ProfileState['pronounSelection'], null | 'other' | 'prefer_not_to_say'>, string>>;
@@ -33,6 +35,13 @@ export class ProfilePreviewProjector {
         : {}),
       ...(profile.activityPreferencesVisibility === 'authenticated' && profile.activityPreferences.length > 0
         ? { activityPreferences: profile.activityPreferences.map(({ code, label }) => ({ code, label })) }
+        : {}),
+      ...(profile.socialLinks.some(({ visibility }) => visibility === 'authenticated')
+        ? {
+            socialLinks: profile.socialLinks
+              .filter(({ visibility }) => visibility === 'authenticated')
+              .map((link) => ({ provider: link.provider, identifier: link.canonicalIdentifier, url: toSocialProfileUrl(link) })),
+          }
         : {}),
     };
   }

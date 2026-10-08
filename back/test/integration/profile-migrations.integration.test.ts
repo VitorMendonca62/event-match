@@ -33,7 +33,7 @@ function seedStatement(file: string, insert: string): string {
 const languageSeedStatement = () => seedStatement('0008_profile_optional_identity.sql', 'INSERT INTO "language"');
 const activityPreferenceSeedStatement = () => seedStatement('0009_profile_activity_preferences.sql', 'INSERT INTO "activity_preference"');
 
-describe('migrations 0007 to 0010 over existing 0006 profile data', () => {
+describe('migrations 0007 to 0012 over existing 0006 profile data', () => {
   let database: EphemeralDatabase;
   let folder: string;
 
@@ -167,7 +167,7 @@ describe('migrations 0007 to 0010 over existing 0006 profile data', () => {
     ]);
     expect(catalog.rows[0]).toEqual({ code: 'outdoor', label_pt_br: 'Ao ar livre', sort_order: 10 });
     const ledger = await database.pool.query(`select count(*)::int as count from drizzle.__drizzle_migrations`);
-    expect(ledger.rows).toEqual([{ count: 11 }]);
+    expect(ledger.rows).toEqual([{ count: 12 }]);
 
     await expect(database.pool.query(`update profile set activity_preferences_visibility = 'everyone' where account_id = $1`, [id])).rejects.toMatchObject({ code: '23514' });
     await expect(database.pool.query(`insert into activity_preference (code, label_pt_br, sort_order) values ('Bad-Code', 'Inválida', 999)`)).rejects.toMatchObject({ code: '23514' });
@@ -214,6 +214,39 @@ describe('migrations 0007 to 0010 over existing 0006 profile data', () => {
       await client.query('begin');
       await client.query(`delete from account where id = $1`, [id]);
       const relation = await client.query(`select count(*)::int as count from profile_availability_slot where account_id = $1`, [id]);
+      expect(relation.rows).toEqual([{ count: 0 }]);
+    } finally {
+      await client.query('rollback');
+      client.release();
+    }
+  });
+
+  test('adds social links with canonical-value checks, unique ordering and cascade deletion', async () => {
+    const id = '30000000-0000-7000-8000-000000000007';
+    const tables = await database.pool.query(`select table_name from information_schema.tables where table_schema = 'public' and table_name = 'profile_social_link'`);
+    expect(tables.rows).toEqual([{ table_name: 'profile_social_link' }]);
+
+    await database.pool.query(`
+      insert into profile_social_link (id, account_id, provider, canonical_identifier, position, visibility)
+      values
+        ('70000000-0000-7000-8000-000000000001', $1, 'instagram', 'ana.silva', 1, 'private'),
+        ('70000000-0000-7000-8000-000000000002', $1, 'linkedin', 'ana-silva', 2, 'authenticated')
+    `, [id]);
+    const links = await database.pool.query(`select provider, canonical_identifier, position, visibility from profile_social_link where account_id = $1 order by position`, [id]);
+    expect(links.rows).toEqual([
+      { provider: 'instagram', canonical_identifier: 'ana.silva', position: 1, visibility: 'private' },
+      { provider: 'linkedin', canonical_identifier: 'ana-silva', position: 2, visibility: 'authenticated' },
+    ]);
+    await expect(database.pool.query(`insert into profile_social_link (id, account_id, provider, canonical_identifier, position, visibility) values ('70000000-0000-7000-8000-000000000003', $1, 'instagram', 'other', 3, 'private')`, [id])).rejects.toMatchObject({ code: '23505' });
+    await expect(database.pool.query(`insert into profile_social_link (id, account_id, provider, canonical_identifier, position, visibility) values ('70000000-0000-7000-8000-000000000003', $1, 'x', 'bad-handle', 3, 'private')`, [id])).rejects.toMatchObject({ code: '23514' });
+    await expect(database.pool.query(`insert into profile_social_link (id, account_id, provider, canonical_identifier, position, visibility) values ('70000000-0000-7000-8000-000000000003', $1, 'instagram', 'other', 2, 'private')`, [id])).rejects.toMatchObject({ code: '23505' });
+    await expect(database.pool.query(`insert into profile_social_link (id, account_id, provider, canonical_identifier, position, visibility) values ('70000000-0000-7000-8000-000000000003', $1, 'instagram', 'other', 3, 'public')`, [id])).resolves.toBeDefined();
+
+    const client = await database.pool.connect();
+    try {
+      await client.query('begin');
+      await client.query(`delete from account where id = $1`, [id]);
+      const relation = await client.query(`select count(*)::int as count from profile_social_link where account_id = $1`, [id]);
       expect(relation.rows).toEqual([{ count: 0 }]);
     } finally {
       await client.query('rollback');

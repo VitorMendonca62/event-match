@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { and, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 
 import type { TransactionContext } from '../../../../shared/application/ports/unit-of-work.port';
 import { resolveExecutor } from '../../../../shared/infrastructure/persistence/resolve-executor';
 import type { Profile, ProfileState, UsageIntent } from '../../domain/entities/profile';
 import { toCanonicalOrder, type AvailabilitySlot } from '../../domain/value-objects/availability';
 import type { PersistedProfileState, ProfileRepositoryPort } from '../../domain/ports/outbound/profile-repository.port';
-import { accountInterest, profile, profileActivityPreference, profileAvailabilitySlot, profileLanguage, profilePhotoAsset, profileUsageIntent } from './schema/profiles.schema';
+import { accountInterest, profile, profileActivityPreference, profileAvailabilitySlot, profileLanguage, profilePhotoAsset, profileSocialLink, profileUsageIntent } from './schema/profiles.schema';
 
 @Injectable()
 export class DrizzleProfileRepositoryAdapter implements ProfileRepositoryPort {
@@ -14,7 +14,7 @@ export class DrizzleProfileRepositoryAdapter implements ProfileRepositoryPort {
     const database = resolveExecutor(context);
     const [row] = await database.select().from(profile).where(eq(profile.accountId, accountId)).limit(1);
     if (!row?.displayName || !row.region) return null;
-    const [intents, interests, languages, preferences, availability, photos] = await Promise.all([
+    const [intents, interests, languages, preferences, availability, photos, socialLinks] = await Promise.all([
       database.select({ value: profileUsageIntent.usageIntent }).from(profileUsageIntent).where(eq(profileUsageIntent.accountId, accountId)),
       database.select({ id: accountInterest.interestId }).from(accountInterest).where(eq(accountInterest.accountId, accountId)),
       database.select({ code: profileLanguage.languageCode })
@@ -27,6 +27,14 @@ export class DrizzleProfileRepositoryAdapter implements ProfileRepositoryPort {
         .where(eq(profileAvailabilitySlot.accountId, accountId)),
       database.select({ publicId: profilePhotoAsset.publicId }).from(profilePhotoAsset)
         .where(and(eq(profilePhotoAsset.accountId, accountId), eq(profilePhotoAsset.state, 'active'))).limit(1),
+      database.select({
+        id: profileSocialLink.id,
+        provider: profileSocialLink.provider,
+        canonicalIdentifier: profileSocialLink.canonicalIdentifier,
+        position: profileSocialLink.position,
+        visibility: profileSocialLink.visibility,
+      }).from(profileSocialLink)
+        .where(eq(profileSocialLink.accountId, accountId)).orderBy(asc(profileSocialLink.position)),
     ]);
     return {
       accountId, revision: row.revision, displayName: row.displayName, region: row.region,
@@ -42,6 +50,13 @@ export class DrizzleProfileRepositoryAdapter implements ProfileRepositoryPort {
       activityPreferencesVisibility: row.activityPreferencesVisibility as ProfileState['activityPreferencesVisibility'],
       availabilitySlots: toCanonicalOrder(availability.map(({ weekday, period }) => `${weekday}_${period}` as AvailabilitySlot)),
       preferredDistance: row.preferredDistance as ProfileState['preferredDistance'],
+      socialLinks: socialLinks.map((link) => ({
+        id: link.id,
+        provider: link.provider as ProfileState['socialLinks'][number]['provider'],
+        canonicalIdentifier: link.canonicalIdentifier,
+        position: link.position,
+        visibility: link.visibility as ProfileState['socialLinks'][number]['visibility'],
+      })),
       // Delivery URLs are attached by the media use case/adapter; persistence never invents one.
       photo: photos.length > 0 ? { deliveryUrl: '', width: 512, height: 512 } : null,
     };
@@ -77,6 +92,20 @@ export class DrizzleProfileRepositoryAdapter implements ProfileRepositoryPort {
         const separator = slot.indexOf('_');
         return { accountId: value.accountId, weekday: slot.slice(0, separator), period: slot.slice(separator + 1), selectedAt: selectedAtDate };
       }));
+    }
+    await database.delete(profileSocialLink).where(eq(profileSocialLink.accountId, value.accountId));
+    if (value.socialLinks.length > 0) {
+      const now = new Date();
+      await database.insert(profileSocialLink).values(value.socialLinks.map((link) => ({
+        id: link.id,
+        accountId: value.accountId,
+        provider: link.provider,
+        canonicalIdentifier: link.canonicalIdentifier,
+        position: link.position,
+        visibility: link.visibility,
+        createdAt: now,
+        updatedAt: now,
+      })));
     }
     return 'updated';
   }
