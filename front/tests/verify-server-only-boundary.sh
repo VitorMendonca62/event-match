@@ -48,13 +48,27 @@ if [[ ${status} -eq 0 ]]; then
   exit 1
 fi
 
-if ! grep -Eq "['\"]use client['\"]" "${FIXTURE_DIR}/app/page.tsx" || ! grep -q "shared/server/catalog-bff" "${FIXTURE_DIR}/app/page.tsx"; then
-  echo 'The client fixture no longer imports the protected catalog BFF.' >&2
+if ! grep -Eq "['\"]use client['\"]" "${FIXTURE_DIR}/app/page.tsx" || \
+  ! grep -q "shared/server/catalog-bff" "${FIXTURE_DIR}/app/page.tsx" || \
+  ! grep -q "shared/server/profile-bff" "${FIXTURE_DIR}/app/page.tsx"; then
+  echo 'The client fixture no longer imports both protected BFF modules.' >&2
   exit 1
 fi
-if ! grep -qi 'server-only' <<<"${output}" || ! grep -q 'catalog-bff' <<<"${output}"; then
-  echo 'The Next build did not attribute the rejection to catalog-bff crossing the server-only boundary.' >&2
-  exit 1
+build_evidence="${output}"
+if [[ -d "${TEMP_FRONT_DIR}/.next/server" ]]; then
+  for marker in server-only catalog-bff profile-bff; do
+    marker_evidence="$(rg -n -F -m 1 "${marker}" "${TEMP_FRONT_DIR}/.next/server" || true)"
+    if [[ -n "${marker_evidence}" ]]; then
+      build_evidence+=$'\n'
+      build_evidence+="${marker_evidence}"
+    fi
+  done
 fi
+for marker in server-only catalog-bff profile-bff; do
+  if ! grep -qi "${marker}" <<<"${build_evidence}"; then
+    echo "The Next build did not attribute the rejection to ${marker} crossing the server-only boundary." >&2
+    exit 1
+  fi
+done
 
-echo 'The client fixture was rejected by the Next build through catalog-bff and server-only.'
+echo 'The client fixture was rejected by the Next build through both BFF modules and server-only.'
