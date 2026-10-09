@@ -76,7 +76,7 @@ O MVP permite descobrir, criar e participar de encontros informais e gratuitos, 
 | RF018 | Rascunho | Salvar e recuperar evento incompleto, inclusive ao abandonar o preenchimento. |
 | RF019 | Validação do evento | Informar campos ausentes, data passada, horário inválido e capacidade ausente. |
 | RF020 | Prévia do evento | Mostrar visão pública e distinguir informações públicas das reservadas. |
-| RF021 | Publicação | Publicar somente após confirmação de evento presencial, gratuito, informal e em local público. |
+| RF021 | Publicação | Publicar somente após confirmação de evento presencial, gratuito, informal e em local elegível conforme RN020. |
 | RF022 | Descoberta | Recomendar por região, interesses e intenção, mostrando dados essenciais e vagas. |
 | RF023 | Busca e filtros | Buscar por texto e filtrar por data, horário, distância, categoria, vagas, acessibilidade e faixa etária. |
 | RF024 | Detalhes | Exibir proposta, anfitrião, vagas e modalidade sem revelar o ponto exato a não confirmados. |
@@ -190,7 +190,7 @@ O MVP permite descobrir, criar e participar de encontros informais e gratuitos, 
 - **RN017:** a mesma pessoa poderá ser participante e anfitriã em eventos diferentes.
 - **RN018:** anfitrião deverá ter foto, apresentação, três interesses, ambos os contatos confirmados e regras aceitas.
 - **RN019:** somente encontros presenciais, informais e gratuitos serão publicados no MVP.
-- **RN020:** eventos ocorrerão em locais públicos ou estabelecimentos identificáveis; residências serão proibidas.
+- **RN020:** eventos ocorrerão somente em locais públicos ou estabelecimentos identificáveis; residências serão proibidas. A anfitriã declara que o local selecionado não é residência, sem que o fluxo comum colete endereço, bairro ou nome do local.
 - **RN021:** o ponto exato será visível ao anfitrião e aos confirmados; a equipe só poderá acessá-lo diante de necessidade concreta de atendimento, segurança ou análise de denúncia, por profissional autorizado para o caso.
 - **RN022:** solicitação pendente não reservará vaga e não poderá haver duplicidade.
 - **RN023:** entrada automática será impedida em evento lotado, cancelado, iniciado ou com restrição aplicável.
@@ -223,9 +223,9 @@ O MVP permite descobrir, criar e participar de encontros informais e gratuitos, 
 - **RN044:** com menos de 24 horas, será possível responder até duas horas antes do início.
 - **RN045:** se a mudança ocorrer faltando menos de duas horas, será possível responder até o início.
 - **RN046:** a vaga ficará reservada no prazo; silêncio cancelará a participação sem prejuízo ao histórico.
-- **RN047:** anfitrião novo terá um evento futuro ativo e até dois publicados a cada 30 dias.
-- **RN048:** deixará de ser novo após dois eventos realizados e encerrados corretamente, sem ocorrência grave ou denúncia relevante em análise.
-- **RN049:** anfitrião experiente poderá manter até três eventos futuros simultâneos.
+- **RN047:** no MVP, toda anfitriã poderá manter somente um evento futuro ativo e publicar no máximo dois eventos em uma janela móvel de 30 dias.
+- **RN048:** o MVP não classificará anfitriãs como novas ou experientes para definir limites de criação de eventos.
+- **RN049:** a capacidade máxima configurável de um evento no MVP será de 12 pessoas. A futura diferenciação entre categorias gratuita e paga de anfitriã exigirá produto, autorização, cobrança e decisão arquitetural próprios; ela não altera os limites deste MVP.
 
 ### 3.5 Conversa e bloqueio
 

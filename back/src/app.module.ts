@@ -8,6 +8,7 @@ import { ProfilesModule } from './modules/profiles/profiles.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { validateEnv } from './shared/infrastructure/config/env';
 import { PersistenceModule } from './shared/infrastructure/persistence/persistence.module';
+import { EventsModule } from './modules/events/events.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { PersistenceModule } from './shared/infrastructure/persistence/persisten
     CatalogModule,
     RegistrationModule,
     IdentityAccessModule,
+    EventsModule,
     HealthModule,
   ],
 })

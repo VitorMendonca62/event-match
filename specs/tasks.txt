@@ -1,3 +1,80 @@
+TASK 30 — Campos opcionais de custo, faixa etária e orientações do evento
+
+Objetivo:
+Permitir que a anfitriã informe, quando aplicável, custo estimado individual, faixa etária, itens a levar e orientações adicionais do evento, com limites claros, projeções seguras e sem transformar encontro gratuito em cobrança.
+
+Valor para a pessoa usuária:
+Como pessoa interessada em um encontro, quero consultar informações opcionais relevantes antes de solicitar participação, para decidir com clareza se ele é compatível comigo.
+
+Requisitos de origem e dependências:
+- Rastreia RF017, RF023, RN014, RN019, RN027, RN029, RN035, RN112, RNF001–RNF002 e RNF010.
+- Depende da TASK 23.1 para o agregado, contrato, rascunho e projeções de Eventos.
+- Não substitui a TASK 19 para acessibilidade/alimentação nem a TASK 29 para capa e galeria de fotos.
+
+Escopo:
+- Definir semântica, limites e validações de custo estimado individual, faixa etária, itens a levar e orientações adicionais.
+- Projetar os campos somente para as audiências autorizadas, sem idade exata, dados de saúde, contato, endereço ou conteúdo inseguro em respostas e telemetria.
+- Atualizar agregado, APIs/BFF, migrations, OpenAPI, documentação e testes correspondentes após as decisões de produto e privacidade.
+
+Fora de escopo:
+- Cobrança, pagamento, comissão, ingresso, evento pago ou conversão de evento gratuito em pago.
+- Capa/galeria de fotos (TASK 29), acessibilidade/alimentação (TASK 19), localização exata, participação, filtros de descoberta ou regras de recusa.
+
+Critérios de aceite:
+- Custo estimado é apenas informativo, não permite cobrança e não altera a gratuidade do evento.
+- Faixa etária usa representação aprovada sem expor nascimento ou idade exata e não habilita discriminação ou critérios ocultos.
+- Itens e orientações respeitam limites, moderação e projeção segura; nenhum campo opcional revela endereço, contato ou dado sensível.
+- A ausência dos campos não impede salvar rascunho nem publicar o evento.
+
+Situação para planejamento:
+- Bloqueada até a TASK 23.1 estabilizar o agregado e produto definir vocabulário/limites de custo, faixas etárias permitidas, tamanho e política de conteúdo para itens/orientações, audiências e moderação. Exigirá revisão da ADR-056 ou ADR própria para o contrato opcional.
+
+Estimativa inicial:
+- Complexidade Fibonacci: 13.
+- Risco de deploy: alto, por envolver privacidade etária, gratuidade, conteúdo livre, projeções públicas e integração frontend/backend.
+
+---
+
+TASK 29 — Capa e galeria de fotos do evento
+
+Objetivo:
+Permitir que a anfitriã adicione uma capa e até cinco fotos à galeria de cada evento, com ordenação, substituição, remoção, entrega autorizada e ciclo de vida seguro.
+
+Valor para a pessoa usuária:
+Como anfitriã, quero ilustrar meu encontro com uma capa e fotos complementares, para comunicar melhor a proposta sem expor pessoas, locais ou conteúdo inadequado.
+
+Requisitos de origem e dependências:
+- Depende da TASK 23.1 para agregado, posse, estados e projeções autorizadas do evento.
+- Reutiliza os princípios de upload, normalização, remoção de EXIF, entrega e limpeza das ADR-039 e ADR-042; não reutiliza automaticamente o modelo de perfil.
+- Requer política de moderação, denúncia, recurso, retenção e audiência definida; a ADR-047 é referência de padrão, mas é específica de fotos de perfil.
+- Rastreia RF017, RF020–RF021, RF049, RF077, RF091, RN020–RN021, RN075–RN077, RN150–RN155 e RNF001–RNF002.
+
+Escopo:
+- [ ] Uma capa independente e até cinco fotos de galeria ativas por evento, com ordenação estável, substituição e remoção pela anfitriã autorizada.
+- [ ] Upload direto assinado, validação autoritativa, transformação segura, remoção de metadados, derivados de entrega, limites, estados de moderação e limpeza idempotente.
+- [ ] Projeções de mídia separadas por audiência e estado do evento, sem URL persistida, coordenada, EXIF, endereço ou conteúdo privado em respostas e telemetria.
+- [ ] Contratos HTTP/BFF, migrations, documentação, OpenAPI, observabilidade segura e testes de unidade, integração e E2E correspondentes.
+
+Fora de escopo:
+- Vídeos, áudios, stories, comentários, reações, reconhecimento facial, edição de imagem no produto ou importação de redes sociais.
+- Fotos de perfil, galeria de perfil, conversa coletiva, publicidade paga, conteúdo gerado por participantes ou acesso a câmera/localização do aparelho.
+- Liberar imagem a uma audiência antes de a política de moderação e de visibilidade ser aceita.
+
+Critérios de aceite:
+- Somente a anfitriã autorizada administra uma capa e no máximo cinco fotos de galeria do próprio evento; falha, concorrência ou upload incompleto não cria item visível.
+- Arquivos são validados, normalizados e entregues por derivados autorizados; originais, EXIF, URLs técnicas, localização e conteúdo de moderação não chegam a respostas, logs ou telemetria.
+- A capa e a galeria só aparecem para a audiência e estado de evento expressamente aprovados; foto pendente, sinalizada, reprovada ou com moderação indisponível falha fechada para terceiros.
+- Remoção, cancelamento, exclusão da conta e expiração acionam limpeza idempotente sem quebrar a projeção do evento.
+
+Situação para planejamento:
+- Bloqueada até a TASK 23.1 estabilizar o agregado de Eventos e produto definir: audiência da capa e da galeria antes/depois da confirmação; se a capa conta no limite de cinco; limites de arquivo/formato; política de moderação, denúncia, recurso e retenção; e se imagens de pessoas exigem consentimento adicional. Exigirá ADRs próprios para modelo de assets, moderação, visibilidade e lifecycle.
+
+Estimativa inicial:
+- Complexidade Fibonacci: 13.
+- Risco de deploy: alto, por envolver conteúdo visual, privacidade de localização/pessoas, moderação, fornecedor de mídia e limpeza de dados.
+
+---
+
 TASK 28 — Reorganizar a edição de perfil em etapas compreensíveis
 
 Status: implementada no frontend em 2026-10-08 — página única em quatro grupos (Sobre você; Identidade e comunicação; Interesses e encontros; Quando e até onde), índice fixo com status salvo por grupo, ações de salvar/prévia sempre visíveis com indicação de alterações não salvas e controles de visibilidade compactos. Sem salvamento parcial, sem mudança de contrato/BFF e sem ADR (nenhuma decisão material). Direção registrada no surface brief `front/.impeccable/surfaces/src-app-perfil-page-tsx.md`; E2E de perfil, acessibilidade e teclado verdes.
@@ -114,7 +191,7 @@ Valor para a pessoa usuária:
 Como participante ou anfitriã, quero entrar e administrar encontros de forma previsível, com vagas, estados e comunicações coerentes e seguras.
 
 Requisitos de origem e dependências:
-- Depende da TASK 23 para evento publicado, seus estados iniciais e visão detalhada autorizada.
+- Depende da TASK 23.1 para evento publicado, seus estados iniciais e visão detalhada autorizada.
 - Rastreia RF028–RF038, RF085, RF103, RN023–RN049, RN125–RN130 e RN167.
 
 Escopo:
@@ -131,7 +208,7 @@ Critérios de aceite:
 - Mudanças relevantes, prazos e notificações seguem as regras do DER e não revelam razões privadas indevidamente.
 
 Situação para planejamento:
-- A planejar após a TASK 23; exigirá ADRs para máquina de estados, concorrência, reserva de vaga, autorização entre contextos e notificações.
+- A planejar após a TASK 23.1; exigirá ADRs para máquina de estados, concorrência, reserva de vaga, autorização entre contextos e notificações.
 
 Estimativa inicial:
 - Complexidade Fibonacci: 13.
@@ -148,7 +225,7 @@ Valor para a pessoa usuária:
 Como participante, quero encontrar encontros compatíveis na minha região e entender a proposta antes de manifestar interesse, sem comprometer a privacidade do grupo.
 
 Requisitos de origem e dependências:
-- Depende da TASK 23 para eventos publicados, catálogo de atividades e projeções públicas mínimas.
+- Depende da TASK 23.1 para eventos publicados, catálogo de atividades e projeções públicas mínimas.
 - Consome a região estruturada da TASK 20 quando ela estiver disponível; não deve inferir localização precisa de dados legados.
 - Rastreia RF022–RF027, RF102, RN026–RN027, RN107, RN147 e RN156–RN157.
 
@@ -171,7 +248,7 @@ Critérios de aceite:
 - “Surpreenda-me” nunca seleciona evento indisponível, dispensado, incompatível por bloqueio/restrição ou favorecido por pagamento; a pessoa pode solicitar outra sugestão.
 
 Situação para planejamento:
-- A planejar após a TASK 23 e com o contrato de região da TASK 20 estabilizado; exigirá ADRs para projeções, filtros, ordenação/variedade, privacidade dos marcadores e uso de provedora de mapas, se houver.
+- A planejar após a TASK 23.1 e com o contrato de região da TASK 20 estabilizado; exigirá ADRs para projeções, filtros, ordenação/variedade, privacidade dos marcadores e uso de provedora de mapas, se houver.
 
 Estimativa inicial:
 - Complexidade Fibonacci: 8.
@@ -179,24 +256,67 @@ Estimativa inicial:
 
 ---
 
-TASK 23 — Fundação de eventos: criação, rascunho, prévia e publicação
+TASK 23.2 — Frontend de eventos: criação, rascunho, prévia e publicação
 
 Objetivo:
-Criar o bounded context de Eventos para que anfitriãs habilitadas criem encontros, salvem rascunhos, validem dados, revisem a prévia e publiquem somente encontros presenciais, gratuitos, informais e em locais públicos.
+Entregar a experiência web para que anfitriãs habilitadas criem encontros, salvem rascunhos, revisem a prévia e publiquem eventos por meio do contrato da TASK 23.1.
+
+Valor para a pessoa usuária:
+Como anfitriã habilitada, quero preparar e publicar meu encontro em um fluxo claro e seguro, para conferir as informações antes de disponibilizá-lo às demais pessoas.
+
+Requisitos de origem e dependências:
+- Depende da TASK 23.1 para o contrato HTTP, estados, autorização, validações e projeções de privacidade do evento.
+- Depende da TASK 20 para selecionar UF e município no formato estruturado adotado pelo produto.
+- Rastreia RF016–RF021, RF084–RF085, RN005, RN017–RN022, RN028–RN031, RN047–RN049 e RN137, na perspectiva da interface e do BFF.
+
+Escopo:
+- Criar páginas, componentes e estados de interface para iniciar, editar, recuperar, revisar e publicar rascunhos de eventos.
+- Implementar os BFFs/Route Handlers mínimos necessários, limitados a autenticação, autorização de entrada, proxy e composição permitida pelo contrato do backend.
+- Integrar o campo de região estruturada, validações, mensagens de erro, estados de carregamento, sucesso e falha, sem duplicar regras de negócio.
+- Exibir prévia e dados públicos conforme a audiência autorizada, sem renderizar ponto exato, contatos ou detalhes privados.
+- Adicionar testes de componentes, integração do BFF e fluxo E2E do caminho crítico, além de documentação de interface quando necessária.
+
+Fora de escopo:
+- Regras de domínio, persistência, migrations, autorização final, validação de publicação ou qualquer acesso direto ao PostgreSQL.
+- Descoberta, solicitação/participação, conversa, avaliações, denúncia, evento pago, remoto ou residencial.
+- Consulta direta ao IBGE ou a qualquer provedor externo de localização pelo navegador.
+
+Critérios de aceite:
+- Uma anfitriã elegível consegue iniciar, salvar, recuperar, editar, revisar e publicar um evento usando somente o BFF/API definido.
+- A interface apresenta erros e estados do contrato sem transformar regras de negócio em validações exclusivas do frontend.
+- A prévia e as respostas exibidas no frontend nunca mostram ponto exato, contatos ou dados privados para uma audiência não autorizada.
+- Route Handlers não acessam PostgreSQL nem duplicam a API de negócio; os testes cobrem sucesso, validação, sessão expirada, conflito e indisponibilidade.
+- Lint, typecheck, testes e build do frontend passam.
+
+Situação para planejamento:
+- A planejar após a TASK 23.1 e a estabilização do contrato de região da TASK 20; exigirá brief visual/artefatos do Impeccable e decisões de navegação, formulários, acessibilidade, composição BFF e cobertura E2E.
+
+Estimativa inicial:
+- Complexidade Fibonacci: 8.
+- Risco de deploy: alto, por envolver fluxo autenticado, formulário multiestado, privacidade de projeções e integração com contrato novo.
+
+---
+
+TASK 23.1 — Backend de eventos: criação, rascunho, prévia e publicação
+
+Status: implementada — SDD-025 concluída em 2026-10-08; backend `0.18.0` com migration `0014_events`, API desligada por padrão em `EVENTS_HTTP_ENABLED=false`. ADR-054–ADR-058, ADR-060 e ADR-061 aplicáveis à TASK 23.1 estão aceitas. A revisão jurídica de retenção é gate de lançamento, não bloqueia a implementação técnica.
+
+Objetivo:
+Criar o bounded context de Eventos no backend para que anfitriãs habilitadas criem encontros, salvem rascunhos, validem dados, revisem a prévia e publiquem encontros presenciais, gratuitos e informais em locais elegíveis.
 
 Valor para a pessoa usuária:
 Como anfitriã habilitada, quero preparar e publicar um encontro com segurança e clareza, para reunir pessoas em uma atividade local compatível com o propósito do EventMatch.
 
 Requisitos de origem e dependências:
-- Depende da conclusão funcional da TASK 20 para usar município/UF estruturados como região do evento; até lá não inicia implementação.
+- Consome o contrato de município/UF estruturados entregue pela TASK 20 como região aproximada do evento.
 - Consome a capacidade de anfitriã já definida no perfil, sem duplicar regras de completude no frontend.
 - Rastreia RF016–RF021, RF084–RF085, RN005, RN017–RN022, RN028–RN031, RN047–RN049 e RN137.
 
 Escopo:
-- Criar o módulo NestJS hexagonal de Eventos, persistência PostgreSQL, contratos HTTP documentados e BFFs mínimos necessários.
+- Criar o módulo NestJS hexagonal de Eventos, suas portas, casos de uso, adapters de persistência PostgreSQL e contratos HTTP documentados.
 - Criar, editar e recuperar rascunhos; validar informações; pré-visualizar; publicar evento elegível.
-- Modelar estados iniciais e separar região aproximada de ponto exato reservado aos papéis autorizados.
-- Registrar alterações e observabilidade sem conteúdo privado; atualizar documentação, OpenAPI e testes.
+- Modelar estados iniciais; projetar área aproximada estável sem bairro e reservar a coordenada exata aos papéis autorizados.
+- Registrar alterações e observabilidade sem conteúdo privado; atualizar documentação, OpenAPI e testes do backend.
 
 Fora de escopo:
 - Descoberta, solicitação/participação, conversa, avaliações, denúncia, evento pago, remoto ou residencial.
@@ -204,11 +324,11 @@ Fora de escopo:
 Critérios de aceite:
 - Somente perfil elegível cria ou publica evento; regras de presença, gratuidade, informalidade e local público são aplicadas no backend.
 - Rascunho é recuperável e publicação bloqueia dados inválidos, data passada e capacidade ausente.
-- Prévia e respostas públicas nunca expõem ponto exato, contatos ou detalhes privados.
-- O frontend permanece consumidor do BFF/API; PostgreSQL é acessado somente por adaptadores do backend.
+- Prévia e respostas públicas nunca expõem bairro, ponto exato, contatos ou detalhes privados; a coordenada exata é liberada somente à anfitriã e participação confirmada.
+- Os contratos HTTP documentados retornam somente os dados autorizados para cada audiência; PostgreSQL é acessado somente por adaptadores do backend.
 
 Situação para planejamento:
-- Pronta para planejamento assim que a TASK 20 estabilizar o contrato de região. Exigirá ADRs para máquina de estados, endereço/ponto exato, limites de anfitriã, persistência e projeções de privacidade.
+- Planejamento pronto em `specs/sdd-025-backend-eventos/tasks.md`. ADRs 054–058, 060 e 061 aceitas definem agregado, localização, limites, contrato, proibição de residência e fuso. Revisão jurídica de retenção é gate de lançamento; o BFF e a interface ficam na TASK 23.2.
 
 Estimativa inicial:
 - Complexidade Fibonacci: 13.
@@ -314,7 +434,7 @@ Estimativa inicial:
 
 TASK 20 — Região estruturada por estado e município
 
-Status: planejada e pronta para implementação — SDD-023, ADR-052 e ADR-053 aceitas em 2026-10-08.
+Status: implementada — SDD-023 concluída; ADR-052 e ADR-053 aceitas; backend `0.17.0` e frontend/workspace `0.19.0` publicados em 2026-10-08.
 
 Objetivo:
 Substituir a região aproximada em texto livre por uma seleção estruturada de Unidade da Federação e município, sem depender do IBGE em tempo de execução nem inferir códigos a partir de regiões legadas.

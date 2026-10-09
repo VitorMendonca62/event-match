@@ -112,6 +112,16 @@ type ProfileEnvironment = {
   PROFILE_PHOTO_ORIGIN_15M_LIMIT: number;
 };
 
+type EventsEnvironment = {
+  EVENTS_HTTP_ENABLED: boolean;
+  EVENT_EXACT_LOCATION_KEY?: string;
+  EVENT_APPROXIMATE_RADIUS_METERS: number;
+};
+
+export const EVENT_POLICY_BOUNDS = {
+  approximateRadiusMeters: { min: 200, max: 5_000 },
+} as const;
+
 function validateProfile(environment: ProfileEnvironment, issue: (path: string, message: string) => void): void {
   if (environment.PROFILE_HTTP_ENABLED && !environment.PROFILE_INVITATION_KEY) issue('PROFILE_INVITATION_KEY', 'is required when PROFILE_HTTP_ENABLED is true');
   if (environment.PROFILE_PHOTO_ACCOUNT_DAILY_LIMIT > environment.PROFILE_PHOTO_ORIGIN_15M_LIMIT) issue('PROFILE_PHOTO_ACCOUNT_DAILY_LIMIT', 'must not exceed PROFILE_PHOTO_ORIGIN_15M_LIMIT');
@@ -125,6 +135,12 @@ function validateProfile(environment: ProfileEnvironment, issue: (path: string, 
   if (environment.PROFILE_MEDIA_SMOKE_ENABLED) {
     if (environment.PROFILE_MEDIA_PROVIDER !== 'cloudinary') issue('PROFILE_MEDIA_PROVIDER', 'must be cloudinary when PROFILE_MEDIA_SMOKE_ENABLED is true');
     if (!environment.PROFILE_MEDIA_SMOKE_FIXTURE) issue('PROFILE_MEDIA_SMOKE_FIXTURE', 'is required when PROFILE_MEDIA_SMOKE_ENABLED is true');
+  }
+}
+
+function validateEvents(environment: EventsEnvironment, issue: (path: string, message: string) => void): void {
+  if (environment.EVENTS_HTTP_ENABLED && !environment.EVENT_EXACT_LOCATION_KEY) {
+    issue('EVENT_EXACT_LOCATION_KEY', 'is required when EVENTS_HTTP_ENABLED is true');
   }
 }
 
@@ -246,6 +262,10 @@ const rawEnvSchema = z
     CLOUDINARY_API_KEY: optionalEnvironmentValue(z.string().trim().min(1)),
     CLOUDINARY_API_SECRET: optionalEnvironmentValue(z.string().trim().min(1)),
     CLOUDINARY_PROFILE_UPLOAD_PRESET: optionalEnvironmentValue(z.string().trim().min(1)),
+    // SDD-025 / ADR-055: independent AES-256 key for exact event locations.
+    EVENTS_HTTP_ENABLED: booleanSchema.default(false),
+    EVENT_EXACT_LOCATION_KEY: optionalEnvironmentValue(base64SecretSchema({ exact: 32 })),
+    EVENT_APPROXIMATE_RADIUS_METERS: z.coerce.number().int().min(EVENT_POLICY_BOUNDS.approximateRadiusMeters.min).max(EVENT_POLICY_BOUNDS.approximateRadiusMeters.max).default(500),
   })
   .superRefine((environment, context) => {
     const databaseUrl = parseUrl(environment.DATABASE_URL);
@@ -281,6 +301,7 @@ const rawEnvSchema = z
 
     validateAuthentication(environment, production, issue);
     validateProfile(environment, issue);
+    validateEvents(environment, issue);
     if (environment.PROFILE_MEDIA_PROVIDER === 'fake' && environment.NODE_ENV !== 'test') issue('PROFILE_MEDIA_PROVIDER', 'fake is allowed only when NODE_ENV is test');
 
     if (

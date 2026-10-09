@@ -45,6 +45,11 @@ const REGISTRATION_TABLES = [
   'authenticated_session',
   'authentication_attempt',
   'contact_verification',
+  // SDD-025 (events): event aggregate, encrypted exact point and audit trail.
+  'event',
+  'event_activity_type',
+  'event_audit',
+  'event_exact_location',
   'federative_unit',
   'interest',
   'language',
@@ -222,7 +227,7 @@ describe('registration persistence (PostgreSQL integration)', () => {
       const [interests] = await query<{ count: string }>(`select count(*)::text as count from interest`);
       const [ledger] = await query<{ count: string }>(`select count(*)::text as count from drizzle.__drizzle_migrations`);
       expect(interests?.count).toBe('20');
-      expect(ledger?.count).toBe('13');
+      expect(ledger?.count).toBe('14');
     });
   });
 

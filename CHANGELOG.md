@@ -1,5 +1,14 @@
 # Changelog
 
+## Backend 0.18.0 — 2026-10-08
+
+Fundação backend de Eventos (SDD-025; ADR-054 a ADR-058, ADR-060 e ADR-061). Mudança aditiva; workspace/frontend permanecem sem alteração nesta entrega. O HTTP começa desligado com `EVENTS_HTTP_ENABLED=false`.
+
+- Novo `EventsModule` hexagonal para criar, recuperar, editar, pré-visualizar e publicar rascunhos de eventos presenciais, gratuitos e informais.
+- Publicação valida anfitriã elegível, catálogo de atividade, local não residencial, fuso IANA do município, janela de 24 horas a 30 dias, duração máxima de oito horas, capacidade até 12 e limites concorrentes por anfitriã.
+- Migration `0014_events` cria catálogo, evento, ponto exato cifrado e auditoria; a área aproximada pública é estável e o ponto exato não é incluído em projeções públicas.
+- OpenAPI, DTOs, filtros, telemetria allowlisted, testes unitários/HTTP/DI e documentação de arquitetura, domínio e integração foram atualizados. A retenção jurídica do ponto exato continua gate de lançamento.
+
 ## 0.19.1 — 2026-10-08
 
 Dispensa do convite delegada ao BFF de perfil (SDD-024; ADR-040 e ADR-050). Refactor interno do frontend/workspace; backend permanece em `0.17.0`, sem migration ou alteração de contrato.

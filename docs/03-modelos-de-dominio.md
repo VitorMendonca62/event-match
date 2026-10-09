@@ -99,11 +99,15 @@ Referências: RF004, RF006, RF012–RF016, RF081; RN004, RN008–RN014, RN018, R
 
 ### 2.3 Event
 
-- `eventId`, anfitrião atual, atividade, título, descrição, data/início, região, ponto exato protegido, capacidade e modalidade de entrada.
+- `eventId`, anfitrião atual, atividade, título, descrição, data/início, fuso IANA do município, região, categoria de local, ponto exato protegido, capacidade e modalidade de entrada.
 - Opcionais: imagem, término, custo estimado informativo, acessibilidade, alimentação, faixa etária, itens e orientações.
 - Estados: `draft`, `published_open`, `full`, `cancelled`, `completed`, `not_held`.
 - Histórico de alterações importantes e transferências.
 - Invariantes: presencial, informal, gratuito, local público, capacidade >= confirmados, um anfitrião confirmado.
+
+Na primeira entrega, `EventsModule` implementa somente `draft -> published_open`; os demais estados e relações de participação ficam para tarefas posteriores. `event_activity_type` é o catálogo versionado de códigos estáveis, separado de interesses e preferências: novos rascunhos exigem item ativo, enquanto leituras históricas preservam o rótulo de item desativado. `event` guarda a revisão, o snapshot de localização, `starts_at`/`ends_at` normalizados em UTC, `starts_at_local`/`ends_at_local` para preservar a intenção no fuso do município, a capacidade limitada a 12 e a declaração não residencial. `event_exact_location` guarda apenas o payload cifrado do ponto exato (ciphertext, IV, tag e versão de chave), enquanto a área aproximada é projetada de forma determinística e persistida no próprio evento para manter a resposta pública estável. `event_audit` registra ator, ação, campos alterados allowlisted e correlação, sem conteúdo privado.
+
+O schema físico da `0014_events` mantém FKs para conta, município e catálogo de atividade, `CHECK`s de estado, modalidade, capacidade, coerência temporal, localização e publicação, índices para proprietário/estado/início e município/estado, além de CAS por `revision`. O ponto exato não é selecionado pelas queries públicas nem pela query de prévia: a leitura cifrada é carregada somente no adapter autorizado para edição e publicação da anfitriã. Retenção e eliminação do ponto exato após encerramento/cancelamento dependem da validação jurídica brasileira prevista no DER.
 
 Referências: RF017–RF024, RF033–RF038, RF071, RF084–RF087; RN017–RN031, RN042–RN049, RN137.
 

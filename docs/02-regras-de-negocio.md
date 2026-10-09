@@ -77,12 +77,13 @@ As regras normativas completas são RN001–RN168 em [`DER-EventMatch-MVP.md`](D
 
 ## 3. Eventos e anfitriões
 
-- Apenas encontros presenciais, informais, gratuitos e em local público/estabelecimento identificável podem ser publicados (RN019–RN020).
+- Apenas encontros presenciais, informais e gratuitos em local público ou estabelecimento identificável podem ser publicados. Residências são proibidas; a anfitriã declara que o local não é residência, sem que endereço/bairro/ponto exato sejam expostos (RN019–RN021; ADR-061).
 - Ponto exato é visível ao anfitrião e confirmados; acesso profissional exige necessidade concreta e autorização no caso (RN021, RN152).
 - Aprovação manual é a modalidade padrão; entrada automática é opcional e respeita capacidade, bloqueios e restrições (RN023–RN024, RN111).
 - Mudança de data, horário, cidade, ponto exato ou atividade exige reconfirmação (RN028, RN042–RN046).
 - Evento gratuito não vira pago; capacidade não fica abaixo dos confirmados; cancelamento é irreversível; evento nunca fica sem anfitrião confirmado (RN029–RN031).
-- Anfitrião novo: um evento futuro ativo e dois publicados por 30 dias. Torna-se experiente após dois eventos válidos sem ocorrência relevante; experiente pode manter três futuros simultâneos (RN047–RN049).
+- No MVP, toda anfitriã mantém no máximo um evento futuro ativo e dois eventos publicados em uma janela móvel de 30 dias; não há classificação de anfitriã nova ou experiente. A futura diferenciação entre categorias gratuita e paga fica fora deste escopo (RN047–RN049).
+- A capacidade máxima configurável por evento é de 12 pessoas (RN049).
 
 ### Estados canônicos
 

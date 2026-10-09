@@ -40,7 +40,9 @@ services:
       DATABASE_URL: ${DATABASE_URL:-}
       DATABASE_POOL_MAX: "1"
       DATABASE_IDLE_TIMEOUT_MS: "10000"
-      DATABASE_CONNECTION_TIMEOUT_MS: "2000"
+      # The origin-rate-limit E2E test intentionally sends 30 concurrent requests through
+      # the production-shaped single-connection pool; queue them instead of producing 500s.
+      DATABASE_CONNECTION_TIMEOUT_MS: "10000"
       DATABASE_STATEMENT_TIMEOUT_MS: "5000"
       DATABASE_SSL_MODE: disable
       CONTACT_HASH_KEY: ${CONTACT_HASH_KEY:-}

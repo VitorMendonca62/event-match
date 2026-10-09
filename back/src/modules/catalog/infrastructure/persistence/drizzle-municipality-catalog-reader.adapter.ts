@@ -19,12 +19,13 @@ function selectShape() {
     municipalityName: municipality.name,
     ufCode: municipality.ufCode,
     active: municipality.active,
+    timeZone: municipality.timeZone,
   } as const;
 }
 
-function mapRow(row: { municipalityCode: string; municipalityName: string; ufCode: string; active: boolean }): MunicipalitySummary {
+function mapRow(row: { municipalityCode: string; municipalityName: string; ufCode: string; active: boolean; timeZone: string }): MunicipalitySummary {
   if (!isUfCode(row.ufCode)) throw new Error('Catalog contains an invalid federative unit code.');
-  return { municipalityCode: row.municipalityCode, municipalityName: row.municipalityName, ufCode: row.ufCode, active: row.active };
+  return { municipalityCode: row.municipalityCode, municipalityName: row.municipalityName, ufCode: row.ufCode, active: row.active, timeZone: row.timeZone };
 }
 
 @Injectable()

@@ -92,6 +92,13 @@
       "when": 1791856800002,
       "tag": "0013_structured_location_catalog",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791936000000,
+      "tag": "0014_events",
+      "breakpoints": true
     }
   ]
 }
