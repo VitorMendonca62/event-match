@@ -67,6 +67,12 @@ Os três proxies públicos de catálogo (`interests`, `languages` e `activity-pr
 
 No frontend, `/entrar` e `/inicio` são RSC dinâmicas que leem o cookie `HttpOnly` só no servidor e validam a sessão antes de renderizar (`front/src/shared/server/authenticated-view.ts`); as ilhas cliente são apenas `LoginForm`, `LogoutButton` e `SessionKeeper` (revalida no foco, na visibilidade e no retorno do bfcache). Os Route Handlers `front/src/app/api/auth/{login,session,logout}` checam origem, `Sec-Fetch-Site` e `Content-Type`, convertem o token em cookie `__Host-eventmatch_session` e nunca o devolvem em JSON (ADR-034). `AUTH_HTTP_ENABLED` (backend) e `AUTH_UI_ENABLED` (frontend, server-only) controlam o rollout; o logout continua expirando o cookie mesmo com a UI desligada.
 
+### Eventos: rascunho, prévia e publicação (SDD-025, ADR-054 a ADR-058, ADR-060 e ADR-061)
+
+`EventsModule` é o bounded context NestJS da primeira entrega de eventos. O controller limita-se a DTOs validados, autenticação da sessão, capacidade `events_write`, envelope HTTP e tradução de erros tipados; os casos de uso dependem apenas de portas para repositório, catálogo de atividade, elegibilidade de anfitriã, limites, município/fuso, proteção do ponto exato, área aproximada, auditoria e telemetria. A composição importa `PersistenceModule`, `IdentityAccessModule`, `ProfilesModule` e `CatalogModule` sem `forwardRef()`; domínio e aplicação não importam NestJS, Drizzle, HTTP ou schemas de outros contextos.
+
+O evento persiste o snapshot estruturado de UF/município e o fuso IANA derivado do catálogo. A coordenada exata fica em tabela 1:1 cifrada com AES-256-GCM e nunca participa das projeções públicas; a prévia usa uma área aproximada estável, com raio configurado e centro deslocado determinístico. Revisão otimista, advisory lock por anfitriã, contagem transacional e auditoria allowlisted protegem publicação e edição concorrentes. O HTTP permanece desligado por padrão (`EVENTS_HTTP_ENABLED=false`) e exige `EVENT_EXACT_LOCATION_KEY` somente quando a flag é ligada.
+
 ### Deploy inicial do frontend
 
 O frontend/BFF do ambiente publicado de testes será hospedado diretamente na Vercel, sem proxy adicional à frente. O cadastro deriva uma fingerprint de origem a partir do header específico da plataforma e autentica as chamadas BFF → NestJS, conforme ADR-023. A leitura da origem fica isolada em adapter server-only para permitir migração futura à Cloudflare mediante nova ADR, sem alterar regras de negócio, contrato interno ou PostgreSQL.

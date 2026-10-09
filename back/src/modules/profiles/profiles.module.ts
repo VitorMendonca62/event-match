@@ -30,6 +30,8 @@ import { PROFILE_TELEMETRY_PORT } from './domain/ports/outbound/profile-telemetr
 import { LoggerProfileTelemetryAdapter } from './infrastructure/observability/logger-profile-telemetry.adapter';
 import { ProfileController } from './presentation/http/controllers/profile.controller';
 import { ProfileBffGuard, ProfileMediaGuard, ProfileReadGuard, ProfileWriteGuard } from './presentation/http/profile-auth.guard';
+import { HOST_ELIGIBILITY_PORT } from './domain/ports/host-eligibility.port';
+import { DrizzleHostEligibilityAdapter } from './infrastructure/persistence/drizzle-host-eligibility.adapter';
 
 @Module({
   imports: [PersistenceModule, CatalogModule, IdentityAccessModule],
@@ -44,6 +46,7 @@ import { ProfileBffGuard, ProfileMediaGuard, ProfileReadGuard, ProfileWriteGuard
     { provide: PROFILE_IMAGE_STORE_PORT, inject: [ConfigService, CloudinaryProfileImageStoreAdapter, FakeProfileImageStoreAdapter], useFactory: (config: ConfigService<BackendEnv, true>, cloudinary: CloudinaryProfileImageStoreAdapter, fake: FakeProfileImageStoreAdapter): ProfileImageStorePort => config.getOrThrow<string>('PROFILE_MEDIA_PROVIDER') === 'fake' ? fake : cloudinary },
     { provide: PROFILE_MEDIA_REPOSITORY_PORT, useClass: DrizzleProfileMediaRepository },
     { provide: PROFILE_TELEMETRY_PORT, useClass: LoggerProfileTelemetryAdapter },
+    { provide: HOST_ELIGIBILITY_PORT, useClass: DrizzleHostEligibilityAdapter },
     { provide: PROFILE_MEDIA_POLICY, inject: [ConfigService], useFactory: (config: ConfigService<BackendEnv, true>) => ({ enabled: config.getOrThrow<boolean>('PROFILE_MEDIA_ENABLED'), uploadTtlMs: config.getOrThrow<number>('PROFILE_PHOTO_UPLOAD_TTL_SECONDS') * 1000, accountLimit: config.getOrThrow<number>('PROFILE_PHOTO_ACCOUNT_DAILY_LIMIT'), originLimit: config.getOrThrow<number>('PROFILE_PHOTO_ORIGIN_15M_LIMIT') }) },
     useCaseProvider(GetOwnProfile, [UNIT_OF_WORK_PORT, PROFILE_REPOSITORY_PORT, PROFILE_INVITATION_SUBJECT_PORT, INTEREST_CATALOG_READER_PORT, LANGUAGE_CATALOG_READER_PORT, ACTIVITY_PREFERENCE_CATALOG_READER_PORT, PROFILE_MEDIA_REPOSITORY_PORT, PROFILE_IMAGE_STORE_PORT, PROFILE_TELEMETRY_PORT, PROFILE_MEDIA_POLICY]),
     useCaseProvider(UpdateOwnProfile, [UNIT_OF_WORK_PORT, PROFILE_REPOSITORY_PORT, INTEREST_CATALOG_READER_PORT, LANGUAGE_CATALOG_READER_PORT, ACTIVITY_PREFERENCE_CATALOG_READER_PORT, MUNICIPALITY_CATALOG_READER_PORT, PROFILE_MEDIA_REPOSITORY_PORT, PROFILE_IMAGE_STORE_PORT, PROFILE_TELEMETRY_PORT, PROFILE_MEDIA_POLICY]),
@@ -54,7 +57,7 @@ import { ProfileBffGuard, ProfileMediaGuard, ProfileReadGuard, ProfileWriteGuard
     useCaseProvider(RemoveProfilePhoto, [UNIT_OF_WORK_PORT, PROFILE_MEDIA_REPOSITORY_PORT, PROFILE_TELEMETRY_PORT, CleanupProfileMedia]),
     ProfileBffGuard, ProfileMediaGuard, ProfileReadGuard, ProfileWriteGuard,
   ],
-  exports: [PROFILE_WRITER_PORT],
+  exports: [PROFILE_WRITER_PORT, HOST_ELIGIBILITY_PORT],
 })
 export class ProfilesModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void { consumer.apply(NoStoreMiddleware).forRoutes(ProfileController); }

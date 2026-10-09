@@ -27,7 +27,7 @@ export function configureApplication(app: INestApplication): void {
     const swaggerConfig = new DocumentBuilder()
       .setTitle('EventMatch API')
       .setDescription('Technical API contract for EventMatch.')
-      .setVersion('0.17.0')
+      .setVersion('0.18.0')
       .addBearerAuth(
         {
           type: 'http',

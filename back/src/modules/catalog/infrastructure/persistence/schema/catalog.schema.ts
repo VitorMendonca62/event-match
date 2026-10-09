@@ -59,6 +59,7 @@ export const municipality = pgTable('municipality', {
   ufCode: char('uf_code', { length: 2 }).notNull(),
   name: text('name').notNull(),
   normalizedName: text('normalized_name').notNull(),
+  timeZone: text('time_zone').notNull().default('America/Sao_Paulo'),
   active: boolean('active').notNull().default(true),
   sourceVersion: text('source_version').notNull(),
   sourceReference: text('source_reference').notNull(),

@@ -42,6 +42,10 @@ const PROFILE_DEFAULTS = {
   PROFILE_MEDIA_PROVIDER: 'cloudinary' as const,
   PROFILE_MEDIA_SMOKE_ENABLED: false,
 };
+const EVENTS_DEFAULTS = {
+  EVENTS_HTTP_ENABLED: false,
+  EVENT_APPROXIMATE_RADIUS_METERS: 500,
+};
 
 describe('validateEnv', () => {
   test('applies safe defaults', () => {
@@ -64,6 +68,7 @@ describe('validateEnv', () => {
       BREVO_BASE_URL: 'https://api.brevo.com/v3',
       ...AUTH_DEFAULTS,
       ...PROFILE_DEFAULTS,
+      ...EVENTS_DEFAULTS,
       ...secrets,
     });
   });
@@ -258,5 +263,18 @@ describe('authentication policy (SDD-013 §4.2)', () => {
     expect(() => validateEnv({ ...production, AUTH_LOGIN_CONTACT_LIMIT: '6' })).toThrow('AUTH_LOGIN_CONTACT_LIMIT');
     expect(() => validateEnv({ ...production, AUTH_LOGIN_WINDOW_SECONDS: '60' })).toThrow('AUTH_LOGIN_WINDOW_SECONDS');
     expect(validateEnv(production).AUTH_LOGIN_ORIGIN_LIMIT).toBe(30);
+  });
+});
+
+describe('event configuration (SDD-025)', () => {
+  const base = { ...secrets, DATABASE_URL: 'postgresql://eventmatch:eventmatch@localhost:5432/eventmatch' };
+
+  test('keeps event HTTP disabled until the BFF is ready', () => {
+    expect(validateEnv(base).EVENTS_HTTP_ENABLED).toBe(false);
+  });
+
+  test('requires an independent exact-location key when event HTTP is enabled', () => {
+    expect(() => validateEnv({ ...base, EVENTS_HTTP_ENABLED: 'true' })).toThrow('EVENT_EXACT_LOCATION_KEY');
+    expect(validateEnv({ ...base, EVENTS_HTTP_ENABLED: 'true', EVENT_EXACT_LOCATION_KEY: Buffer.alloc(32, 7).toString('base64') }).EVENTS_HTTP_ENABLED).toBe(true);
   });
 });

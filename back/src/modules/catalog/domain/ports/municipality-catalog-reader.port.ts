@@ -3,7 +3,7 @@ import type { StructuredLocation, UfCode } from '../value-objects/location';
 
 export const MUNICIPALITY_CATALOG_READER_PORT = Symbol('MUNICIPALITY_CATALOG_READER_PORT');
 
-export type MunicipalitySummary = Readonly<StructuredLocation & { active: boolean }>;
+export type MunicipalitySummary = Readonly<StructuredLocation & { active: boolean; timeZone?: string }>;
 
 export interface MunicipalityCatalogReaderPort {
   searchActive(

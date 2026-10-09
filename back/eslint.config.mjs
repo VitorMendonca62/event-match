@@ -2,7 +2,7 @@ import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 
 // Bounded contexts that own Drizzle schemas (ADR-013).
-const schemaOwners = ['registration', 'profiles', 'catalog'];
+const schemaOwners = ['registration', 'profiles', 'catalog', 'events'];
 
 export default tseslint.config(
   {

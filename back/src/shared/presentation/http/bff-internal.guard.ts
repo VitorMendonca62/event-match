@@ -13,7 +13,7 @@ import type { Request } from 'express';
 import type { BackendEnv } from '../../infrastructure/config/env';
 import { BFF_TOKEN_HEADER } from './bff-headers';
 
-export type BffRolloutFlag = 'REGISTRATION_HTTP_ENABLED' | 'AUTH_HTTP_ENABLED' | 'PROFILE_HTTP_ENABLED' | 'PROFILE_MEDIA_ENABLED';
+export type BffRolloutFlag = 'REGISTRATION_HTTP_ENABLED' | 'AUTH_HTTP_ENABLED' | 'PROFILE_HTTP_ENABLED' | 'PROFILE_MEDIA_ENABLED' | 'EVENTS_HTTP_ENABLED';
 
 /**
  * Internal routes accept only the Next.js BFF (ADR-022, ADR-023, ADR-034): the shared internal
