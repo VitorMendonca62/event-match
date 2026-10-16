@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { proxyActivityPreferenceCatalog, proxyFederativeUnitCatalog, proxyInterestCatalog, proxyLanguageCatalog, proxyMunicipalityCatalog } from '../../src/shared/server/catalog-bff';
+import { proxyActivityPreferenceCatalog, proxyEventActivityTypeCatalog, proxyFederativeUnitCatalog, proxyInterestCatalog, proxyLanguageCatalog, proxyMunicipalityCatalog } from '../../src/shared/server/catalog-bff';
 import type { CatalogBffDeps } from '../../src/shared/server/catalog-bff';
 import { fakeBackend, testEnv } from './bff-fixtures';
 
@@ -172,5 +172,33 @@ describe('catalog BFF (ADR-050)', () => {
     expect(await response.json()).toEqual({ data: {}, message: 'Catálogo indisponível.', statusCode: 503 });
     expect(unavailable.status).toBe(503);
     expect(await unavailable.text()).not.toContain('secret');
+  });
+
+  test('event activity types are public, strictly shaped, and hidden without an upstream call when disabled', async () => {
+    const backend = fakeBackend(200, { eventActivityTypes: [{ code: 'caminhada', label: 'Caminhada' }] });
+    const response = await proxyEventActivityTypeCatalog({ env: testEnv(), fetchImpl: backend.fetchImpl });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      data: { eventActivityTypes: [{ code: 'caminhada', label: 'Caminhada' }] },
+      message: 'Tipos de atividade disponíveis.', statusCode: 200,
+    });
+    expect(backend.calls).toHaveLength(1);
+    expect(backend.calls[0]?.url).toBe('http://backend.test/api/v1/catalog/event-activity-types?locale=pt-BR');
+    expect(backend.calls[0]?.init.headers.get('authorization')).toBeNull();
+    expect(backend.calls[0]?.init.headers.get('x-eventmatch-bff-token')).toBeNull();
+    expect(response.headers.get('cache-control')).toBe('no-store');
+
+    const disabledBackend = fakeBackend(200, { eventActivityTypes: [] });
+    const disabled = await proxyEventActivityTypeCatalog({ env: testEnv({ EVENTS_UI_ENABLED: false }), fetchImpl: disabledBackend.fetchImpl });
+    expect(disabled.status).toBe(404);
+    expect(disabledBackend.calls).toHaveLength(0);
+  });
+
+  test('event activity types fail closed when the response contains an extra field', async () => {
+    const backend = fakeBackend(200, { eventActivityTypes: [{ code: 'caminhada', label: 'Caminhada', active: true }] });
+    const response = await proxyEventActivityTypeCatalog({ env: testEnv(), fetchImpl: backend.fetchImpl });
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ data: {}, message: 'Catálogo indisponível.', statusCode: 503 });
+    expect(backend.calls).toHaveLength(1);
   });
 });

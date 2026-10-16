@@ -57,6 +57,7 @@ async function resolveLocation(
 ): Promise<{ location: EventLocation | null; changed: boolean }> {
   const touched = input.ufCode !== undefined || input.municipalityCode !== undefined;
   if (!touched) return { location: current, changed: false };
+  if (input.ufCode === null && input.municipalityCode === null) return { location: null, changed: current !== null };
   if (!input.ufCode || !input.municipalityCode || !isUfCode(input.ufCode)) throw new EventError('INVALID_LOCATION', 'invalid_location');
   const found = await municipalities.findByCodeAndUf(context, { ufCode: input.ufCode as UfCode, municipalityCode: input.municipalityCode });
   if (!found || !found.timeZone || !found.active) throw new EventError('INVALID_LOCATION', 'invalid_location');

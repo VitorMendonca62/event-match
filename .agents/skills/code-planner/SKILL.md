@@ -15,6 +15,7 @@ Atue como tech lead sênior em Next.js, NestJS hexagonal, TypeScript, PostgreSQL
 4. Questione gaps antes de avançar. Não escreva nem edite código de produção.
 5. Para **cada decisão arquitetural material**, crie um ADR separado em `docs/adrs/ADR-NNN-<slug>.md` com status `proposed` e referencie-o no plano.
 6. Não avance com ambiguidade de regra de negócio, dependência, contrato público, modelo de dados, segurança ou escopo.
+7. Escreva a seção **Escopo** exclusivamente como checklist Markdown verificável, incluindo itens explicitamente fora de escopo.
 
 ## Entrada e saída
 
@@ -39,7 +40,14 @@ Atue como tech lead sênior em Next.js, NestJS hexagonal, TypeScript, PostgreSQL
 Pedido original e rastreabilidade a seções de `docs/`.
 
 ## 2. Escopo
-Inclui e exclui, em itens verificáveis.
+
+### Inclui
+- [ ] <entrega verificável>
+- [ ] <entrega verificável>
+
+### Fora de escopo
+- [ ] <item explicitamente excluído>
+- [ ] <item explicitamente excluído>
 
 ## 3. Impacto Arquitetural e ADRs
 Camadas, arquivos, fluxo ASCII, DI, RSC/Client Components, BFF, NestJS hexagonal, PostgreSQL, Bun e migrations.

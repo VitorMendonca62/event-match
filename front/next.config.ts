@@ -11,12 +11,21 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     const developmentEval = process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : '';
+    const tileTemplate = process.env.EVENT_MAP_TILE_URL_TEMPLATE;
+    let tileOrigin = '';
+    if (tileTemplate) {
+      try {
+        tileOrigin = ` ${new URL(tileTemplate.replaceAll('{z}', '0').replaceAll('{x}', '0').replaceAll('{y}', '0')).origin}`;
+      } catch {
+        tileOrigin = '';
+      }
+    }
     const csp = [
       "default-src 'self'",
       `script-src 'self' 'unsafe-inline'${developmentEval}`,
       "style-src 'self' 'unsafe-inline'",
       "font-src 'self'",
-      "img-src 'self' blob: data: https://res.cloudinary.com",
+      `img-src 'self' blob: data: https://res.cloudinary.com${tileOrigin}`,
       "connect-src 'self' https://api.cloudinary.com",
       "object-src 'none'",
       "base-uri 'self'",

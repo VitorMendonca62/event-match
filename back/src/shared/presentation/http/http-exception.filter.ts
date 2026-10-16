@@ -12,6 +12,7 @@ import { ApiResponseDto } from './api-response.dto';
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost): void {
+    console.log(exception)
     const response = host.switchToHttp().getResponse<Response>();
     const statusCode = this.getStatusCode(exception);
     const message = this.getMessage(statusCode);

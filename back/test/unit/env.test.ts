@@ -275,6 +275,6 @@ describe('event configuration (SDD-025)', () => {
 
   test('requires an independent exact-location key when event HTTP is enabled', () => {
     expect(() => validateEnv({ ...base, EVENTS_HTTP_ENABLED: 'true' })).toThrow('EVENT_EXACT_LOCATION_KEY');
-    expect(validateEnv({ ...base, EVENTS_HTTP_ENABLED: 'true', EVENT_EXACT_LOCATION_KEY: Buffer.alloc(32, 7).toString('base64') }).EVENTS_HTTP_ENABLED).toBe(true);
+    expect(validateEnv({ ...base, EVENTS_HTTP_ENABLED: 'true', EVENT_EXACT_LOCATION_KEY: Buffer.alloc(32, 7).toString('base64'), EVENT_LOCATION_SEARCH_URL: 'https://nominatim.openstreetmap.org/search', EVENT_LOCATION_SEARCH_USER_AGENT: 'EventMatch/test' }).EVENTS_HTTP_ENABLED).toBe(true);
   });
 });

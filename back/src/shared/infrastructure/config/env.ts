@@ -116,6 +116,8 @@ type EventsEnvironment = {
   EVENTS_HTTP_ENABLED: boolean;
   EVENT_EXACT_LOCATION_KEY?: string;
   EVENT_APPROXIMATE_RADIUS_METERS: number;
+  EVENT_LOCATION_SEARCH_URL?: string;
+  EVENT_LOCATION_SEARCH_USER_AGENT?: string;
 };
 
 export const EVENT_POLICY_BOUNDS = {
@@ -141,6 +143,12 @@ function validateProfile(environment: ProfileEnvironment, issue: (path: string, 
 function validateEvents(environment: EventsEnvironment, issue: (path: string, message: string) => void): void {
   if (environment.EVENTS_HTTP_ENABLED && !environment.EVENT_EXACT_LOCATION_KEY) {
     issue('EVENT_EXACT_LOCATION_KEY', 'is required when EVENTS_HTTP_ENABLED is true');
+  }
+  if (environment.EVENTS_HTTP_ENABLED && !environment.EVENT_LOCATION_SEARCH_URL) {
+    issue('EVENT_LOCATION_SEARCH_URL', 'is required when EVENTS_HTTP_ENABLED is true');
+  }
+  if (environment.EVENTS_HTTP_ENABLED && !environment.EVENT_LOCATION_SEARCH_USER_AGENT) {
+    issue('EVENT_LOCATION_SEARCH_USER_AGENT', 'is required when EVENTS_HTTP_ENABLED is true');
   }
 }
 
@@ -266,6 +274,8 @@ const rawEnvSchema = z
     EVENTS_HTTP_ENABLED: booleanSchema.default(false),
     EVENT_EXACT_LOCATION_KEY: optionalEnvironmentValue(base64SecretSchema({ exact: 32 })),
     EVENT_APPROXIMATE_RADIUS_METERS: z.coerce.number().int().min(EVENT_POLICY_BOUNDS.approximateRadiusMeters.min).max(EVENT_POLICY_BOUNDS.approximateRadiusMeters.max).default(500),
+    EVENT_LOCATION_SEARCH_URL: optionalEnvironmentValue(z.string().trim().url().refine((value) => hasProtocol(value, ['https:']), 'must use https://')),
+    EVENT_LOCATION_SEARCH_USER_AGENT: optionalEnvironmentValue(z.string().trim().min(8).max(160).refine((value) => !/[\r\n]/u.test(value), 'must be a single line')),
   })
   .superRefine((environment, context) => {
     const databaseUrl = parseUrl(environment.DATABASE_URL);

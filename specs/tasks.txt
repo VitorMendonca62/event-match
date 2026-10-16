@@ -1,3 +1,160 @@
+TASK 34 — Fechar lacunas de busca, publicação e acessibilidade de eventos
+
+Objetivo:
+Corrigir as divergências finais encontradas na revisão dos SDD-027, SDD-028 e SDD-029, cobrindo o fluxo de busca do navegador ao NestJS e tornando explícitas a janela móvel de publicação e a preferência por movimento reduzido.
+
+Valor para a pessoa usuária:
+Como anfitriã, quero buscar e ajustar um local, entender quando a publicação é bloqueada e evitar movimento animado quando configurei essa preferência, para concluir o convite com previsibilidade e acessibilidade.
+
+Requisitos de origem e dependências:
+- SDD-027, SDD-028 e SDD-029; ADR-064 para busca/mapa e TASK 31 para validação de publicação.
+- Depende dos endpoints de busca e dos componentes de formulário/mapa já implementados; não altera seus contratos.
+
+Escopo:
+- Cobrir a busca de local nos testes do BFF, contrato HTTP NestJS e E2E, incluindo request explícita, resultado, ajuste do ponto e persistência do rascunho.
+- Cobrir no E2E que a publicação sem coordenadas informa os campos ausentes e que rascunhos incompletos continuam salváveis.
+- Substituir “30 dias corridos” por “janela móvel de 30 dias” nos dois textos de limite de publicação.
+- Respeitar `prefers-reduced-motion` ao retornar o foco e a rolagem quando o mapa ampliado fecha.
+
+Fora de escopo:
+- Alterar API, DTOs, regras de domínio, persistência, ADRs, experiência visual além do texto e comportamento de busca/mapa fora do ajuste de movimento.
+
+Critérios de aceite:
+- Testes diretos provam validação e encaminhamento seguro da busca pelo BFF e sua autenticação, validação de DTO, resposta `no-store` e erro de rate limit no NestJS.
+- E2E exercita busca submetida, seleção de resultado, ajuste por teclado e salvamento do ponto; também verifica erros de coordenadas na publicação e salvamento de rascunho incompleto.
+- Pessoas com movimento reduzido não recebem rolagem suave ao fechar o mapa; demais pessoas mantêm a rolagem suave atual.
+- Os dois textos do limite explicam a janela móvel de 30 dias.
+
+Situação para planejamento:
+- Implementada em 2026-10-16. Cobertura BFF e HTTP NestJS aprovada; E2E existente aprovado no desktop/mobile e o novo fluxo de mapa aprovado em execução direcionada nos dois viewports. Lint, tipos, builds e detector Impeccable passaram. Sem alteração de contrato, domínio, schema ou ADR; evidências em `specs/sdd-031-event-location-review-hardening/tasks.md`.
+
+Estimativa inicial:
+- Complexidade Fibonacci: 5.
+- Risco de deploy: baixo, pois a mudança é cobertura de testes e correções localizadas de texto/acessibilidade sem mudança de contrato.
+
+---
+
+TASK 33 — Corrigir cobertura e acabamento da busca de local em eventos
+
+Objetivo:
+Corrigir as verificações desatualizadas da migration 0015 e da prévia do mapa, cobrir a busca de locais e sua contenção global, e alinhar a interface à privacidade e ao sistema visual aprovados.
+
+Valor para a pessoa usuária:
+Como anfitriã, quero entender o compartilhamento de dados antes de abrir o mapa e confiar que a busca, o ponto exato e a prévia aproximada se comportem conforme descrito.
+
+Requisitos de origem e dependências:
+- TASK 32 / SDD-029 e ADR-064.
+- AGENTS.md: testes de integração/E2E, privacidade, telemetria, design system e NestJS/Next.js.
+
+Escopo:
+- Atualizar os snapshots de schema e migrations para a tabela operacional `event_location_search_rate_gate` e a 15ª migration, verificando sua finalidade e ausência de PII.
+- Atualizar E2E da prévia para exigir `location.approximateArea` e garantir ausência de `exactLocation`.
+- Corrigir o runner E2E para fornecer as configurações exigidas de busca e tiles quando a UI de eventos estiver habilitada.
+- Acrescentar testes diretos para propriedade do rascunho, município, resposta allowlisted e indisponibilidade da busca; adapter Nominatim; e contenção global PostgreSQL entre conexões.
+- Informar antes de abrir o mapa que a busca/tiles enviam dados ao provedor público, incluindo município/consulta e IP/área visível.
+- Remover sombras e desfoque da experiência de mapa, substituindo-os por contraste tonal e bordas.
+- Remover logging de objetos de erro crus nos fluxos de eventos.
+
+Fora de escopo:
+- Alterar os contratos públicos, domínio, limites da integração, regras de localização ou ADR-064.
+- Adicionar retry, autocomplete, coleta de localização do aparelho ou armazenamento persistente de termos/resultados.
+
+Critérios de aceite:
+- Integração de migrations espera exatamente 15 entradas e verifica a linha singleton operacional sem dados pessoais.
+- E2E autenticado demonstra que o preview contém área aproximada e omite o ponto exato.
+- Testes cobrem os cenários de aplicação, adapter e concorrência PostgreSQL listados no escopo.
+- O aviso de privacidade aparece antes da chamada automática de centralização/tiles do mapa.
+- Componentes do mapa e navegação relacionada não usam sombra nem blur; controles mantêm contraste e foco visível.
+- Nenhum fluxo de evento imprime objetos de erro crus; erros continuam tratados pela telemetria configurada.
+
+Situação para planejamento:
+- Implementada em 2026-10-09 — SDD-030; snapshots da migration 0015, testes da busca/rate gate, runner e E2E de preview corrigidos; aviso de privacidade e acabamento visual ajustados. Frontend: 201 testes; backend: 398 testes; integração PostgreSQL: 68 testes; E2E Chromium desktop/mobile: 4 testes passaram. Sem mudança de contrato ou decisão arquitetural. Evidências em `specs/sdd-030-event-location-review-fixes/tasks.md`.
+
+Estimativa inicial:
+- Complexidade Fibonacci: 5.
+- Risco de deploy: baixo, concentrado em testes e apresentação visual; o aviso de privacidade torna explícito o compartilhamento previsto em ADR-064.
+
+---
+
+TASK 32 — Seleção e prévia de localização de evento em mapa
+
+Objetivo:
+Permitir que a anfitriã encontre um local público ou estabelecimento pelo nome, ajuste o ponto no mapa e revise uma área aproximada sem expor a coordenada exata.
+
+Valor para a pessoa usuária:
+Como anfitriã, quero escolher o local num mapa e entender como a região aparecerá na prévia, para não precisar conhecer latitude e longitude e preservar a privacidade do grupo.
+
+Requisitos de origem e dependências:
+- Depende da TASK 23.1 para coordenada exata protegida e projeção pública aproximada, e da TASK 23.2 para rascunho e prévia.
+- Preferência confirmada: buscar o local pelo nome e mover o pino.
+- Rastreia RF017, RF020–RF021 e RN020–RN021; reutilização futura possível pela TASK 24.
+- Provedor escolhido: serviços públicos do OSM; ADR-064 registra atribuição, disponibilidade, limites, privacidade e cache.
+
+Escopo:
+- Adicionar seleção de local por busca de nome de local público/estabelecimento e ajuste manual do pino.
+- Renderizar no mapa da prévia somente o centro e o raio aproximados já calculados pelo backend.
+- Manter coordenada exata cifrada no backend; não persistir texto de busca, nome retornado pelo provedor, endereço ou coordenada exata no navegador além do estado transitório necessário à edição.
+- Restringir buscas ao município/UF escolhidos e não solicitar localização do aparelho automaticamente.
+- Carregar o mapa sob demanda, manter atribuição visível e oferecer interação acessível por teclado e leitor de tela.
+
+Fora de escopo:
+- Mapa de descoberta pública, marcadores de outros eventos, navegação/rotas, rastreamento, geolocalização automática ou coleta de endereço residencial.
+- Alterar a projeção de privacidade da coordenada exata ou as regras de local não residencial.
+
+Critérios de aceite:
+- A anfitriã encontra o município/local por busca explícita, confirma o resultado e pode ajustar o pino antes de salvar.
+- O mapa da prévia mostra somente a área pública aproximada retornada pelo backend; nenhuma chamada ao provedor externo contém ID de evento, sessão ou coordenada exata como consulta de geocodificação.
+- A busca e o mapa mostram estados de carregamento, nenhum resultado, indisponibilidade e erro, sem impedir edição dos demais campos.
+- O provedor pode ser trocado por configuração; uso de tiles e busca respeita termos, atribuição, limites e cache aplicáveis.
+- Desktop, mobile, zoom de 200%, teclado e leitor de tela permitem selecionar e revisar o ponto.
+
+Situação para planejamento:
+- Implementada em 2026-10-09 — SDD-029 concluída com ADR-064 aceita, endpoint NestJS/BFF autenticado, limite global de busca, mapa de seleção e prévia aproximada. Refinamento: o resultado pesquisado recebe pino próprio, além do central; confirmar o ponto central deixa-o verde e fecha o diálogo; fechá-lo retorna ao campo de ponto exato com mapa aberto; resultados destacam nome acima do endereço. Migration `0015_event_location_search_rate_gate`; lint, typecheck e builds passaram; testes automatizados não foram executados. Revisão visual pendente porque a rota autenticada redirecionou para login sem sessão disponível.
+
+Estimativa inicial:
+- Complexidade Fibonacci: 13.
+- Risco de deploy: alto, por integração externa, coordenada exata, privacidade, atribuição e disponibilidade do mapa.
+
+---
+
+TASK 31 — Tornar claras as validações e os limites de publicação
+
+Objetivo:
+Exibir erros de publicação junto aos campos correspondentes e explicar os limites de horário e quantidade de eventos antes da confirmação.
+
+Valor para a pessoa usuária:
+Como anfitriã, quero saber exatamente o que falta ou precisa ser corrigido e quais limites se aplicam, para concluir a publicação sem tentativas genéricas.
+
+Requisitos de origem e dependências:
+- Depende da TASK 23.1 para erros e regras do backend e da TASK 23.2 para formulário, BFF e modal de publicação.
+- Rastreia RF016–RF021 e RN047–RN049; regras atuais de horário e limites estão definidas na TASK 23.1 e ADR-057.
+
+Escopo:
+- Validar no formulário os requisitos de publicação antes de enviar o comando, mantendo o salvamento de rascunho permissivo.
+- Identificar latitude e longitude ausentes individualmente e apresentá-las com mensagem, destaque visual, associação acessível e foco no resumo.
+- Explicar que o início deve ocorrer entre 24 horas e 30 dias e que a duração máxima é de 8 horas.
+- Explicar que, no MVP, todas as anfitriãs podem manter no máximo um evento futuro ativo e publicar até dois eventos em uma janela móvel de 30 dias; não há categoria paga de anfitriã nesta versão.
+- Atualizar o changelog; o contrato HTTP e o backend permanecem inalterados.
+
+Fora de escopo:
+- Alterar regras de domínio, limites, autorização, preço, categoria paga, schema PostgreSQL ou comportamento do backend ao rejeitar publicação.
+- Adicionar mapa, geocodificação ou fornecedor externo; esses itens pertencem à TASK 32.
+
+Critérios de aceite:
+- Falha de publicação por campos ausentes destaca cada campo/grupo e explica o motivo, sem depender de uma mensagem genérica.
+- Erro não revela dados privados, coordenadas, estado de segurança nem detalhes internos.
+- Limites de tempo e quantidade ficam visíveis antes de publicar e coincidem com as regras efetivamente aplicadas no backend.
+- Salvamento de rascunho continua aceitando dados incompletos e não dispara erros próprios de publicação.
+
+Situação para planejamento:
+- Implementada em 2026-10-09 — SDD-028 concluída no frontend/workspace `0.22.0` em release combinado com SDD-029; sem mudança de regra, contrato ou migration. Lint, typecheck e build passaram; testes automatizados não foram executados. Revisão visual pendente porque a rota autenticada redirecionou para login sem sessão disponível.
+
+Estimativa inicial:
+- Complexidade Fibonacci: 8.
+- Risco de deploy: médio, por validação antecipada e apresentação de regras de publicação na interface.
+
+---
+
 TASK 30 — Campos opcionais de custo, faixa etária e orientações do evento
 
 Objetivo:
@@ -288,8 +445,7 @@ Critérios de aceite:
 - Route Handlers não acessam PostgreSQL nem duplicam a API de negócio; os testes cobrem sucesso, validação, sessão expirada, conflito e indisponibilidade.
 - Lint, typecheck, testes e build do frontend passam.
 
-Situação para planejamento:
-- A planejar após a TASK 23.1 e a estabilização do contrato de região da TASK 20; exigirá brief visual/artefatos do Impeccable e decisões de navegação, formulários, acessibilidade, composição BFF e cobertura E2E.
+Status: implementada — SDD-027 concluída em 2026-10-09; backend `0.19.0`, frontend/workspace `0.20.0`, ADR-062 aceita, `EVENTS_UI_ENABLED=false` por padrão, sem migration nova. Refinamento: prévia mostra `0/vagas`; resumo “Seu rascunho” foi substituído por navegação responsiva por etapas no padrão da barra lateral do perfil, com atalhos para salvar, prévia e publicação. Brief, capturas e revisão Impeccable registrados em `front/.impeccable/`; validações detalhadas em `specs/sdd-027-frontend-eventos/tasks.md`.
 
 Estimativa inicial:
 - Complexidade Fibonacci: 8.

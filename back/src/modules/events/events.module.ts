@@ -10,6 +10,8 @@ import { IdentityAccessModule } from '../identity-access/identity-access.module'
 import { ProfilesModule } from '../profiles/profiles.module';
 import { HOST_ELIGIBILITY_PORT } from '../profiles/domain/ports/host-eligibility.port';
 import { CreateEventDraft, GetEventDraft, PreviewEventDraft, PublishEvent, UpdateEventDraft } from './application/use-cases/event.use-cases';
+import { SearchEventLocations } from './application/use-cases/search-event-locations.use-case';
+import { ListActiveEventActivityTypes } from './application/use-cases/list-active-event-activity-types.use-case';
 import { APPROXIMATE_EVENT_AREA_PROJECTOR_PORT } from './domain/ports/approximate-event-area-projector.port';
 import { EVENT_ACTIVITY_TYPE_CATALOG_PORT } from './domain/ports/event-activity-type-catalog.port';
 import { EVENT_AUDIT_PORT } from './domain/ports/event-audit.port';
@@ -17,26 +19,33 @@ import { EVENT_REPOSITORY_PORT } from './domain/ports/event-repository.port';
 import { EVENT_TELEMETRY_PORT } from './domain/ports/event-telemetry.port';
 import { EXACT_LOCATION_PROTECTOR_PORT } from './domain/ports/exact-location-protector.port';
 import { HOST_EVENT_LIMIT_PORT } from './domain/ports/host-event-limit.port';
+import { LOCATION_SEARCH_RATE_GATE_PORT } from './domain/ports/location-search-rate-gate.port';
+import { PLACE_SEARCH_PORT } from './domain/ports/place-search.port';
 import { DrizzleEventActivityTypeCatalogAdapter } from './infrastructure/persistence/drizzle-event-activity-type-catalog.adapter';
 import { DrizzleEventRepositoryAdapter } from './infrastructure/persistence/drizzle-event-repository.adapter';
 import { DrizzleHostEventLimitAdapter } from './infrastructure/persistence/drizzle-host-event-limit.adapter';
+import { PostgresLocationSearchRateGateAdapter } from './infrastructure/persistence/postgres-location-search-rate-gate.adapter';
+import { NominatimPlaceSearchAdapter } from './infrastructure/integrations/nominatim-place-search.adapter';
 import { DrizzleEventAuditAdapter } from './infrastructure/observability/drizzle-event-audit.adapter';
 import { LoggerEventTelemetryAdapter } from './infrastructure/observability/logger-event-telemetry.adapter';
 import { AesExactLocationAdapter } from './infrastructure/security/aes-exact-location.adapter';
 import { DeterministicAreaProjectorAdapter } from './infrastructure/security/deterministic-area-projector.adapter';
 import { EventsController } from './presentation/http/controllers/events.controller';
+import { EventActivityTypesController } from './presentation/http/controllers/event-activity-types.controller';
 import { EventsBffGuard, EventsCapabilityGuard } from './presentation/http/events-auth.guard';
 
 const eventUseCaseDependencies = [UNIT_OF_WORK_PORT, EVENT_REPOSITORY_PORT, HOST_ELIGIBILITY_PORT, HOST_EVENT_LIMIT_PORT, EVENT_ACTIVITY_TYPE_CATALOG_PORT, MUNICIPALITY_CATALOG_READER_PORT, EXACT_LOCATION_PROTECTOR_PORT, APPROXIMATE_EVENT_AREA_PROJECTOR_PORT, EVENT_AUDIT_PORT, EVENT_TELEMETRY_PORT];
 
 @Module({
   imports: [PersistenceModule, CatalogModule, ProfilesModule, IdentityAccessModule],
-  controllers: [EventsController],
+  controllers: [EventsController, EventActivityTypesController],
   providers: [
     { provide: EXACT_LOCATION_PROTECTOR_PORT, useClass: AesExactLocationAdapter },
     { provide: APPROXIMATE_EVENT_AREA_PROJECTOR_PORT, useClass: DeterministicAreaProjectorAdapter },
     { provide: EVENT_REPOSITORY_PORT, useClass: DrizzleEventRepositoryAdapter },
     { provide: HOST_EVENT_LIMIT_PORT, useClass: DrizzleHostEventLimitAdapter },
+    { provide: LOCATION_SEARCH_RATE_GATE_PORT, useClass: PostgresLocationSearchRateGateAdapter },
+    { provide: PLACE_SEARCH_PORT, useClass: NominatimPlaceSearchAdapter },
     { provide: EVENT_ACTIVITY_TYPE_CATALOG_PORT, useClass: DrizzleEventActivityTypeCatalogAdapter },
     { provide: EVENT_AUDIT_PORT, useClass: DrizzleEventAuditAdapter },
     { provide: EVENT_TELEMETRY_PORT, useClass: LoggerEventTelemetryAdapter },
@@ -45,9 +54,11 @@ const eventUseCaseDependencies = [UNIT_OF_WORK_PORT, EVENT_REPOSITORY_PORT, HOST
     useCaseProvider(UpdateEventDraft, eventUseCaseDependencies),
     useCaseProvider(PreviewEventDraft, eventUseCaseDependencies),
     useCaseProvider(PublishEvent, eventUseCaseDependencies),
+    useCaseProvider(ListActiveEventActivityTypes, [UNIT_OF_WORK_PORT, EVENT_ACTIVITY_TYPE_CATALOG_PORT]),
+    useCaseProvider(SearchEventLocations, [UNIT_OF_WORK_PORT, EVENT_REPOSITORY_PORT, MUNICIPALITY_CATALOG_READER_PORT, PLACE_SEARCH_PORT]),
     EventsBffGuard, EventsCapabilityGuard,
   ],
 })
 export class EventsModule implements NestModule {
-  configure(consumer: MiddlewareConsumer): void { consumer.apply(NoStoreMiddleware).forRoutes(EventsController); }
+  configure(consumer: MiddlewareConsumer): void { consumer.apply(NoStoreMiddleware).forRoutes(EventsController, EventActivityTypesController); }
 }

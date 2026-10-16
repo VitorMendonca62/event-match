@@ -11,7 +11,8 @@ Aplicação Next.js App Router do EventMatch. A base usa React Server Components
 | `/cadastro/concluido` | RSC | Confirmação sem dados da conta; oferece “Entrar no EventMatch” quando `AUTH_UI_ENABLED=true`. |
 | `/entrar` | RSC + ilha `LoginForm` | Login por e-mail e senha (SDD-013); pessoa conectada é redirecionada a `/inicio`. |
 | `/inicio` | RSC + ilhas `LogoutButton`/`SessionKeeper` | Primeira área autenticada, validada no servidor antes do render; sem dados privados. |
-| `/api/registration/**`, `/api/catalog/interests`, `/api/auth/**` | Route Handlers | BFF fino para o NestJS; detalhes em `docs/04-integracoes-externas.md`. |
+| `/eventos`, `/eventos/novo`, `/eventos/novo/[eventId]` | RSC + ilha de formulário | Criar, retomar, editar, pré-visualizar e publicar encontros, incluindo busca de local e mapa aproximado (SDD-027–029), quando `EVENTS_UI_ENABLED=true`. |
+| `/api/registration/**`, `/api/catalog/**`, `/api/auth/**`, `/api/events/**` | Route Handlers | BFF fino para o NestJS; detalhes em `docs/04-integracoes-externas.md`. |
 
 ## Pré-requisitos
 
@@ -45,6 +46,9 @@ A aplicação fica disponível em `http://localhost:3000` por padrão.
 | `BACKEND_TIMEOUT_MS` | `8000` | Timeout de cada chamada ao backend, sem retry. |
 | `AUTH_UI_ENABLED` | `false` | Expõe `/entrar`, `/inicio`, login e manutenção de sessão (SDD-013). Ligue só depois de `AUTH_HTTP_ENABLED=true` no backend; o logout segue expirando o cookie mesmo desligado. |
 | `PROFILE_UI_ENABLED` | `false` | Expõe o convite em `/inicio`, `/perfil`, a prévia e os Route Handlers de perfil (SDD-015). Ligue após `PROFILE_HTTP_ENABLED=true` no backend. |
+| `EVENTS_UI_ENABLED` | `false` | Expõe `/eventos`, o formulário, busca e Route Handlers de eventos (SDD-027–029). Ligue após publicar e validar a API NestJS e configurar os tiles HTTPS abaixo. |
+| `EVENT_MAP_TILE_URL_TEMPLATE` | serviço público configurado no `.env.example` | URL HTTPS com `{z}`, `{x}` e `{y}`; configurar no build e runtime, incluída no CSP e enviada ao mapa do navegador. |
+| `EVENT_MAP_ATTRIBUTION_URL` | serviço público configurado no `.env.example` | Link de créditos exigido pelo provedor de tiles; obrigatório com `EVENTS_UI_ENABLED=true`. |
 
 Nenhuma dessas variáveis usa o prefixo `NEXT_PUBLIC_`. O servidor valida as variáveis em `dev`, `start` e na inicialização do container de produção. Configuração inválida encerra o processo com erro sem exibir valores recebidos.
 

@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
 
 import { CreateEventDraft, GetEventDraft, PreviewEventDraft, PublishEvent, UpdateEventDraft } from '../../../src/modules/events/application/use-cases/event.use-cases';
+import { ListActiveEventActivityTypes } from '../../../src/modules/events/application/use-cases/list-active-event-activity-types.use-case';
 import { EventsModule } from '../../../src/modules/events/events.module';
 import { validateEnv } from '../../../src/shared/infrastructure/config/env';
 
@@ -16,6 +17,6 @@ describe('EventsModule composition (SDD-025)', () => {
   afterAll(async () => { await module.close(); });
 
   test('resolves every event use case through DI tokens without forward references', () => {
-    for (const useCase of [CreateEventDraft, GetEventDraft, UpdateEventDraft, PreviewEventDraft, PublishEvent]) expect(module.get(useCase)).toBeInstanceOf(useCase);
+    for (const useCase of [CreateEventDraft, GetEventDraft, UpdateEventDraft, PreviewEventDraft, PublishEvent, ListActiveEventActivityTypes]) expect(module.get(useCase)).toBeInstanceOf(useCase);
   });
 });

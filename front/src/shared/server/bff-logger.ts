@@ -4,7 +4,7 @@
  */
 export type BffLogEntry = Readonly<{
   /** Defaults to the registration BFF; the auth BFF logs as `auth-bff`. */
-  scope?: 'registration-bff' | 'auth-bff' | 'profile-bff';
+  scope?: 'registration-bff' | 'auth-bff' | 'profile-bff' | 'events-bff';
   operation: string;
   status: number;
   durationMs: number;

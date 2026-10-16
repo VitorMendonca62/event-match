@@ -99,6 +99,13 @@
       "when": 1791936000000,
       "tag": "0014_events",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1791936000001,
+      "tag": "0015_event_location_search_rate_gate",
+      "breakpoints": true
     }
   ]
 }
