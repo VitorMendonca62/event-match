@@ -15,6 +15,8 @@ const STATUS: Record<EventError['code'], HttpStatus> = {
   EVENT_LIMIT_REACHED: HttpStatus.CONFLICT,
   RESIDENTIAL_VENUE_FORBIDDEN: HttpStatus.UNPROCESSABLE_ENTITY,
   LOCATION_PROTECTION_UNAVAILABLE: HttpStatus.SERVICE_UNAVAILABLE,
+  LOCATION_SEARCH_RATE_LIMITED: HttpStatus.TOO_MANY_REQUESTS,
+  LOCATION_SEARCH_UNAVAILABLE: HttpStatus.SERVICE_UNAVAILABLE,
 };
 
 const MESSAGE: Record<EventError['code'], string> = {
@@ -24,6 +26,8 @@ const MESSAGE: Record<EventError['code'], string> = {
   INACTIVE_ACTIVITY_TYPE: 'The selected activity is unavailable.', HOST_NOT_ELIGIBLE: 'You do not have permission to perform this action.',
   EVENT_LIMIT_REACHED: 'The event limit was reached.', RESIDENTIAL_VENUE_FORBIDDEN: 'This location category is not available.',
   LOCATION_PROTECTION_UNAVAILABLE: 'The event service is temporarily unavailable.',
+  LOCATION_SEARCH_RATE_LIMITED: 'Location search is temporarily rate limited.',
+  LOCATION_SEARCH_UNAVAILABLE: 'Location search is temporarily unavailable.',
 };
 
 @Catch(EventError)

@@ -86,6 +86,53 @@ export async function setNewestAccountStatus(status: 'active' | 'suspended'): Pr
      WHERE id = (SELECT id FROM account WHERE activated_at IS NOT NULL ORDER BY activated_at DESC LIMIT 1)`;
 }
 
+/**
+ * SDD-027 host fixture. This runs only against the disposable database exposed by the E2E runner;
+ * it supplies the facts required by the backend's real host-eligibility check without weakening it.
+ */
+export async function makeNewestAccountHostEligible(): Promise<void> {
+  await sql`
+    WITH newest AS (
+      SELECT id FROM account WHERE status = 'active' AND activated_at IS NOT NULL ORDER BY activated_at DESC LIMIT 1
+    )
+    INSERT INTO profile (account_id, presentation)
+    SELECT newest.id, 'Gosto de conhecer a cidade em atividades de grupo.' FROM newest
+    ON CONFLICT (account_id) DO UPDATE SET presentation = EXCLUDED.presentation, updated_at = now()`;
+  await sql`
+    WITH newest AS (
+      SELECT id FROM account WHERE status = 'active' AND activated_at IS NOT NULL ORDER BY activated_at DESC LIMIT 1
+    ), selected_interests AS (
+      SELECT id FROM interest WHERE active ORDER BY slug LIMIT 3
+    )
+    INSERT INTO account_interest (account_id, interest_id, selected_at)
+    SELECT newest.id, selected_interests.id, now() FROM newest CROSS JOIN selected_interests
+    ON CONFLICT (account_id, interest_id) DO NOTHING`;
+  await sql`
+    WITH newest AS (
+      SELECT id FROM account WHERE status = 'active' AND activated_at IS NOT NULL ORDER BY activated_at DESC LIMIT 1
+    )
+    INSERT INTO account_contact (account_id, channel, contact_hash, contact_ciphertext, confirmed_at, holds_contact)
+    SELECT newest.id, 'whatsapp', decode(md5(newest.id::text || ':e2e-whatsapp'), 'hex'),
+           decode(md5(newest.id::text || ':e2e-whatsapp-ciphertext'), 'hex'), now(), true
+      FROM newest
+    ON CONFLICT (account_id, channel) DO UPDATE
+      SET contact_hash = EXCLUDED.contact_hash, contact_ciphertext = EXCLUDED.contact_ciphertext,
+          confirmed_at = EXCLUDED.confirmed_at, holds_contact = true`;
+  await sql`
+    WITH newest AS (
+      SELECT id FROM account WHERE status = 'active' AND activated_at IS NOT NULL ORDER BY activated_at DESC LIMIT 1
+    )
+    INSERT INTO profile_photo_asset (
+      id, account_id, provider, public_id, state, upload_expires_at, activated_at
+    )
+    SELECT gen_random_uuid(), newest.id, 'cloudinary', 'e2e-host-' || gen_random_uuid()::text,
+           'active', now() + interval '1 day', now()
+      FROM newest
+     WHERE NOT EXISTS (
+       SELECT 1 FROM profile_photo_asset photo WHERE photo.account_id = newest.id AND photo.state = 'active'
+     )`;
+}
+
 export async function closeDatabase(): Promise<void> {
   await connection?.end();
   connection = undefined;

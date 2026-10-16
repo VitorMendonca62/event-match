@@ -67,9 +67,13 @@ describe('session cookie (ADR-034)', () => {
       BFF_INTERNAL_TOKEN: SECRET,
       ORIGIN_FINGERPRINT_KEY: SECRET,
       EDGE_PROVIDER: 'fixture',
+      EVENT_MAP_TILE_URL_TEMPLATE: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      EVENT_MAP_ATTRIBUTION_URL: 'https://www.openstreetmap.org/copyright',
     };
     expect(parseBffEnv(valid).AUTH_UI_ENABLED).toBe(false);
     expect(parseBffEnv({ ...valid, AUTH_UI_ENABLED: 'true' }).AUTH_UI_ENABLED).toBe(true);
+    expect(parseBffEnv(valid).EVENTS_UI_ENABLED).toBe(false);
+    expect(parseBffEnv({ ...valid, EVENTS_UI_ENABLED: 'true' }).EVENTS_UI_ENABLED).toBe(true);
   });
 });
 

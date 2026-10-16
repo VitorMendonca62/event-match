@@ -18,49 +18,49 @@ export class ExactLocationDto {
 }
 
 export class CreateEventDraftDto {
-  @ApiPropertyOptional({ example: 'caminhada', pattern: '^[a-z][a-z0-9_]{1,59}$' })
+  @ApiPropertyOptional({ example: 'caminhada', pattern: '^[a-z][a-z0-9_]{1,59}$', nullable: true })
   @IsOptional() @IsString() @Matches(/^[a-z][a-z0-9_]{1,59}$/u)
-  readonly activityTypeCode?: string;
+  readonly activityTypeCode?: string | null;
 
-  @ApiPropertyOptional({ example: 'Caminhada no parque', maxLength: 120 })
+  @ApiPropertyOptional({ example: 'Caminhada no parque', maxLength: 120, nullable: true })
   @IsOptional() @IsString() @Length(1, 120) @MaxLength(120)
-  readonly title?: string;
+  readonly title?: string | null;
 
-  @ApiPropertyOptional({ example: 'Um encontro informal para caminhar e conversar.', maxLength: 2_000 })
+  @ApiPropertyOptional({ example: 'Um encontro informal para caminhar e conversar.', maxLength: 2_000, nullable: true })
   @IsOptional() @IsString() @Length(1, 2_000) @MaxLength(2_000)
-  readonly description?: string;
+  readonly description?: string | null;
 
-  @ApiPropertyOptional({ example: '2026-11-15T09:00', description: 'Local date/time without offset; the municipality supplies the IANA time zone.' })
+  @ApiPropertyOptional({ example: '2026-11-15T09:00', description: 'Local date/time without offset; the municipality supplies the IANA time zone.', nullable: true })
   @IsOptional() @IsString() @Matches(LOCAL_DATE_TIME_PATTERN)
-  readonly startsAtLocal?: string;
+  readonly startsAtLocal?: string | null;
 
   @ApiPropertyOptional({ example: '2026-11-15T12:00', nullable: true })
   @IsOptional() @IsString() @Matches(LOCAL_DATE_TIME_PATTERN)
   readonly endsAtLocal?: string | null;
 
-  @ApiPropertyOptional({ enum: FEDERATIVE_UNIT_CODES, example: 'PE' })
+  @ApiPropertyOptional({ enum: FEDERATIVE_UNIT_CODES, example: 'PE', nullable: true })
   @IsOptional() @IsString() @IsIn(FEDERATIVE_UNIT_CODES)
-  readonly ufCode?: string;
+  readonly ufCode?: string | null;
 
-  @ApiPropertyOptional({ example: '2611606', pattern: '^\\d{7}$' })
+  @ApiPropertyOptional({ example: '2611606', pattern: '^\\d{7}$', nullable: true })
   @IsOptional() @IsString() @Matches(/^\d{7}$/u)
-  readonly municipalityCode?: string;
+  readonly municipalityCode?: string | null;
 
-  @ApiPropertyOptional({ enum: EVENT_VENUE_TYPES, example: 'public_place' })
+  @ApiPropertyOptional({ enum: EVENT_VENUE_TYPES, example: 'public_place', nullable: true })
   @IsOptional() @IsIn(EVENT_VENUE_TYPES)
-  readonly venueType?: (typeof EVENT_VENUE_TYPES)[number];
+  readonly venueType?: (typeof EVENT_VENUE_TYPES)[number] | null;
 
-  @ApiPropertyOptional({ example: true, description: 'The host confirms that the location is not a residence.' })
+  @ApiPropertyOptional({ example: true, description: 'The host confirms that the location is not a residence.', nullable: true })
   @IsOptional() @IsBoolean()
-  readonly nonResidentialHostDeclaration?: boolean;
+  readonly nonResidentialHostDeclaration?: boolean | null;
 
   @ApiPropertyOptional({ type: ExactLocationDto, nullable: true })
   @IsOptional() @ValidateNested() @Type(() => ExactLocationDto)
   readonly exactLocation?: ExactLocationDto | null;
 
-  @ApiPropertyOptional({ example: 8, minimum: 1, maximum: 12 })
+  @ApiPropertyOptional({ example: 8, minimum: 1, maximum: 12, nullable: true })
   @IsOptional() @IsInt() @Min(1) @Max(12)
-  readonly capacity?: number;
+  readonly capacity?: number | null;
 
   @ApiPropertyOptional({ enum: EVENT_ADMISSION_MODES, default: 'manual_approval' })
   @IsOptional() @IsIn(EVENT_ADMISSION_MODES)
@@ -77,4 +77,13 @@ export class PublishEventDto {
   @ApiPropertyOptional({ example: 3, minimum: 1 })
   @IsOptional() @IsInt() @Min(1)
   readonly revision?: number;
+}
+
+export class SearchEventLocationsDto {
+  @ApiPropertyOptional({ minLength: 0, maxLength: 80, example: 'Parque da Jaqueira' })
+  @IsOptional()
+  @IsString()
+  @Length(0, 80)
+  @Matches(/^[\p{L}\p{N} .,'’()-]*$/u)
+  readonly query?: string;
 }

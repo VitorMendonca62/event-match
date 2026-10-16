@@ -1,6 +1,11 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { drizzle } from 'drizzle-orm/node-postgres';
 
 import { createEphemeralDatabase, type EphemeralDatabase } from '../support/ephemeral-database';
+import type { TransactionContext } from '../../src/shared/application/ports/unit-of-work.port';
+import { DrizzleEventActivityTypeCatalogAdapter } from '../../src/modules/events/infrastructure/persistence/drizzle-event-activity-type-catalog.adapter';
+import { PostgresLocationSearchRateGateAdapter } from '../../src/modules/events/infrastructure/persistence/postgres-location-search-rate-gate.adapter';
+import type { PostgresPool } from '../../src/shared/infrastructure/persistence/database.types';
 
 const adminUrl = process.env.DATABASE_INTEGRATION_URL;
 if (!adminUrl) throw new Error('DATABASE_INTEGRATION_URL is required for PostgreSQL integration tests.');
@@ -65,6 +70,56 @@ describe('events persistence (PostgreSQL integration, SDD-025)', () => {
       { code: '1506807', time_zone: 'America/Santarem' },
       { code: '2611606', time_zone: 'America/Recife' },
     ]);
+  });
+
+  test('activity catalog adapter returns only active entries in stable order', async () => {
+    await query(`update event_activity_type set active = false where code = 'caminhada'`);
+    try {
+      const adapter = new DrizzleEventActivityTypeCatalogAdapter();
+      const context = drizzle({ client: database.pool }) as unknown as TransactionContext;
+      const items = await adapter.listActive(context, 'pt-BR');
+      const expected = await query<{ code: string; label_pt_br: string }>(
+        `select code, label_pt_br from event_activity_type where active order by sort_order asc, code asc limit 100`,
+      );
+
+      expect(items).toEqual(expected.map(({ code, label_pt_br }) => ({ code, label: label_pt_br, active: true })));
+      expect(items.some((item) => item.code === 'caminhada')).toBe(false);
+    } finally {
+      await query(`update event_activity_type set active = true where code = 'caminhada'`);
+    }
+  });
+
+  test('Nominatim rate gate allows one request per second across independent PostgreSQL connections', async () => {
+    const [connectionA, connectionB] = await Promise.all([
+      database.pool.connect(),
+      database.pool.connect(),
+    ]);
+    try {
+      await connectionA.query(`update event_location_search_rate_gate set next_allowed_at = clock_timestamp() - interval '1 second' where key = 'nominatim'`);
+      const [pidA] = (await connectionA.query<{ pid: number }>('select pg_backend_pid() as pid')).rows;
+      const [pidB] = (await connectionB.query<{ pid: number }>('select pg_backend_pid() as pid')).rows;
+      expect(pidA?.pid).not.toBe(pidB?.pid);
+
+      const gateA = new PostgresLocationSearchRateGateAdapter({ query: connectionA.query.bind(connectionA) } as unknown as PostgresPool);
+      const gateB = new PostgresLocationSearchRateGateAdapter({ query: connectionB.query.bind(connectionB) } as unknown as PostgresPool);
+      const [before] = (await connectionA.query<{ next_allowed_at: Date }>(
+        `select next_allowed_at from event_location_search_rate_gate where key = 'nominatim'`,
+      )).rows;
+      const outcomes = await Promise.all([gateA.tryAcquire(), gateB.tryAcquire()]);
+      expect(outcomes.filter(Boolean)).toHaveLength(1);
+      expect(await gateA.tryAcquire()).toBe(false);
+
+      const [after] = (await connectionA.query<{ next_allowed_at: Date; elapsed_ms: number }>(
+        `select next_allowed_at, extract(epoch from (next_allowed_at - $1::timestamptz)) * 1000 as elapsed_ms
+         from event_location_search_rate_gate where key = 'nominatim'`,
+        [before?.next_allowed_at],
+      )).rows;
+      expect(Number(after?.elapsed_ms)).toBeGreaterThanOrEqual(900);
+      expect(Number(after?.elapsed_ms)).toBeLessThan(5_000);
+    } finally {
+      connectionA.release();
+      connectionB.release();
+    }
   });
 
   test('database checks reject residences and preserve exact coordinates outside the event row', async () => {

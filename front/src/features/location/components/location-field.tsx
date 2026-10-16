@@ -21,6 +21,8 @@ type LocationChange = Readonly<{
 
 type LocationFieldProps = Readonly<{
   federativeUnits: readonly FederativeUnitOption[];
+  legend?: string;
+  helpText?: string;
   initialUfCode?: UfCode;
   initialMunicipalityCode?: string;
   initialMunicipalityName?: string;
@@ -33,6 +35,8 @@ type SearchStatus = 'idle' | 'loading' | 'ready' | 'empty' | 'error';
 
 export function LocationField({
   federativeUnits,
+  legend = 'Onde você mora?',
+  helpText = 'Escolha seu estado e município. Não pedimos endereço, bairro, CEP ou sua localização do aparelho.',
   initialUfCode,
   initialMunicipalityCode = '',
   initialMunicipalityName = '',
@@ -149,10 +153,10 @@ export function LocationField({
           : '';
 
   return (
-    <fieldset className="space-y-5" aria-describedby={error ? errorId : hintId}>
-      <legend className="font-semibold">Onde você mora?</legend>
+    <fieldset className="space-y-5" aria-describedby={describedBy}>
+      <legend className="font-semibold">{legend}</legend>
       <p id={hintId} className="text-sm text-muted-foreground">
-        Escolha seu estado e município. Não pedimos endereço, bairro, CEP ou sua localização do aparelho.
+        {helpText}
       </p>
       <div className="@container">
         <div className="grid gap-5 @xl:grid-cols-2 @xl:items-start">
@@ -164,7 +168,13 @@ export function LocationField({
               onChange={changeUf}
               disabled={disabled}
               required
-              className="block min-h-13 w-full rounded-xl border-2 border-border bg-surface px-4 text-lg text-foreground hover:border-muted-foreground focus-visible:border-foreground focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:text-disabled"
+              aria-invalid={error ? true : undefined}
+              aria-describedby={describedBy}
+              aria-errormessage={error ? errorId : undefined}
+              className={cn(
+                'block min-h-13 w-full rounded-xl border-2 bg-surface px-4 text-lg text-foreground focus-visible:outline-offset-3 disabled:cursor-not-allowed disabled:text-disabled',
+                error ? 'border-error focus-visible:border-error' : 'border-border hover:border-muted-foreground focus-visible:border-foreground',
+              )}
             >
               <option value="">Escolha um estado</option>
               {federativeUnits.map((unit) => (
@@ -194,7 +204,7 @@ export function LocationField({
               aria-errormessage={error ? errorId : undefined}
               className={cn(
                 'block min-h-13 w-full rounded-xl border-2 bg-surface px-4 text-lg text-foreground transition-colors duration-200',
-                'placeholder:text-disabled hover:border-muted-foreground focus-visible:border-foreground focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:text-disabled',
+                'placeholder:text-disabled hover:border-muted-foreground focus-visible:border-foreground focus-visible:outline-offset-3 disabled:cursor-not-allowed disabled:text-disabled',
                 error ? 'border-error' : 'border-border',
               )}
             />

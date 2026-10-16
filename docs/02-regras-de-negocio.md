@@ -7,7 +7,7 @@ As regras normativas completas são RN001–RN168 em [`DER-EventMatch-MVP.md`](D
 ## 2. Conta, perfil e acesso
 
 - Somente pessoas com 18 anos completos podem criar conta; nascimento nunca é público (RN001, RN009).
-- E-mail e celular confirmados são únicos por conta ativa. Cadastro exige ao menos um contato; anfitrião exige ambos (RN002–RN005, RN018).
+- E-mail e celular confirmados são únicos por conta ativa. Cadastro exige ao menos um contato confirmado; anfitrião exige e-mail confirmado (RN002–RN005, RN018; ADR-063).
 - Senha tem mínimo de oito caracteres, não aceita somente espaços nem senha óbvia; não há composição artificial obrigatória (RN006–RN007).
 - Perfil exige ao menos três interesses. Nome de exibição não é único e não existe username no MVP (RN004, RN008).
 - Faixas públicas: 18–24, 25–34, 35–44, 45–54, 55–64 e 65+ (RN010).

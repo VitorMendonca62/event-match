@@ -2,7 +2,8 @@ import 'server-only';
 
 import { envelopeSchema, interestListDataSchema, interestSchema } from '@/features/registration/contracts';
 import { activityPreferenceListDataSchema, languageListDataSchema } from '@/features/profile/contracts';
-import { federativeUnitListDataSchema, municipalityListDataSchema, ufCodeSchema } from '@/features/location/contracts';
+import { federativeUnitListDataSchema, municipalityListDataSchema, ufCodeSchema, type FederativeUnitOption } from '@/features/location/contracts';
+import { eventActivityTypeListDataSchema, type EventActivityType } from '@/features/events/contracts';
 import type { BffEnv } from '@/shared/config/bff-env.server';
 import { callBackend } from './backend-client';
 import { jsonResponse } from './bff-proxy';
@@ -67,6 +68,13 @@ const FEDERATIVE_UNITS: CatalogDefinition = {
   invalidSuccessStatus: 503,
 };
 
+const EVENT_ACTIVITY_TYPES: CatalogDefinition = {
+  path: '/catalog/event-activity-types?locale=pt-BR',
+  responseSchema: eventActivityTypeListDataSchema,
+  successMessage: 'Tipos de atividade disponíveis.',
+  invalidSuccessStatus: 503,
+};
+
 function failedCatalogResponse(upstreamStatus: number, definition: CatalogDefinition): Response {
   const preservedMessage = definition.preserveStatuses?.[upstreamStatus];
   const statusCode = preservedMessage
@@ -110,6 +118,30 @@ export function proxyActivityPreferenceCatalog(deps: CatalogBffDeps): Promise<Re
 
 export function proxyFederativeUnitCatalog(deps: CatalogBffDeps): Promise<Response> {
   return proxyCatalog(deps, FEDERATIVE_UNITS);
+}
+
+export async function loadFederativeUnits(deps: CatalogBffDeps): Promise<Readonly<{ kind: 'ok'; items: readonly FederativeUnitOption[] }> | Readonly<{ kind: 'unavailable' }>> {
+  const upstream = await callBackend({ method: 'GET', path: FEDERATIVE_UNITS.path, internal: false }, deps.env, deps.fetchImpl);
+  const envelope = envelopeSchema.safeParse(upstream.body);
+  const data = envelope.success ? strictFederativeUnitListDataSchema.safeParse(envelope.data.data) : undefined;
+  if (upstream.status === 200 && data?.success) return { kind: 'ok', items: data.data.federativeUnits };
+  return { kind: 'unavailable' };
+}
+
+export async function loadEventActivityTypes(deps: CatalogBffDeps): Promise<Readonly<{ kind: 'ok'; items: readonly EventActivityType[] }> | Readonly<{ kind: 'disabled' }> | Readonly<{ kind: 'unavailable' }>> {
+  if (!deps.env.EVENTS_UI_ENABLED) return { kind: 'disabled' };
+  const upstream = await callBackend({ method: 'GET', path: EVENT_ACTIVITY_TYPES.path, internal: false }, deps.env, deps.fetchImpl);
+  const envelope = envelopeSchema.safeParse(upstream.body);
+  const data = envelope.success ? eventActivityTypeListDataSchema.safeParse(envelope.data.data) : undefined;
+  if (upstream.status === 200 && data?.success) return { kind: 'ok', items: data.data.eventActivityTypes };
+  return { kind: 'unavailable' };
+}
+
+export async function proxyEventActivityTypeCatalog(deps: CatalogBffDeps): Promise<Response> {
+  const result = await loadEventActivityTypes(deps);
+  if (result.kind === 'disabled') return jsonResponse({ data: {}, message: GENERIC_MESSAGES[404], statusCode: 404 });
+  if (result.kind === 'unavailable') return jsonResponse({ data: {}, message: CATALOG_UNAVAILABLE, statusCode: 503 });
+  return jsonResponse({ data: { eventActivityTypes: result.items }, message: EVENT_ACTIVITY_TYPES.successMessage, statusCode: 200 });
 }
 
 const municipalityQuerySchema = z.strictObject({

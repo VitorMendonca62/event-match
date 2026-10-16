@@ -66,6 +66,20 @@ export class PublicEventPreviewResponseDto {
   @ApiProperty({ enum: ['draft', 'published_open'] }) status!: 'draft' | 'published_open';
 }
 
+export class EventLocationSearchResultDto {
+  @ApiProperty({ enum: ['municipality', 'place'] })
+  kind!: 'municipality' | 'place';
+  @ApiProperty({ maxLength: 240, description: 'Nome do local e, quando disponíveis, rua, número, bairro, município e estado; sem endereço completo.' }) label!: string;
+  @ApiProperty({ minimum: -90, maximum: 90 }) latitude!: number;
+  @ApiProperty({ minimum: -180, maximum: 180 }) longitude!: number;
+}
+
+export class EventLocationSearchResponseDto {
+  @ApiProperty({ type: [EventLocationSearchResultDto], maxItems: 5 })
+  results!: EventLocationSearchResultDto[];
+}
+
 export const EventOwnerDraftEnvelopeDto = apiEnvelope(EventOwnerDraftResponseDto, 'EventOwnerDraftEnvelopeDto', HttpStatus.OK);
 export const CreatedEventOwnerDraftEnvelopeDto = apiEnvelope(EventOwnerDraftResponseDto, 'CreatedEventOwnerDraftEnvelopeDto', HttpStatus.CREATED);
 export const PublicEventPreviewEnvelopeDto = apiEnvelope(PublicEventPreviewResponseDto, 'PublicEventPreviewEnvelopeDto', HttpStatus.OK);
+export const EventLocationSearchEnvelopeDto = apiEnvelope(EventLocationSearchResponseDto, 'EventLocationSearchEnvelopeDto', HttpStatus.OK);

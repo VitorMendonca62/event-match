@@ -16,6 +16,7 @@ export function testEnv(overrides: Partial<BffEnv> = {}): BffEnv {
     BACKEND_TIMEOUT_MS: 1000,
     AUTH_UI_ENABLED: true,
     PROFILE_UI_ENABLED: true,
+    EVENTS_UI_ENABLED: true,
     ...overrides,
   };
 }

@@ -3,17 +3,17 @@ import type { EventStatus } from '../../domain/entities/event';
 
 export type EventDraftInput = Readonly<{
   revision?: number;
-  activityTypeCode?: string;
-  title?: string;
-  description?: string;
-  startsAtLocal?: string;
+  activityTypeCode?: string | null;
+  title?: string | null;
+  description?: string | null;
+  startsAtLocal?: string | null;
   endsAtLocal?: string | null;
-  ufCode?: string;
-  municipalityCode?: string;
-  venueType?: EventVenueType;
-  nonResidentialHostDeclaration?: boolean;
+  ufCode?: string | null;
+  municipalityCode?: string | null;
+  venueType?: EventVenueType | null;
+  nonResidentialHostDeclaration?: boolean | null;
   exactLocation?: ExactLocation | null;
-  capacity?: number;
+  capacity?: number | null;
   admissionMode?: EventAdmissionMode;
 }>;
 

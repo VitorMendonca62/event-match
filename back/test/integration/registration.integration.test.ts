@@ -50,6 +50,8 @@ const REGISTRATION_TABLES = [
   'event_activity_type',
   'event_audit',
   'event_exact_location',
+  // SDD-029 / ADR-064: shared operational gate for public Nominatim requests.
+  'event_location_search_rate_gate',
   'federative_unit',
   'interest',
   'language',
@@ -177,6 +179,23 @@ describe('registration persistence (PostgreSQL integration)', () => {
       );
       expect(tables.map((row) => row.table_name)).toEqual(REGISTRATION_TABLES);
 
+      const gateColumns = await query<{ column_name: string }>(
+        `select column_name from information_schema.columns
+         where table_schema = 'public' and table_name = 'event_location_search_rate_gate'
+         order by ordinal_position`,
+      );
+      const [gateRow] = await query<{ key: string; next_allowed_at: Date; row_count: string }>(
+        `select key, next_allowed_at,
+                (select count(*)::text from event_location_search_rate_gate) as row_count
+         from event_location_search_rate_gate`,
+      );
+      expect(gateColumns.map((row) => row.column_name)).toEqual(['key', 'next_allowed_at']);
+      expect(gateRow).toMatchObject({ key: 'nominatim', row_count: '1' });
+      expect(gateRow?.next_allowed_at).toBeInstanceOf(Date);
+      await expect(database.pool.query(
+        `insert into event_location_search_rate_gate (key, next_allowed_at) values ('other', now())`,
+      )).rejects.toMatchObject({ code: '23514' });
+
       const indexes = (await query<{ indexname: string }>(`select indexname from pg_indexes where schemaname = 'public'`)).map(
         (row) => row.indexname,
       );
@@ -227,7 +246,7 @@ describe('registration persistence (PostgreSQL integration)', () => {
       const [interests] = await query<{ count: string }>(`select count(*)::text as count from interest`);
       const [ledger] = await query<{ count: string }>(`select count(*)::text as count from drizzle.__drizzle_migrations`);
       expect(interests?.count).toBe('20');
-      expect(ledger?.count).toBe('14');
+      expect(ledger?.count).toBe('15');
     });
   });
 

@@ -4,7 +4,7 @@
 - **Data:** 2026-10-08
 - **Decisores:** produto, backend, confiança e segurança
 - **Relacionado:** TASK 23.1; `specs/sdd-025-backend-eventos/tasks.md`; RF016, RF021; RN005, RN018, RN047–RN049
-- **Substitui/Substituído por:** N/A
+- **Substitui/Substituído por:** requisito de contatos substituído parcialmente pela ADR-063; demais decisões permanecem vigentes
 
 ## Contexto
 

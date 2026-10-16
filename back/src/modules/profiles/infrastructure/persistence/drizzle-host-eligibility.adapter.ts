@@ -36,7 +36,6 @@ export class DrizzleHostEligibilityAdapter implements HostEligibilityPort {
       interests.length >= 3 &&
       photos.length > 0 &&
       channels.has('email') &&
-      channels.has('whatsapp') &&
       rules.length > 0,
     );
   }

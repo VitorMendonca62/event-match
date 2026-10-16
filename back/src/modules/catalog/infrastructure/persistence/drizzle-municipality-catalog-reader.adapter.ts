@@ -5,7 +5,7 @@ import type { TransactionContext } from '../../../../shared/application/ports/un
 import { resolveExecutor } from '../../../../shared/infrastructure/persistence/resolve-executor';
 import type { MunicipalityCatalogReaderPort, MunicipalitySummary } from '../../domain/ports/municipality-catalog-reader.port';
 import { isUfCode, type UfCode } from '../../domain/value-objects/location';
-import { municipality } from './schema/catalog.schema';
+import { federativeUnit, municipality } from './schema/catalog.schema';
 
 const LIMIT = 20;
 
@@ -18,14 +18,15 @@ function selectShape() {
     municipalityCode: municipality.code,
     municipalityName: municipality.name,
     ufCode: municipality.ufCode,
+    federativeUnitName: federativeUnit.name,
     active: municipality.active,
     timeZone: municipality.timeZone,
   } as const;
 }
 
-function mapRow(row: { municipalityCode: string; municipalityName: string; ufCode: string; active: boolean; timeZone: string }): MunicipalitySummary {
+function mapRow(row: { municipalityCode: string; municipalityName: string; ufCode: string; active: boolean; timeZone: string; federativeUnitName: string }): MunicipalitySummary {
   if (!isUfCode(row.ufCode)) throw new Error('Catalog contains an invalid federative unit code.');
-  return { municipalityCode: row.municipalityCode, municipalityName: row.municipalityName, ufCode: row.ufCode, active: row.active, timeZone: row.timeZone };
+  return { municipalityCode: row.municipalityCode, municipalityName: row.municipalityName, ufCode: row.ufCode, active: row.active, timeZone: row.timeZone, federativeUnitName: row.federativeUnitName };
 }
 
 @Injectable()
@@ -40,6 +41,7 @@ export class DrizzleMunicipalityCatalogReaderAdapter implements MunicipalityCata
     const rows = await resolveExecutor(context)
       .select(selectShape())
       .from(municipality)
+      .innerJoin(federativeUnit, eq(federativeUnit.code, municipality.ufCode))
       .where(and(...conditions))
       .orderBy(asc(municipality.name), asc(municipality.code))
       .limit(LIMIT);
@@ -53,6 +55,7 @@ export class DrizzleMunicipalityCatalogReaderAdapter implements MunicipalityCata
     const [row] = await resolveExecutor(context)
       .select(selectShape())
       .from(municipality)
+      .innerJoin(federativeUnit, eq(federativeUnit.code, municipality.ufCode))
       .where(and(eq(municipality.code, input.municipalityCode), eq(municipality.ufCode, input.ufCode)))
       .limit(1);
     return row ? mapRow(row) : null;

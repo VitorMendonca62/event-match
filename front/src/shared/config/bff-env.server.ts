@@ -12,6 +12,14 @@ const secretSchema = z
 const httpUrlSchema = z
   .url({ protocol: /^https?$/ })
   .transform((value) => value.replace(/\/+$/, ''));
+const tileTemplateSchema = z.string().trim().min(1).refine((value) => {
+  if (!value.includes('{z}') || !value.includes('{x}') || !value.includes('{y}')) return false;
+  try {
+    return new URL(value.replaceAll('{z}', '0').replaceAll('{x}', '0').replaceAll('{y}', '0')).protocol === 'https:';
+  } catch {
+    return false;
+  }
+}, 'must be an HTTPS tile URL template containing {z}, {x}, and {y}');
 
 /**
  * Server-only configuration of the registration BFF (ADR-022, ADR-023). Never prefixed with
@@ -35,8 +43,21 @@ export const bffEnvSchema = z
       .enum(['true', 'false'])
       .default('false')
       .transform((value) => value === 'true'),
+    // SDD-027 rollout: event creation routes and BFF stay hidden until the backend is ready.
+    EVENTS_UI_ENABLED: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((value) => value === 'true'),
+    EVENT_MAP_TILE_URL_TEMPLATE: z.preprocess((value) => typeof value === 'string' && value.trim() === '' ? undefined : value, tileTemplateSchema.optional()),
+    EVENT_MAP_ATTRIBUTION_URL: z.preprocess((value) => typeof value === 'string' && value.trim() === '' ? undefined : value, z.url({ protocol: /^https$/ }).optional()),
   })
   .superRefine((env, context) => {
+    if (env.EVENTS_UI_ENABLED && !env.EVENT_MAP_TILE_URL_TEMPLATE) {
+      context.addIssue({ code: 'custom', path: ['EVENT_MAP_TILE_URL_TEMPLATE'], message: 'is required when EVENTS_UI_ENABLED is true' });
+    }
+    if (env.EVENTS_UI_ENABLED && !env.EVENT_MAP_ATTRIBUTION_URL) {
+      context.addIssue({ code: 'custom', path: ['EVENT_MAP_ATTRIBUTION_URL'], message: 'is required when EVENTS_UI_ENABLED is true' });
+    }
     if (env.NODE_ENV !== 'production') return;
     if (env.EDGE_PROVIDER !== 'vercel') {
       context.addIssue({ code: 'custom', path: ['EDGE_PROVIDER'], message: 'must be vercel in production' });

@@ -29,6 +29,7 @@ export async function expectNoSeriousA11yViolations(page: Page): Promise<void> {
 }
 
 export async function expectNoHorizontalScroll(page: Page): Promise<void> {
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  // `clientWidth` excludes a visible vertical scrollbar (2 CSS px in mobile Chromium).
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(0);
 }

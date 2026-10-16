@@ -1,16 +1,17 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, Put, UseFilters, UseGuards } from '@nestjs/common';
-import { ApiBadRequestResponse, ApiBearerAuth, ApiConflictResponse, ApiCreatedResponse, ApiForbiddenResponse, ApiHeader, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiServiceUnavailableResponse, ApiTags, ApiUnprocessableEntityResponse } from '@nestjs/swagger';
+import { ApiBadRequestResponse, ApiBearerAuth, ApiConflictResponse, ApiCreatedResponse, ApiForbiddenResponse, ApiHeader, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiServiceUnavailableResponse, ApiTags, ApiTooManyRequestsResponse, ApiUnprocessableEntityResponse } from '@nestjs/swagger';
 
 import { CreatedResponseDto, OkResponseDto } from '../../../../../shared/presentation/http/api-response.dto';
 import { API_V1_PREFIX } from '../../../../../shared/presentation/http/api-version';
 import { BFF_TOKEN_HEADER } from '../../../../../shared/presentation/http/bff-headers';
 import { IdentityAccessErrorFilter } from '../../../../identity-access/presentation/http/identity-access-error.filter';
 import { CreateEventDraft, GetEventDraft, PreviewEventDraft, PublishEvent, UpdateEventDraft } from '../../../application/use-cases/event.use-cases';
+import { SearchEventLocations } from '../../../application/use-cases/search-event-locations.use-case';
 import { EventErrorFilter } from '../event-error.filter';
 import { EventAccountId } from '../event-principal.decorator';
 import { EventsBffGuard, EventsCapabilityGuard } from '../events-auth.guard';
-import { CreateEventDraftDto, PublishEventDto, UpdateEventDraftDto } from '../dto/event-request.dto';
-import { CreatedEventOwnerDraftEnvelopeDto, EventOwnerDraftEnvelopeDto, PublicEventPreviewEnvelopeDto } from '../dto/event-response.dto';
+import { CreateEventDraftDto, PublishEventDto, SearchEventLocationsDto, UpdateEventDraftDto } from '../dto/event-request.dto';
+import { CreatedEventOwnerDraftEnvelopeDto, EventLocationSearchEnvelopeDto, EventOwnerDraftEnvelopeDto, PublicEventPreviewEnvelopeDto } from '../dto/event-response.dto';
 
 @ApiTags('events')
 @ApiHeader({ name: BFF_TOKEN_HEADER, required: true })
@@ -22,7 +23,7 @@ import { CreatedEventOwnerDraftEnvelopeDto, EventOwnerDraftEnvelopeDto, PublicEv
 @UseFilters(EventErrorFilter, IdentityAccessErrorFilter)
 @Controller(`${API_V1_PREFIX}/events`)
 export class EventsController {
-  constructor(private readonly createDraft: CreateEventDraft, private readonly getDraft: GetEventDraft, private readonly updateDraft: UpdateEventDraft, private readonly previewDraft: PreviewEventDraft, private readonly publishEvent: PublishEvent) {}
+  constructor(private readonly createDraft: CreateEventDraft, private readonly getDraft: GetEventDraft, private readonly updateDraft: UpdateEventDraft, private readonly previewDraft: PreviewEventDraft, private readonly publishEvent: PublishEvent, private readonly searchLocations: SearchEventLocations) {}
 
   @Post('drafts')
   @HttpCode(HttpStatus.CREATED)
@@ -62,6 +63,18 @@ export class EventsController {
   @ApiUnprocessableEntityResponse()
   async preview(@EventAccountId() accountId: string, @Param('eventId', ParseUUIDPipe) eventId: string) {
     return new OkResponseDto(await this.previewDraft.execute({ hostAccountId: accountId, eventId }), 'Event preview loaded.');
+  }
+
+  @Post('drafts/:eventId/location-search')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(EventsCapabilityGuard)
+  @ApiOperation({ summary: 'Search public places for the selected municipality' })
+  @ApiOkResponse({ type: EventLocationSearchEnvelopeDto })
+  @ApiBadRequestResponse()
+  @ApiTooManyRequestsResponse()
+  @ApiUnprocessableEntityResponse()
+  async searchLocation(@EventAccountId() accountId: string, @Param('eventId', ParseUUIDPipe) eventId: string, @Body() body: SearchEventLocationsDto) {
+    return new OkResponseDto(await this.searchLocations.execute({ hostAccountId: accountId, eventId, query: body.query }), 'Location search completed.');
   }
 
   @Post('drafts/:eventId/publish')

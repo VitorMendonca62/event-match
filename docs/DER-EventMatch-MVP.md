@@ -71,7 +71,7 @@ O MVP permite descobrir, criar e participar de encontros informais e gratuitos, 
 | RF013 | Prévia do perfil | Mostrar ao usuário como seu perfil aparece publicamente, sem dados privados. |
 | RF014 | Faixa etária | Calcular e atualizar a faixa sem revelar idade exata ou nascimento completo. |
 | RF015 | Privacidade opcional | Aplicar a visibilidade escolhida e manter dados sensíveis privados por padrão. |
-| RF016 | Habilitação de anfitrião | Liberar criação somente com foto, apresentação, três interesses, dois contatos confirmados e regras aceitas. |
+| RF016 | Habilitação de anfitrião | Liberar criação somente com foto, apresentação, três interesses, e-mail confirmado e regras aceitas. |
 | RF017 | Cadastro de evento | Registrar atividade, título, descrição, data, início, região, ponto exato, capacidade e anfitrião; aceitar opcionalmente imagem, término estimado, custo estimado, acessibilidade, alimentação, faixa etária, o que levar e orientações adicionais. |
 | RF018 | Rascunho | Salvar e recuperar evento incompleto, inclusive ao abandonar o preenchimento. |
 | RF019 | Validação do evento | Informar campos ausentes, data passada, horário inválido e capacidade ausente. |
@@ -172,7 +172,7 @@ O MVP permite descobrir, criar e participar de encontros informais e gratuitos, 
 - **RN002:** cada e-mail confirmado poderá pertencer a apenas uma conta ativa.
 - **RN003:** cada celular confirmado poderá pertencer a apenas uma conta ativa.
 - **RN004:** nome de exibição não precisará ser único e não haverá nome de usuário exclusivo no MVP.
-- **RN005:** o cadastro exigirá ao menos um contato confirmado; a criação de eventos exigirá ambos.
+- **RN005:** o cadastro exigirá ao menos um contato confirmado; a criação de eventos exigirá e-mail confirmado.
 - **RN006:** a senha terá no mínimo oito caracteres, não poderá conter apenas espaços nem constar na lista de senhas óbvias.
 - **RN007:** não será obrigatória a combinação de maiúsculas, minúsculas, números e símbolos.
 - **RN008:** o perfil deverá conter ao menos três interesses.
@@ -188,7 +188,7 @@ O MVP permite descobrir, criar e participar de encontros informais e gratuitos, 
 ### 3.2 Eventos e participação
 
 - **RN017:** a mesma pessoa poderá ser participante e anfitriã em eventos diferentes.
-- **RN018:** anfitrião deverá ter foto, apresentação, três interesses, ambos os contatos confirmados e regras aceitas.
+- **RN018:** anfitrião deverá ter foto, apresentação, três interesses, e-mail confirmado e regras aceitas.
 - **RN019:** somente encontros presenciais, informais e gratuitos serão publicados no MVP.
 - **RN020:** eventos ocorrerão somente em locais públicos ou estabelecimentos identificáveis; residências serão proibidas. A anfitriã declara que o local selecionado não é residência, sem que o fluxo comum colete endereço, bairro ou nome do local.
 - **RN021:** o ponto exato será visível ao anfitrião e aos confirmados; a equipe só poderá acessá-lo diante de necessidade concreta de atendimento, segurança ou análise de denúncia, por profissional autorizado para o caso.

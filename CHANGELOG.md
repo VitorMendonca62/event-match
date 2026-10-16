@@ -1,5 +1,35 @@
 # Changelog
 
+## Backend 0.20.0 + frontend/workspace 0.22.0 — 2026-10-09
+
+Clareza de publicação (SDD-028) e busca de local/mapa aproximado (SDD-029; ADR-064). Mudança aditiva; migration operacional `0015_event_location_search_rate_gate`.
+
+- A publicação agora aponta campos faltantes e explica os limites de horário e de eventos; salvar rascunho continua permissivo. O modal mantém centralização vertical e horizontal.
+- A anfitriã pode buscar local por nome e mover o pino em mapa OSM carregado sob demanda. A prévia recebe e desenha apenas a área aproximada; a posição exata segue protegida.
+- Se a busca automática do município falhar, o mapa continua aberto numa visão geral do Brasil para a anfitriã aproximar e mover o pino; a indisponibilidade da busca não bloqueia mais a escolha pelo mapa.
+- Quando o município escolhido ainda não está salvo, “Salvar cidade e abrir mapa” persiste somente esse campo; a busca e o pino não salvam as demais alterações. O mapa pode ser ampliado num diálogo com busca e controles acessíveis.
+- O mapa aceita arraste com mouse ajustado e zoom pelo scroll ou controles gráficos “+”/“−” dentro do mapa; a seleção pode ser desmarcada e não exibe coordenadas nem mensagens repetitivas. Resultados trazem nome do lugar e, em português, rua/número, bairro, município e estado sem o endereço completo; o diálogo desfoca o fundo.
+- O local escolhido na busca recebe um segundo pino âmbar, independente do pino central de ajuste; ele permanece no ponto pesquisado enquanto a pessoa move o mapa. Quando os marcadores coincidem, o pino pesquisado aparece deslocado com uma linha até a coordenada exata, para deixar os dois visíveis. Ao confirmar “Usar esse ponto”, o pino central fica verde e o diálogo se fecha. Fechar o diálogo retorna ao campo “Ponto exato, apenas para organização”, mantém o mapa aberto no formulário e desloca a tela até esse campo. Resultados destacam o nome do local e mostram o endereço com número abaixo, em estilo mais discreto.
+- O botão “Voltar ao ponto”, dentro do mapa, restaura centro e zoom do último local escolhido na busca ou ponto confirmado, sem alterar a seleção ao arrastar.
+- A edição de encontros substitui o resumo “Seu rascunho” por navegação lateral responsiva no padrão do perfil, com atalhos para salvar rascunho, ver prévia e publicar. A prévia mostra participantes/vagas como `0/{limite}`, com a capacidade total incluindo a anfitriã.
+- As ações de salvar, pré-visualizar e publicar ficam apenas na área lateral responsiva, sem duplicatas no fim do formulário.
+- O backend faz busca autenticada via Nominatim compatível, sem autocomplete, query logs ou persistência do termo, com cache volátil e limite global de uma chamada por segundo em PostgreSQL.
+- Rollout: aplicar `0015`, configurar URL/identificação HTTPS do geocoder e URL/atribuição de tiles, publicar backend com `EVENTS_HTTP_ENABLED=false`, publicar frontend desligado e então habilitar gradualmente. Rollback operacional desliga a UI e a API, preservando a migration e os dados.
+
+## Correção da elegibilidade de anfitriã — 2026-10-09
+
+WhatsApp deixa de ser requisito para habilitar anfitriãs enquanto a verificação desse canal estiver indisponível no MVP (ADR-063). A checagem continua no backend; sem mudanças em endpoint, schema ou migration.
+
+## Backend 0.19.0 + frontend/workspace 0.20.0 — 2026-10-09
+
+Criação, rascunho, prévia e publicação de encontros (SDD-027; ADR-062). Mudança aditiva coordenada; sem migration nova. `EVENTS_UI_ENABLED=false` mantém as rotas e a interface desligadas por padrão.
+
+- Backend expõe o catálogo ativo de tipos de atividade com resposta pública limitada, ordenação estável e `no-store`; a extensão não depende de sessão nem da flag dos comandos de Eventos.
+- Frontend adiciona `/eventos`, `/eventos/novo` e `/eventos/novo/[eventId]`, com criação consciente, formulário em grupos, salvamento explícito, prévia e publicação autenticada por BFF.
+- Schemas do proprietário e da prévia são separados. O BFF remove coordenadas exatas e aproximadas da prévia; `sessionStorage` guarda somente UUID, versão e TTL.
+- Conflitos preservam a edição local; publicação consulta a revisão atual antes do comando. Erros de validação recebem resumo focável e mensagens associadas aos campos.
+- Rollout: publicar o backend `0.19.0`, depois o frontend/workspace `0.20.0` desligado, executar smoke autenticado e habilitar gradualmente `EVENTS_UI_ENABLED` e `EVENTS_HTTP_ENABLED`. Rollback desliga primeiro a UI e depois os comandos HTTP; o catálogo público permanece aditivo e não há dados/schema novos.
+
 ## Backend 0.18.0 — 2026-10-08
 
 Fundação backend de Eventos (SDD-025; ADR-054 a ADR-058, ADR-060 e ADR-061). Mudança aditiva; workspace/frontend permanecem sem alteração nesta entrega. O HTTP começa desligado com `EVENTS_HTTP_ENABLED=false`.
